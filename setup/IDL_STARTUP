@@ -1,0 +1,2 @@
+gxpath=getenv('SSW')+path_sep()+'packages'+path_sep()+'gx_simulator'
+ssw_path,gxpath
