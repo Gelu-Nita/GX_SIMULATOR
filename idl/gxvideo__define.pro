@@ -27,7 +27,7 @@ function gxVIDEO::Init,dimensions, stream=stream,title=title,artist=artist,_extr
    fps=opt.fps
    result=self->IDLffVideoWrite::Init(Filename,_extra=_extra)
    if result eq 1 then begin
-    default,title,'GX _imulator Video'
+    default,title,'GX _Simulator Video'
     default,artist,'GX_Simulator'
     self.SetMetadata,'title',title
     self.SetMetadata,'artist',artist

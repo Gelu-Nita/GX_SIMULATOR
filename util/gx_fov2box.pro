@@ -1,7 +1,7 @@
 pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km, out_dir = out_dir, tmp_dir = tmp_dir,$
                         empty_box_only=empty_box_only,save_empty_box=save_save_empty_box,potential_only=potential_only,$
-                        save_potential=save_potential,save_bounds=save_bounds,use_potential=use_potential,$
-                        nlfff_only=nlfff_only, generic_only=generic_only, save_gxm=save_gxm,centre=centre,euv=euv,uv=uv,_extra=_extra
+                        save_potential=save_potential,save_bounds=save_bounds,use_potential=use_potential, use_idl=use_idl,$
+                        nlfff_only=nlfff_only, generic_only=generic_only,centre=centre,euv=euv,uv=uv,_extra=_extra
   setenv, 'WCS_RSUN=6.96d8'
 
   t0=systime(/seconds)
@@ -88,24 +88,26 @@ pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km
   if keyword_set(nlfff_only) then return
   
   skip_nlfff:
-  t0=systime(/seconds)
+  
   message,'Computing field lines for each voxel in the model..',/cont
-  model=gx_importmodel(box)
   tr_height_km=1000
-  tr_height=tr_height_km/(gx_rsun(unit='km'))
-  model->computecoronalmodel,tr_height=tr_height,/compute,_extra=_extra
-  message,strcompress(string(systime(/seconds)-t0,format="('Field line computation performed in ',g0,' seconds')")),/cont
-  gx_model2box,model,box
+  tr_height_sunradius=tr_height_km/(gx_rsun(unit='km'))
+  if keyword_set(use_idl) or !version.os_family ne 'Windows' then begin
+    t0=systime(/seconds)
+    model=gx_importmodel(box)
+    model->computecoronalmodel,tr_height=tr_height_sunradius,/compute,_extra=_extra
+    gx_copylines2box,model,box
+    obj_destroy,model
+    message,strcompress(string(systime(/seconds)-t0,format="('Field line computation performed in ',g0,' seconds')")),/cont
+  endif else begin
+    gx_addlines2box, box,tr_height_km
+  endelse
+  
   box.id=box.id+'.GEN'
   save,box,file=out_dir+path_sep()+box.id+'.sav'
   message,'Box structure saved to '+out_dir+path_sep()+box.id+'.sav',/cont
   
-  if keyword_set(save_gxm) then begin
-    model->SetProperty,id=box.id
-    save,model,file=out_dir+path_sep()+box.id+'.gxm'
-    message,'Model object saved to '+out_dir+path_sep()+box.id+'.gxm',/cont
-  end
-  obj_destroy,model
+  
   if keyword_set(generic_only) then return 
   
   t0=systime(/seconds)

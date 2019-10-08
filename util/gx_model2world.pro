@@ -1,17 +1,17 @@
-;This is a utility program that allows ploting diffrent model components (field lines, fluxtubes, model mox of FOV box, as they project on a LOS map.
+;This is a utility program that allows ploting different model components (field lines, fluxtubes, model mox of FOV box, as they project on a LOS map.
 ;To plot all components on top of the model LOS Bz reference map one should call
 ;gx_model2world,model,/all
 ;To selectevely plot only some components, use the corresponding keywords
 ;To plot on a prexisting LOS map, use /over
 pro gx_model2world,model,lines=lines,fluxtubes=fluxtubes,fov=fov,box=box,over=over,$
-                  scolor=scolor,lcolor=lcolor,openlinecolor=open_line_color,box_color=box_color,fov_color=fov_color,$
+                  scolor=scolor,lcolor=lcolor,ocolor=ocolor,box_color=box_color,fcolor=fcolor,$
                   sthick=sthick,lthick=lthick,_extra=_extra,all=all
   default,model,obj_new()
   default,scolor,250
   default,lcolor,150
-  default,openline_color,200
+  default,ocolor,200
   default,box_color,250
-  default,fov_color,50
+  default,fcolor,50
   default,sthick,3
   default,cthick,1
   
@@ -40,6 +40,7 @@ pro gx_model2world,model,lines=lines,fluxtubes=fluxtubes,fov=fov,box=box,over=ov
     message,'No LOS reference map found in this model, please plot one and call this procedure using /over!',/info
     return
   endif
+  ref.id= 'HMI Bz'
   if ~keyword_set(over) then begin
     tvlct,r,g,b,/get
     loadct,0,/silent
@@ -53,7 +54,7 @@ pro gx_model2world,model,lines=lines,fluxtubes=fluxtubes,fov=fov,box=box,over=ov
         if obj_isa(lines[k],'gxbline') then begin
             lines[k]->getproperty,data=ldata,open=open
             ldata=gx_transform(ldata,model->GetSTM(),/inv)*ref.rsun
-            oplot,ldata[0,*],ldata[1,*],color=open?openline_color:lcolor,thick=lthick,psym=0
+            oplot,ldata[0,*],ldata[1,*],color=open?ocolor:lcolor,thick=lthick,psym=0
         endif
       endfor
       endif else message,'No field lines found in this model!',/info
@@ -72,7 +73,7 @@ pro gx_model2world,model,lines=lines,fluxtubes=fluxtubes,fov=fov,box=box,over=ov
           for k=0,n_elements(tubelines)-1 do begin
             tubelines[k]->getproperty,data=ldata,open=open
             ldata=gx_transform(ldata,model->GetSTM(),/inv)*ref.rsun
-            oplot,ldata[0,*],ldata[1,*],color=open?openline_color:lcolor,thick=lthick,psym=0
+            oplot,ldata[0,*],ldata[1,*],color=open?ocolor:lcolor,thick=lthick,psym=0
           endfor
         end  
      end 
@@ -80,7 +81,7 @@ pro gx_model2world,model,lines=lines,fluxtubes=fluxtubes,fov=fov,box=box,over=ov
   endif
   if keyword_set(fov) then begin
    fovdata=((model->GetRoi(/scanbox))->GetFOVData(/sun))*ref.rsun
-   oplot,fovdata[0,[0,1,2,3,0]],fovdata[1,[0,1,2,3,0]],color=fov_color,_extra=_extra
+   oplot,fovdata[0,[0,1,2,3,0]],fovdata[1,[0,1,2,3,0]],color=fcolor,_extra=_extra
   end
   if keyword_set(box) then begin
    (model->GetRoi())->GetProperty,data=data
