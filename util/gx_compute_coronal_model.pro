@@ -58,6 +58,12 @@ pro gx_compute_coronal_model,tr_height_km,use_idl=use_idl,_extra=_extra
       if tag_exist(box,'olength') then begin
         volume->SetVertexAttributeData,'olength',box.olength
       end
+      if tag_exist(box,'oalpha') then begin
+        volume->SetVertexAttributeData,'oalpha',box.oalpha
+      end
+      if tag_exist(box,'ocurlb') then begin
+        volume->SetVertexAttributeData,'ocurlb',box.ocurlb
+      end
       if tag_exist(box,'ofoot1') then begin
         volume->SetVertexAttributeData,'ofoot1',box.ofoot1
       end

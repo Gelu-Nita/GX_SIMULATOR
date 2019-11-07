@@ -7,7 +7,7 @@ function gxVIDEO::Init,dimensions, stream=stream,title=title,artist=artist,_extr
     MESSAGE, /INFO, !ERROR_STATE.MSG
     return, obj_new()
   end
-  frm=['avi', 'flv', 'gif', 'mjpeg', 'mov', 'mp4', 'swf', 'wav', 'webm']
+  frm=['mp4', 'avi', 'flv', 'gif', 'mjpeg', 'mov', 'swf', 'wav', 'webm']
   formats=strcompress(frm[0],/rem)
   for i=1, n_elements(frm)-1 do formats=formats+'|'+strcompress(frm[i],/rem)
   desc = [ $
