@@ -1,3 +1,6 @@
 [submodule "gxbox"]
 	path = gxbox
 	url = https://github.com/Sergey-Anfinogentov/GXBox_prep
+[submodule "sfq"]
+	path = sfq
+	url = https://github.com/Sergey-Anfinogentov/SFQ
