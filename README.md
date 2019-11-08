@@ -14,8 +14,8 @@ https://git-scm.com/
 ```bash
 git clone https://github.com/Gelu-Nita/GX_SIMULATOR
 cd GX_Simulator
-git submodule update --init --recursive
-git submodule foreach git pull origin master
+git submodule update --init --recursive --remote
 ```
 
 #### Delete the content of your SSW/packages/GX_Simulator folder and move there the content of the cloned GitHub GX_simulator folder created in the previous step 
+
