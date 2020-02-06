@@ -1,8 +1,8 @@
-pro gs_transfer_slice_arr_ana,parms,rowdata,path,parmin,datain,freqlist,info=info
+pro MWTransferArr64_slice,parms,rowdata,path,parmin,datain,freqlist,info=info
 
  if n_elements(path) eq 0 then begin
-  dirpath=file_dirname((ROUTINE_INFO('gs_transfer_slice_arr_ana',/source)).path,/mark)
-  path=dirpath+'gs_transfer_slice_arr_ana.dll'
+  dirpath=file_dirname((ROUTINE_INFO('mwtransferarr64_slice',/source)).path,/mark)
+  path=dirpath+'MWTransferArr64.dll'
  end
  
  if arg_present(info) then begin
@@ -73,6 +73,7 @@ pro gs_transfer_slice_arr_ana,parms,rowdata,path,parmin,datain,freqlist,info=inf
    Nvox=sz[1]  
    Nparms=sz[2]
    if n_elements(datain) eq 0 then datain=dblarr(7,Nfreq,Npix)
+   datain[*]=0
    if n_elements(freqlist) eq Nfreq and parms[0,0,15] eq 0 then begin
      datain[0,*,*]=freqlist#replicate(1d,Npix)
    endif
@@ -86,7 +87,7 @@ pro gs_transfer_slice_arr_ana,parms,rowdata,path,parmin,datain,freqlist,info=inf
     N_dat(1)=Nvox
     N_dat(2)=1;N_Earr
     N_dat(3)=1;N_Muarr
-    N_dat(4)=34L;N_Parm
+    N_dat(4)=nparms;N_Parm
     E=dblarr(N_dat(2))
     mu_s=dblarr(N_dat(3))
     f_sVP=dblarr(N_dat(0),N_dat(1),N_dat(2),N_dat(3))

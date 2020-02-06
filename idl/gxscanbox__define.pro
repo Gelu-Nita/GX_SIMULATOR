@@ -929,19 +929,28 @@ pro gxScanBox::SaveLOS
  end
 end
 
+pro gxScanbox::UpdateParmsTable, info
+ widget_control,self.wParmsTable,get_value=value
+ (*self.parms)=value
+ if n_elements(info) eq 0 then begin
+   (*self.info).parms=value
+   (*self.info)=self->RendererInfo(*self.info)
+ endif else begin
+   ptr_free,self.info
+   self.info=ptr_new(self->RendererInfo(info))
+ endelse
+ self.pData=(self.ImgViewWid)->NewView(*self.info,nx=self.nx,ny=self.ny,xrange=self.xrange,yrange=self.yrange)
+ self->MakeGrid
+ self->Slice
+ self->ResetAllBridges
+end
+
+
+
 function gxScanbox::HandleEvent,event
 subdirectory=['resource', 'bitmaps']
 case event.id of   
-  self.wParmsTable: begin
-                     widget_control,event.id,get_value=value
-                     (*self.parms)=value
-                     (*self.info).parms=value
-                     (*self.info)=self->RendererInfo(*self.info)
-                     self.pData=(self.ImgViewWid)->NewView(*self.info,nx=self.nx,ny=self.ny,xrange=self.xrange,yrange=self.yrange)
-                     self->MakeGrid
-                     self->Slice
-                     self->ResetAllBridges
-                    end
+  self.wParmsTable: self->UpdateParmsTable 
   self.wSquareFOV: begin
                     square=widget_info(self.wSquareFOV,/button_set)
                     autoFov=widget_info(self.wAuto,/button_set)
@@ -1077,19 +1086,7 @@ case event.id of
                     self->TV_SLICE
                  end
                 End               
- self.wSliceSelect: Begin 
-;                    widget_control,widget_info(event.top,Find_By_Uname='STATEBASE'),get_uvalue=state
-;                    container=state.view->Get(/all,count=count)
-;                    if obj_isa(container,'gxSun') then models=container->Get(/all,ISA='gxComponent',count=count)
-;                    if obj_isa(container,'gxModel') then begin
-;                      models=self.parent->Get(/all,isa='gxModel',count=count)
-;                      if count eq 0 then models=container else models=[models,container]
-;                      count=n_elements(models)
-;                    end  
-;                    for i=0,count-1 do begin
-;                     volume=(models[i]->GetVolume())
-;                     volume->Update,event.str,/update;explicitely request volume update
-;                    end   
+ self.wSliceSelect: Begin  
                      select=event.str  
                      update_volume:
                      self.ImgViewWid->GetProperty,model=model
@@ -1123,8 +1120,8 @@ case event.id of
                            goto,update_volume
                          end    
    self.wResetVolumeScale: goto,update_volume                                                                                                                                   
- self.wTV_Slice: self->TV_SLICE    
- self.wSaveLOS:self->SaveLOS                                                                                           
+   self.wTV_Slice: self->TV_SLICE    
+   self.wSaveLOS:self->SaveLOS                                                                                           
  else:
  endcase
 return, self->Rewrite(event,auto=auto)
@@ -1235,7 +1232,8 @@ pro gxScanBox::OnStartScan,event,debug=debug
        bridges[i]->SetVar,'id',i
        bridges[i]->SetVar,'row',-1
        bridges[i]->SetVar,'calls',0
-       bridge_state[i].calls='0'
+       bridges[i]->SetVar,'freqlist',(*self.info).spectrum.x.axis
+       bridge_state[i].calls='0'   
       end 
       bridges[i]->SetVar,'t_start',systime(/s)
       bridges[i]->SetVar,'OnDebug',keyword_set(Debug)

@@ -8,24 +8,45 @@ if ~tag_exist(pbox,'dz') then begin
  dz=dblarr(msize[1],msize[2],msize[3])
  dz[*]=(pbox).dr[2]
 endif else dz=(pbox).dz
-z=total(dz,3,/cum)
-z=z-min(z)
-h=chromo.h/gx_rsun(unit='km')
-h=h-min(h)
+
+;Assume the heights to be 0,dz,2*dz,.....
+z=dblarr(msize[1],msize[2],msize[3])
+cumz=total(dz,3,/cum)
+z[*,*,1:msize[3]-1]=cumz[*,*,0:msize[3]-2]
+
+
+bad=where(chromo.dh eq 1,nbad,comp=chromo_idx)
+if nbad gt 0 then chromo.dh[bad]=0
+tr_h=total(chromo.dh,3,/double)/gx_rsun(unit='km')
+max_tr_h=max(tr_h)
+corona_base_idx=min(where(z[0,0,*] ge max_tr_h))
+corona_base_height=z[0,0,corona_base_idx]
+dh=chromo.dh/gx_rsun(unit='km')
 tr_idx=lonarr(csize[1],csize[2])
-tr_h=dblarr(csize[1],csize[2])
-chromo_idx=where(chromo.nne ne 0 and chromo.temp ne 0 )
+
 for i=0, csize[1]-1 do begin
   for j=0,csize[2]-1 do begin
-    tr_idx[i,j]=max(where(chromo.nne[i,j,*] ne 0 and chromo.temp[i,j,*] ne 0 ))+1
-    tr_h[i,j]=h[i,j,tr_idx[i,j]<(csize[3]-1)]
+    tr_idx[i,j]=max(where(chromo.dh[i,j,*] ne 0))+1
+    if tr_idx[i,j] lt csize[3] then begin
+      dh[i,j,tr_idx[i,j]:*]=(corona_base_height-tr_h[i,j])/n_elements(dh[i,j,tr_idx[i,j]:*])
+    endif else dz[i,j,corona_base_idx]=dz[i,j,corona_base_idx]+corona_base_height-tr_h[i,j]
   endfor
 endfor
+
+dz=dz[*,*,corona_base_idx:*]
+
+size_dz=size(dz)
+big_size=csize[3]+size_dz[3]
+big_dh=dblarr(csize[1],csize[2],big_size)
+big_dh[*,*,0:csize[3]-1]=dh[*,*,0:csize[3]-1]
+big_dh[*,*,csize[3]:*]=dz
+big_h=dblarr(csize[1],csize[2],big_size)
+cum_big_h=total(big_dh,3,/cum,/double)
+big_h[*,*,1:big_size-1]=cum_big_h[*,*,0:big_size-2]
+
 max_chromo_idx=max(tr_idx)-1
-h=h[*,*,0:max_chromo_idx]
-h[*,*,max_chromo_idx]=max(h)
-dh=chromo.dh[*,*,0:max_chromo_idx]/gx_rsun(unit='km')
-dh[*,*,max_chromo_idx]=h[*,*,max_chromo_idx]-total(dh[*,*,0:max_chromo_idx-1],3)
+h=big_h[*,*,0:max_chromo_idx]
+
 
 bcube=fltarr(csize[1],csize[2],max_chromo_idx+1,3)
 
@@ -57,9 +78,9 @@ csize=size(bx)
 
 
 
-min_corona_idx=(array_indices(z,min(where(z gt max(h)))))[2]+1
+min_corona_idx=corona_base_idx;(array_indices(z,min(where(z gt max(h)))))[2]+1
 bcube=fltarr(csize[1],csize[2],max_chromo_idx+msize[3]-min_corona_idx+1,3)
-big_dh=dblarr(csize[1],csize[2],max_chromo_idx+msize[3]-min_corona_idx+1)
+
 bsize=size(bcube)
 bcube[*,*,0:max_chromo_idx,0]=bx
 bcube[*,*,max_chromo_idx+1:*,0]=(pbox).bcube[*,*,min_corona_idx:*,0]
@@ -67,8 +88,7 @@ bcube[*,*,0:max_chromo_idx,1]=by
 bcube[*,*,max_chromo_idx+1:*,1]=(pbox).bcube[*,*,min_corona_idx:*,1]
 bcube[*,*,0:max_chromo_idx,2]=bz
 bcube[*,*,max_chromo_idx+1:*,2]=(pbox).bcube[*,*,min_corona_idx:*,2]
-big_dh[*,*,0:max_chromo_idx]=temporary(dh)
-big_dh[*,*,max_chromo_idx+1:*]=dz[*,*,min_corona_idx:*]
+
 
 deltaz=max(total(big_dh,3))/bsize[3]
 

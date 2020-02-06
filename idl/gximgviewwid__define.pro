@@ -50,10 +50,11 @@ self.wBase = widget_base( self.wIDBase, $
     uname=name,_extra=_extra)
 prefix='GXIMAGE:'
 self.wToolBarBase=widget_valid(wToolbarbase)?wToolbarbase:widget_base(self.wBase,/toolbar,/row,/frame)
-self.wChannBase=widget_base(self.wBase,/row,/toolbar)
+wPSFBase=widget_base(self.wBase,/frame,/row,/toolbar)
+self.wChannBase=widget_base(self.wBase,/row,/toolbar,/frame)
 self.wChannels[0]=cw_field(self.wChannBase,/int,value=0,xsize=4,title='')
 self.wChannels[1]=cw_field(self.wChannBase,/int,value=0,xsize=4,title='')
-wPSFBase=self.wChannBase;widget_base(self.wChannBase,/frame,/row,/toolbar)
+;wPSFBase=self.wChannBase;widget_base(self.wChannBase,/frame,/row,/toolbar)
 self.wPSF[0]=cw_objfield(wPSFBase,value=7.0,xtextsize=3,label='a=',unit='"')
 self.wPSF[1]=cw_objfield(wPSFBase,value=7.0,xtextsize=3,label='b=',unit='"')
 self.wPSF[2]=cw_objfield(wPSFBase,value=0.0,xtextsize=3,label='phi=',unit=STRING(176b))
@@ -89,7 +90,7 @@ self.wMovie= widget_button( ExecBase, $
             /bitmap,tooltip='Generate Video')            
 self.wSave=widget_button( ExecBase, $
             value=gx_bitmap(filepath('save.bmp', subdirectory=subdirectory)), $
-            /bitmap,tooltip='Save Maps to File')           
+            /bitmap,tooltip='Save Maps to File')                      
 ;if ~keyword_set(uploadbttn) then begin
 self.wExportImgCube=widget_button( ExecBase, $
             value=gx_bitmap(filepath('export.bmp', subdirectory=subdirectory)), $
@@ -100,7 +101,15 @@ self.wImportImgCube=widget_button( ExecBase, $
 ;end                                   
 if ~keyword_set(uploadbttn) then self.wMap2Plotman=widget_button( ExecBase, $
             value=gx_bitmap(filepath('contour.bmp', subdirectory=subdirectory)), $
-            /bitmap,tooltip='Send Map to Plotman')                               
+            /bitmap,tooltip='Send Map to Plotman')   
+self.wSaveTb=widget_button( ExecBase, $
+            value=gx_bitmap(filepath('bulb.bmp', subdirectory=subdirectory)), $
+            /bitmap,tooltip='Save Tb Maps to File') 
+widget_control, self.wSaveTb,map=0           
+self.wUploadFreqList=widget_button(self.wToolbarbase, $
+            value=gx_bitmap(filepath('open.bmp', subdirectory=subdirectory)), $
+            /bitmap,tooltip='Upload frequency list from IDL sav file')           
+widget_control, self.wUploadFreqList,map=0                                          
 
 row_base=widget_base(self.wBase,/row)
 self.wDrawImg = widget_draw( $
@@ -332,6 +341,16 @@ function gxImgViewWid::SaveLog
  return,saved
 end
 
+function gxImgViewWid::UploadFreqListButton,fmin=fmin,use_switch=use_switch
+  fmin=where(strcompress(strupcase(((*self.info).parms).name),/rem) eq strcompress(strupcase('f_min'),/rem),count1)
+  use_switch=where(strcompress(strupcase(((*self.info).parms).name),/rem) eq strcompress(strupcase('TBD'),/rem),count2)
+  return, ((count1 gt 0) or (count2 gt 0))
+end
+
+function gxImgViewWid::SaveTbButton
+  lookup=where(strcompress(strupcase(((*self.info).parms).name),/rem) eq strcompress(strupcase('f_min'),/rem),count)
+  return, (count gt 0)
+end
 
 pro gxImgViewWid::NewRenderer
  self->NewSpectrumSize
@@ -343,6 +362,8 @@ pro gxImgViewWid::NewRenderer
  end
  if widget_valid(self.wChannels[4])  then widget_control,self.wChannels[4],/destroy
  if tag_exist((*self.info),'channels') then  self.wChannels[4]=widget_combobox(self.wChannbase,value=(*self.info).channels)
+ widget_control,self.wSaveTb,map=self->SaveTbButton()
+ widget_control,self.wUploadFreqList,map=self->UploadFreqListButton()
  self.newPSF=1
  widget_control,self.wPSF[3],set_value=0
 end
@@ -725,9 +746,9 @@ pro gxImgViewWid::Convolve,compute=compute
     self.oLabel->SetProperty,strings=strings
 end
 ;--------------------------------------------------------------------
-function gxImgViewWid::GetImg,k,raw=raw,psf=psf
+function gxImgViewWid::GetImg,k,idx,raw=raw,psf=psf
   compile_opt hidden
-  idx=self->data_indices()
+  default,idx, self->data_indices()
   default,k, idx[2]
   if ~keyword_set(raw) then begin
     widget_control,self.wPSF[3],get_value=cv
@@ -788,31 +809,31 @@ function gxImgViewWid::GetImg,k,raw=raw,psf=psf
   if size(img,/n_dim) eq 3 then begin
     sz=size(*self.pData,/dim)
     case idx[3] of
-      sz[3]:begin
-      img=total(img,3)
-    end
-    (sz[3]+1):begin
-    img=(img[*,*,1]-img[*,*,0])
-  end
-  (sz[3]+2):begin
-  img=100*(img[*,*,1]-img[*,*,0])/total(img,3)
-  end
-  (sz[3]+3):begin
-  img=coeff*img[*,*,0]/f2[k]
-  end
-  (sz[3]+4):begin
-  img=coeff*img[*,*,1]/f2[k]
-  end
-  (sz[3]+5):begin
-  img=coeff*((img[*,*,1]+img[*,*,0]))/f2[k]/2
-  end
-  (sz[3]+6):begin
-  img=coeff*((img[*,*,1]-img[*,*,0]))/f2[k]
-  end
-  else:begin
-  img=img[*,*,idx[3]]
-  end
-  endcase
+        sz[3]:begin
+                img=total(img,3)
+              end
+        (sz[3]+1):begin
+                    img=(img[*,*,1]-img[*,*,0])
+                  end
+        (sz[3]+2):begin
+                    img=100*(img[*,*,1]-img[*,*,0])/total(img,3)
+                  end
+        (sz[3]+3):begin
+                    img=coeff*img[*,*,0]/f2[k]
+                  end
+        (sz[3]+4):begin
+                    img=coeff*img[*,*,1]/f2[k]
+                  end
+        (sz[3]+5):begin
+                    img=coeff*((img[*,*,1]+img[*,*,0]))/f2[k]/2
+                  end
+        (sz[3]+6):begin
+                    img=coeff*((img[*,*,1]-img[*,*,0]))/f2[k]
+                  end
+        else:begin
+              img=img[*,*,idx[3]]
+             end
+    endcase
   end
   widget_control,self.wContrast,get_value=contrast
   minmax=widget_info(self.wContrast,/SLIDER_MIN_MAX)
@@ -841,6 +862,90 @@ pro gxImgViewWid::GetMapParms,xc=xc,yc=yc,time=time,dx=dx,dy=dy
     time=self.fovmap->get(/time)
   end
 end
+;--------------------------------------------------------------------
+
+pro gxImgViewWid::UploadFreqList,tlb
+  widget_control,widget_info(tlb,find_by_uname='Scanbox'),get_uvalue=scanbox
+  ; Select a text file and open for reading
+    file = DIALOG_PICKFILE(FILTER='*.txt',TITLE='Please select an instrumet specific frequency list file',path=gx_findfile(folder='freqlists'))
+    if file eq '' then return
+    OPENR, lun, file, /GET_LUN
+    
+    ; Read one line at a time, saving the result into array
+    line = ''
+    k=0
+    WHILE NOT EOF(lun) DO BEGIN
+      READF, lun, line & $
+      freqlist = (k eq 0)?line:[freqlist, line]
+      k+=1
+    ENDWHILE
+    ; Close the file and free the file unit
+    FREE_LUN, lun
+  freqlist=double(freqlist)  
+  nfreq=n_elements(freqlist)
+  fmin=0
+  scanbox->ReplaceParmValue,'f_min',fmin
+  scanbox->ReplaceParmValue,'N_freq',nfreq
+  (*self.info).parms[where((*self.info).parms.name eq 'f_min')].value=fmin
+  (*self.info).parms[where((*self.info).parms.name eq 'N_freq')].value=nfreq
+  info=*self.info
+  spectrum=info.spectrum
+  x=spectrum.x
+  x=rep_tag_value(x,freqlist,'axis')
+  spectrum=rep_tag_value(spectrum,x,'x')
+  info=rep_tag_value(info,spectrum,'spectrum')
+  ptr_free,self.info
+  self.info=ptr_new(info)
+  scanbox->UpdateParmsTable,(*self.info)
+end
+
+;----------------------------------------
+pro gxImgViewWid::SaveTbMaps,tlb
+  compile_opt hidden
+  if self->ValidData() and obj_valid(self.fovmap) then begin
+    idx=self->data_indices()
+    if n_elements(idx) ge 5 then begin
+      idx[4]=0
+      sz=size(*self.pdata)
+      sz=size(*self.pdata)
+      map=self.fovmap->get(/map)
+      add_prop, map, freq = 0.0
+      add_prop, map, frequnit = 'GHz'
+      add_prop, map, stokes = ''
+      add_prop, map, dimensions = ['Freq','Pol']
+      add_prop, map, dataunit = 'K'
+      add_prop, map, datatype = 'Brightness Temperature'
+      add_prop, map, rms = 0d
+      add_prop, map, rmsunit = 'K'
+      add_prop, map, comment='Generated by GX Simulator'
+      maps=replicate(map,sz[3],2)
+      pol_id=['LL','RR']
+      for k=0,sz[3]-1 do begin
+        for pol=0,1 do begin
+          idx[3]=pol+5
+          map.data=self->GetImg(k,idx)
+          map_id=string(((*self.info).spectrum).x.axis[k],((*self.info).spectrum).x.unit,format="(g0,' ',a)")
+          map.dataunit=((*self.info).spectrum).y.unit[pol+5]
+          map.id = 'GX '+pol_id[pol]+' '+map_id
+          map.freq = ((*self.info).spectrum).x.axis[k]
+          map.stokes = pol_id[pol]
+          maps[k,pol]=map
+        end
+      end
+      file=''
+      file=dialog_pickfile(filter='*.sav',$
+        DEFAULT_EXTENSION='sav',$
+        /write,/OVERWRITE_PROMPT,$
+        file=file,$
+        title='Please select a file to save this Tb map structure')
+      if file ne '' then begin
+        save,maps,file=file
+      end
+     endif else  answ=dialog_message(['This feature is dedicated only to saving GX bigtness temperature maps, if displayed on this page!',$
+      'To save any other type of GX maps, send them first to Plotman and then use the "Map_Container/Save Grup to File" menu option implemented there.'])
+  endif else answ=dialog_message('No valid image data has been created yet!')
+end
+
 
 ;--------------------------------------------------------------------
  pro gxImgViewWid::SaveMaps,tlb
@@ -1225,6 +1330,8 @@ case event.id of
   self.wPlotSelection:self->PlotProfile
   self.wLog2File:result=self->SaveLog()
   self.wSave:self->SaveMaps,event.top
+  self.wSaveTb:self->SaveTbMaps,event.top
+  self.wUploadFreqList:self->UploadFreqList,event.top
   self.wMap2Plotman:self->Map2Plotman,event.top
   self.wExportImgCube:self->ImgCube2File,event.top
   self.wImportImgCube:self->ImgCubeFile2Renderer,event.top
@@ -1275,6 +1382,8 @@ pro gxImgViewWid__define
     wChannels:lonarr(5),$
     wPlotSelection:0L,$
     wSave:0L,$
+    wSaveTb:0L,$
+    wUploadFreqList:0l,$
     wLog2File:0L,$
     wMap2Plotman:0L,$
     wSpec2Plotman:0L,$
