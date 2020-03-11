@@ -34,34 +34,30 @@ if not exists then gx_defparms
 xy= GET_SCREEN_SIZE(RESOLUTION=resolution)
 if xy[0] lt 3200 then fontsize=12 else fontsize=24
 !defaults.font=strcompress('lucida console*'+string(fontsize),/rem)
-;device,set_font=fontsize
 Widget_Control, DEFAULT_FONT=!defaults.font
-default,file,'GX_Simulator.log'
-if ~file_exist(file) then begin
- file=dialog_pickfile(Title='Please choose a GX Simulator log file to upload',filter='*.gxl')
- if ~file_exist(file) then return                  
-end
-rec=MULTI_RESTORE(lun,file=file, header=header,/new,/verb)
-stat=fstat(lun)
-ny=(stat.size-stat.cur_ptr)/n_tags(rec,/data)
-print,ny
-parmdim=size(rec.parms,/dim)
-parmdim=[parmdim[0],ny,parmdim[1:*]]
-datadim=size(rec.data,/dim)
-datadim[1]=ny
-row=lonarr(ny)
-parms=make_array(parmdim,/float)
-data=make_array(datadim,/float)
-for i=0,ny-1 do begin
- rec=MULTI_RESTORE(lun,file=file)
- row=rec.row
- if row lt ny then begin
-   parms[*,row,*,*,*]=rec.parms
-   data[*,row,*,*,*,*]=rec.data
- end
-end
-
- close,lun
+  if ~file_exist(file) then begin
+    file=dialog_pickfile(Title='Please choose a GX Simulator log file to upload',filter='*.gxl')
+    if ~file_exist(file) then return
+  end
+  rec=MULTI_RESTORE(lun,file=file, header=header,/new,/verb)
+  stat=fstat(lun)
+  ny=(stat.size-stat.cur_ptr)/n_tags(rec,/data)
+  parmdim=size(rec.parms,/dim)
+  parmdim=[parmdim[0],ny,parmdim[1:*]]
+  datadim=size(rec.data,/dim)
+  datadim[1]=ny
+  row=lonarr(ny)
+  parms=make_array(parmdim,/float)
+  data=make_array(datadim,/float)
+  for i=0,ny-1 do begin
+    rec=MULTI_RESTORE(lun,file=file)
+    row=rec.row
+    if row lt ny then begin
+      parms[*,row,*,*,*]=rec.parms
+      data[*,row,*,*,*,*]=rec.data
+    end
+  end
+  close,lun
  mainbase=widget_base(title='GX Explorer',mbar=mbar,/column,UNAME='MAINBASE');,/TLB_KILL_REQUEST_EVENTS)
  statebase=widget_base(mainbase,/row,uname='STATEBASE')
  imgBase=widget_base(statebase)

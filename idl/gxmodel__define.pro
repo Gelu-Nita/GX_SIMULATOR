@@ -1193,6 +1193,90 @@ function gxModel::GetSTM,mscale=mscale,tm=tm
   return,MSCALE##invert(tm)
 end  
 
+function gxModel::GetDirections, TopViewCorrection=TopViewCorrection
+  
+  ;This section seems to have no effect in this version
+  if ~keyword_set(TopViewCorrection) then begin
+    wTopViewCorrection= widget_valid(self.wparent)?widget_info(self.wparent,find_by_uname='GXMODEL:TopViewCorrection'):0
+    if widget_valid( wTopViewCorrection) then begin
+      TopViewCorrection=widget_info(wTopViewCorrection,/button_set)
+    endif else TopViewCorrection=0
+  end
+
+  if TopViewCorrection then begin
+    ;Here we compute the true LOS orientaion disregarding TopView selection or not
+    tm=self->getSTM(mscale=mscale)
+    self->ResetPosition,/unlock
+    self->GetProperty,transform=tm
+    tm=MSCALE##invert(tm)
+  endif
+ ;**********************************
+;  self->getproperty,transform=ctm
+;  vx=gx_transform([1,0,0],ctm)-gx_transform([0,0,0],ctm)
+;  vy=gx_transform([0,1,0],ctm)-gx_transform([0,0,0],ctm)
+;  vz=gx_transform([0,0,1],ctm)-gx_transform([0,0,0],ctm)
+;  vx/=norm(vx)
+;  vy/=norm(vy)
+;  vz/=norm(vz)
+  self->getproperty,transform=ctm
+  btm=invert(ctm[0:2,0:2])
+  vx=btm[*,0]
+  vy=btm[*,1]
+  vz=btm[*,2]
+
+  ;This section seems to have no effect in this version
+  if TopViewCorrection then begin
+    ;Here we recover the TopView or rotated position
+    self->ResetPosition
+    self->GetProperty,transform=tm
+    tm=MSCALE##invert(tm)
+  endif
+  ;**********************************
+
+  
+  return,{x:vx,y:vy,z:vz}
+end
+
+function gxModel::GetBTM, TopViewCorrection=TopViewCorrection
+  ;This functions returns the transformation matrix needed to convert B from box coordinates to LOS coordinates
+  
+  ;This section seems to have no effect
+  if ~keyword_set(TopViewCorrection) then begin
+    wTopViewCorrection= widget_valid(self.wparent)?widget_info(self.wparent,find_by_uname='GXMODEL:TopViewCorrection'):0
+    if widget_valid( wTopViewCorrection) then begin
+      TopViewCorrection=widget_info(wTopViewCorrection,/button_set)
+    endif else TopViewCorrection=0
+  end
+
+  if TopViewCorrection then begin
+    ;Here we compute the true LOS orientaion disregarding TopView selection or not
+    tm=self->getSTM(mscale=mscale)
+    self->ResetPosition,/unlock
+    self->GetProperty,transform=tm
+    tm=MSCALE##invert(tm)
+  endif
+  ;**********************************
+  
+  
+  self->getproperty,transform=ctm
+  
+  btm=invert(ctm[0:2,0:2])
+
+  ;This section seems to have no effect
+  if TopViewCorrection then begin
+    ;Here we recover the TopView or rotated position
+    self->ResetPosition
+    self->GetProperty,transform=tm
+    tm=MSCALE##invert(tm)
+  endif
+  ;**********************************
+
+  return,btm
+end
+
+
+
+
 function gxModel::IsRoi
   return,self.IsRoi
 end

@@ -27,6 +27,9 @@ function gxObjViewWid::Init,wParent, oSubjects, toolbar_parent=toolbar_parent,_e
    self.wZY= widget_button( ViewBase, $
               value='ZY',tooltip='Show ZY view',font=!defaults.font $
               )
+   self.wMovie=widget_button( ViewBase, $
+              value=gx_bitmap(filepath('eba_meth_ex_cm.bmp', subdirectory=*self.pBitmapPath)), $
+              /bitmap,tooltip='Generate Rotating Model Video')        
    self.wFieldline=widget_button(widget_info(self.wRotate,/parent),$
               value=gx_bitmap(filepath('roi.bmp', subdirectory=*self.pBitmapPath)), $
               /bitmap,tooltip='Create Field Line',sensitive=0)
@@ -66,6 +69,10 @@ function gxObjViewWid::Init,wParent, oSubjects, toolbar_parent=toolbar_parent,_e
           self.wZY, $
           event_func='IDLexWidget__HandleEvent', $
           set_uvalue=self
+      widget_control, $
+          self.wMovie, $
+          event_func='IDLexWidget__HandleEvent', $
+          set_uvalue=self    
       widget_control, $
           self.wFieldline, $
           event_func='IDLexWidget__HandleEvent', $
@@ -256,6 +263,7 @@ case event.id of
            ;self->Zoom
            self->Draw
           end
+ self.wMovie:self->OnMovie         
  self.wFieldline: begin
          ; Set the button state if called manually.
         if (WIDGET_INFO(self.wFieldline, /BUTTON_SET) ne event.select) then $
@@ -444,7 +452,100 @@ pro gxObjViewWid::GetProperty,wExtraToolbarBase=wExtraToolbarBase,_extra=_extra
  wExtraToolbarBase=self.wExtraToolbarBase
 end
 ;--------------------------------------------------------------------
-
+pro gxObjViewWid::OnMovie
+                  oCurrent = self.oViewgroup->Get(/current)
+                  Model=oCurrent->Get(/all)
+                  if obj_isa(model,'GXMODEL') then begin
+                    model->Reset
+                    model->Rotate,[1,0,0],15
+                    self->Reset,/full
+                    self->Rotate,[1,0,0],-90
+                    self->Zoom,1.4
+                    model->getproperty,transform=ctm
+                    ez=gx_transform([0,0,1],ctm)-gx_transform([0,0,0],ctm)
+                    model->GetProperty,xrange=xrange,yrange=yrange
+                    model->Translate,xrange[0],yrange[0],0
+                    oCurrent->Translate,-xrange[0],-yrange[0],0
+                    self->Draw
+                    self.oWindow->GetProperty, units=orig_units
+                    self.oWindow->SetProperty, units=0
+                    self.oWindow->GetProperty, dimensions=dimensions
+                    self.oWindow->SetProperty, units=orig_units
+                    oBuff = obj_new('IDLgrBuffer', dimensions=dimensions)
+                    if float(!version.release) ge 8.1 then begin
+                      oVid = gxVideo(dimensions,stream=stream,fps=9)
+                    endif else begin
+                      desc = [ $
+                        '0, LABEL, Movie Output Options, CENTER', $
+                        '1, BASE,, ROW, FRAME', $
+                        '0, DROPLIST,mpeg, LABEL_TOP=Movie Format,Row, TAG=format', $
+                        '2, Float, 9, LABEL_TOP=Frames per second:, WIDTH=6, TAG=fps', $
+                        '1, BASE,, ROW', $
+                        '0, BUTTON, OK, QUIT,TAG=OK', $
+                        '2, BUTTON, Cancel, QUIT, TAG=CANCEL']
+                      opt=CW_FORM(desc,/Column,Title='Movie Options')
+                      ext='mpg'
+                      filename=dialog_pickfile(filter='*.'+ext,$
+                        DEFAULT_EXTENSION=ext,$
+                        /write,/OVERWRITE_PROMPT,$
+                        title='Please choose a filename to save this video')
+                      oVid= OBJ_NEW('IDLgrMPEG',frame_rate=2)
+                    endelse
+                    if ~obj_valid(oVid) then begin
+                      return
+                    endif
+                    parm_list=['T_0','n_0','n_b']
+                    vol=strcompress('None',/rem)
+                    for i=0, n_elements(parm_list)-1 do vol=vol+'|'+strcompress(parm_list[i],/rem)
+                    
+                    desc = [ $
+                      '0, LABEL, Movie Options, CENTER', $
+                      '1, BASE,, ROW, FRAME', $
+                      '0, DROPLIST,'+ vol+', LABEL_TOP= First Rotation,Row, TAG=first, Set_Value=1', $
+                      '2, Float,0.5, LABEL_TOP=Volume Scaling Index:, WIDTH=6, TAG=first_scale', $
+                      '1, BASE,, ROW, FRAME', $
+                      '0, DROPLIST,'+ vol+', LABEL_TOP= Second Rotation,Row, TAG=second,Set_Value=2', $
+                      '2, Float,0.5, LABEL_TOP=Volume Scaling Index:, WIDTH=6, TAG=second_scale', $
+                      '1, BASE,, ROW, FRAME', $
+                      '0, DROPLIST,'+ vol+', LABEL_TOP= Third Rotation,Row, TAG=third,Set_Value=3', $
+                      '2, Float,0.2, LABEL_TOP=Volume Scaling Index:, WIDTH=6, TAG=third_scale', $
+                      '1, BASE,, ROW', $
+                      '2, BUTTON, OK, QUIT,TAG=OK']
+                     opt=CW_FORM(desc,/Column,Title='Movie Options') 
+                     rotations=[opt.first,opt.second,opt.third]
+                     rotations_scale=[opt.first_scale,opt.second_scale,opt.third_scale]
+                     good=where(rotations ne 0,count) 
+                     parm_list=['None',parm_list]
+                     if count ne 0 then begin
+                      parm_list=parm_list[rotations[good]]
+                      pwr_idx=rotations_scale[good]
+                     endif else begin
+                      count=1
+                      parm_list='dR'
+                      pwr_idx=1
+                     endelse
+                    for k=0,count-1 do begin
+                      (model->GetVolume())->Update,parm_list[k],pwr_idx=pwr_idx[k],/update
+                      print,parm_list[k],pwr_idx[k]
+                    for i=0,36 do begin
+                      self->Draw
+                      oBuff->Draw, self.oViewgroup
+                      oBuff->GetProperty, image_data=image_data
+                      if obj_isa(oVid,'IDLgrMPEG') then begin
+                        for i=0, 2 do image_data[i,*,*]=rotate(reform(image_data[i,*,*]),7)
+                        for j=1, 24/opt.fps do oVid->Put, image_data
+                      endif else if obj_valid(oVid) then result=oVid->Put(stream,image_data)
+                      wait,0.05
+                      model->Rotate,ez,10
+                    end
+                  end  
+                    
+                  endif
+                  obj_destroy, oBuff
+                  if obj_isa(oVid,'IDLgrMPEG') then  oVid->Save, FILENAME=filename
+                  obj_destroy, oVid
+                  self->Draw
+                end
 pro gxObjViewWid__define
  struct_hide,{gxObjViewWid, inherits IDLexObjViewWid, $
  wExtraToolbarBase:0l, $
@@ -454,6 +555,7 @@ pro gxObjViewWid__define
  wXY:0l,$
  wXZ:0l,$
  wZY:0l,$
+ wMovie:0l,$
  wZoomIn:0l,$
  wZoomOut:0l,$
  wZoom2View:0l,$

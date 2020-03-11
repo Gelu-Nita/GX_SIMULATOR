@@ -1,5 +1,5 @@
 
-function gxVIDEO::Init,dimensions, stream=stream,title=title,artist=artist,_extra=_extra
+function gxVIDEO::Init,dimensions, stream=stream,title=title,artist=artist,fps=fps,_extra=_extra
   compile_opt hidden
   catch, error_stat
   if error_stat ne 0 then begin
@@ -10,15 +10,17 @@ function gxVIDEO::Init,dimensions, stream=stream,title=title,artist=artist,_extr
   frm=['mp4', 'avi', 'flv', 'gif', 'mjpeg', 'mov', 'swf', 'wav', 'webm']
   formats=strcompress(frm[0],/rem)
   for i=1, n_elements(frm)-1 do formats=formats+'|'+strcompress(frm[i],/rem)
+  default,fps,24
   desc = [ $
     '0, LABEL, Movie Output Options, CENTER', $
     '1, BASE,, ROW, FRAME', $
     '0, DROPLIST,'+ formats+', LABEL_TOP=Movie Format,Row, TAG=format', $
-    '2, Float, 24, LABEL_TOP=Frames per second:, WIDTH=6, TAG=fps', $
+    '2, Float,'+string(fps,format='(i2)')+', LABEL_TOP=Frames per second:, WIDTH=6, TAG=fps', $
     '1, BASE,, ROW', $
     '0, BUTTON, OK, QUIT,TAG=OK', $
     '2, BUTTON, Cancel, QUIT, TAG=CANCEL']
   opt=CW_FORM(desc,/Column,Title='Moview Options')
+  if opt.OK ne 1 then return, !null
   ext=frm[opt.format]
   filename=dialog_pickfile(filter='*.'+ext,$
     DEFAULT_EXTENSION=ext,$

@@ -105,11 +105,11 @@ if ~keyword_set(uploadbttn) then self.wMap2Plotman=widget_button( ExecBase, $
 self.wSaveTb=widget_button( ExecBase, $
             value=gx_bitmap(filepath('bulb.bmp', subdirectory=subdirectory)), $
             /bitmap,tooltip='Save Tb Maps to File') 
-widget_control, self.wSaveTb,map=0           
+widget_control, self.wSaveTb,sensitive=0           
 self.wUploadFreqList=widget_button(self.wToolbarbase, $
             value=gx_bitmap(filepath('open.bmp', subdirectory=subdirectory)), $
             /bitmap,tooltip='Upload frequency list from IDL sav file')           
-widget_control, self.wUploadFreqList,map=0                                          
+widget_control, self.wUploadFreqList,sensitive=0                                          
 
 row_base=widget_base(self.wBase,/row)
 self.wDrawImg = widget_draw( $
@@ -297,7 +297,9 @@ pro gxImgViewWid::OnStartScan
   gx_key=(n_elements(gx_key) ne 0) ? string(gx_key):''
   self.fovmap=(self.model->scanbox())->GetFOVMap()
   map=self.fovmap->get(/map)
+  directions=self.model->GetDirections()
   if tag_exist(map,'gx_key')then map.gx_key=gx_key else map=create_struct(map,'gx_key',gx_key)
+  if tag_exist(map,'directions')then map.directions=directions else map=create_struct(map,'directions',directions)
   self.fovmap->setmap,0,map
  endif
  if widget_valid(self.wSave) then widget_control,self.wSave,sensitive=0
@@ -362,8 +364,8 @@ pro gxImgViewWid::NewRenderer
  end
  if widget_valid(self.wChannels[4])  then widget_control,self.wChannels[4],/destroy
  if tag_exist((*self.info),'channels') then  self.wChannels[4]=widget_combobox(self.wChannbase,value=(*self.info).channels)
- widget_control,self.wSaveTb,map=self->SaveTbButton()
- widget_control,self.wUploadFreqList,map=self->UploadFreqListButton()
+ widget_control,self.wSaveTb,sensitive=self->SaveTbButton()
+ widget_control,self.wUploadFreqList,sensitive=self->UploadFreqListButton()
  self.newPSF=1
  widget_control,self.wPSF[3],set_value=0
 end
@@ -1352,6 +1354,16 @@ pro gxImgViewWid::SetProperty,model=model,fovmap=fovmap,_extra=extra
   if isa(model,'gxmodel') then self.model=model
   if isa(fovmap,'map') then self.fovmap=fovmap
   self->IDLexWidget::SetProperty,_extra=extra
+end
+
+function gxImgViewWid::GetFovMap
+ ;for convenience
+ return,self.fovmap
+end
+
+function gxImgViewWid::GetModel
+ ;for convenience
+ return,self.model
 end
 
 pro gxImgViewWid::GetProperty,wUpload=wUpload,model=model,fovmap=fovmap,_ref_extra=extra

@@ -46,16 +46,14 @@ for k=0l, n_elements(larr)-1 do begin
   
    if arg_present(dem) then begin
      dem[*,k]=(a12*dx3+a34*dx1)/(dx1+dx3)
-
-     T[k]=total(dem[*,k]*(10^logtdem))/total(dem[*,k])
-     N[k]=sqrt(total(dem[*,k]*dt,/double))
-     
+     n2=total(dem[*,k]*dt,/double)
+     T[k]=total(dem[*,k]*(10^logtdem)*dt)/n2
+     N[k]=sqrt(n2)
    endif else begin
      dem=(a12*dx3+a34*dx1)/(dx1+dx3)
-   
-     T[k]=total(dem*(10^logtdem))/total(dem)
-     
-     N[k]=sqrt(total(dem*dt,/double))
+     n2=total(dem*dt,/double)
+     T[k]=total(dem*(10^logtdem)*dt)/n2
+     N[k]=sqrt(n2)
    endelse
 
 skip:

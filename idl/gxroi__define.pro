@@ -86,7 +86,8 @@ function gxROI::ReplaceData,data,nx=nx,ny=ny,compute_grid=compute_grid
   if ~keyword_set(compute_grid) then begin
     return,(((self.parent)->GetVolume())->getflags()).newGrid
   endif
-  return,(!version.os_family eq 'Windows')?self->ComputeGrid():self->ComputeGrid_old()
+  ;return,(!version.os_family eq 'Windows')?self->ComputeGrid():self->ComputeGrid_old()
+  return,self->ComputeGrid()
 end  
 
 pro gxROI::ReplaceFovMap
@@ -169,6 +170,7 @@ function gxROI::ComputeGrid,model=model
   volume->GetVertexAttributeData,'voxel_id',voxel_id
   ;erase upper 16 bits of the voxel id
   voxel_id=ishft(ishft(voxel_id,16),-16)
+  ;if max(dz, min=mindz) eq mindz then voxel_id[*]=gx_voxelid(/chromo)
   ;end erase upper 16 bits
   gx_renderirregularmulti, Nlos, dx, dy, dz, LOSarr, $
     Nvoxels, VoxList, ds, $

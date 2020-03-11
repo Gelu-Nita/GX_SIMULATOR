@@ -400,7 +400,10 @@ pro gxScanBox::NewGrid,xrange=xrange,yrange=yrange,zrange=zrange,nx=nx,ny=ny,com
   widget_control,self.wParmsTable,set_value=table
   self.pData=(self.ImgViewWid)->NewView(*self.info,nx=self.nx,ny=self.ny,xrange=self.xrange,yrange=self.yrange)
   self->MakeGrid
-  if keyword_set(compute_grid) then self->Slice,index 
+  if keyword_set(compute_grid) then begin
+    self.ImgViewWid->OnStartScan
+    self->Slice,index
+  endif
 end
 
 pro gxScanBox::UpdateGrid
@@ -436,8 +439,11 @@ pro gxScanBox::MakeGrid
  ptr_free,self.grid
  
  empty_slice=fltarr(self.nx,self.nz)
- self.grid=ptr_new({grid:ptr_new(),Bx:empty_slice,By:empty_slice,Bz:empty_slice,$
-   parms:dblarr(self.nx,self.nz,n_elements(*self.parms)),slice:empty_slice})                    
+; self.grid=ptr_new({grid:ptr_new(),Bx:empty_slice,By:empty_slice,Bz:empty_slice,$
+;   parms:dblarr(self.nx,self.nz,n_elements(*self.parms)),slice:empty_slice})   
+self.grid=ptr_new({grid:ptr_new(),B:dblarr(self.nx*self.nz,3),$
+   parms:dblarr(self.nx,self.nz,n_elements(*self.parms)),slice:empty_slice})    
+               
 end
 
 pro gxScanBox::CleanGrid,oculted=oculted  
@@ -486,6 +492,7 @@ PRO gxScanBox::Slice,row
   endif
   
   grid=model->GetGrid()
+ if ptr_valid(grid) then (*self.grid).grid=grid
   if ~ptr_valid(grid) then goto, unassigned
 
   sz=model->Size()
@@ -558,54 +565,25 @@ PRO gxScanBox::Slice,row
         end  
     end    
 
-    tm=model->getSTM(mscale=mscale)
     
-    model->GetProperty,wparent=wparent
-    wTopViewCorrection=widget_info(wparent,find_by_uname='GXMODEL:TopViewCorrection')
-    if widget_valid( wTopViewCorrection) then begin
-      TopViewCorrection=widget_info(wTopViewCorrection,/button_set)
-    endif else TopViewCorrection=0
-    
-    if TopViewCorrection then begin
-      ;Here we compute the true LOS orientaion disregarding TopView selection or not
-      model->ResetPosition,/unlock
-      model->GetProperty,transform=tm
-      tm=MSCALE##invert(tm)
-    endif
-    
-    model->getproperty,transform=ctm
-    ex=gx_transform([1,0,0],ctm)-gx_transform([0,0,0],ctm)
-    ey=gx_transform([0,1,0],ctm)-gx_transform([0,0,0],ctm)
-    ez=gx_transform([0,0,1],ctm)-gx_transform([0,0,0],ctm)
-    ex/=norm(ex)
-    ey/=norm(ey)
-    ez/=norm(ez)
-    
-    if TopViewCorrection then begin
-      ;Here we recover the TopView or rotated position
-      model->ResetPosition 
-      model->GetProperty,transform=tm
-      tm=MSCALE##invert(tm)
-    endif  
-
     sz=model->Size()
     vol=fltarr(sz[1],sz[2],sz[3])   
     volume=model->GetVolume()   
-        ;n_0
-        idx=self->name2idx('n_0')
-        if (size(idx))[0] ne 0 then begin
-          volume->GetVertexAttributeData,'n0',n0
-          (*self.grid).parms[*,*,idx]=interpolate(temporary(n0),vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
-          assigned[idx]=1
-        end
+    ;n_0
+    idx=self->name2idx('n_0')
+    if (size(idx))[0] ne 0 then begin
+      volume->GetVertexAttributeData,'n0',n0
+      (*self.grid).parms[*,*,idx]=interpolate(temporary(n0),vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
+      assigned[idx]=1
+    end
 
-        ;T_0
-        idx=self->name2idx('T_0')
-        if (size(idx))[0] ne 0 then begin
-          volume->GetVertexAttributeData,'T0',T0 
-          (*self.grid).parms[*,*,idx]=interpolate(temporary(T0),vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
-          assigned[idx]=1
-        end
+    ;T_0
+    idx=self->name2idx('T_0')
+    if (size(idx))[0] ne 0 then begin
+      volume->GetVertexAttributeData,'T0',T0 
+      (*self.grid).parms[*,*,idx]=interpolate(temporary(T0),vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
+      assigned[idx]=1
+    end
       
 
     
@@ -676,11 +654,6 @@ PRO gxScanBox::Slice,row
       assigned[idx]=1
     end
    
-    
-
-;************
-;;GN Sep 23 2016: Moved the block commented above to allow models like Bifrost to have
-;chromo parameters even if a chromo_id is not defined
 
     volume->GetVertexAttributeData,'chromo_idx',chromo_idx
     ; start for backward compatibility Dec 18 2014!!!!
@@ -725,9 +698,7 @@ PRO gxScanBox::Slice,row
          assigned[idx]=1
        end
      endif
-   end
-   ;;GN Sep 23 2016: end section inserted above   
-   
+   end 
    
     
     ;LOOP OVER FLUXTUBES
@@ -795,56 +766,49 @@ PRO gxScanBox::Slice,row
      endif
    end  
    
-    volume=model->GetVolume()
-    volume->GetVertexAttributeData,'Bx',vol
-    B=dblarr(self.nx*self.nz,3,/nozero)
-    
-    if n_elements(vol) ne 0 then begin
-      B[*]=0
-      B[*,0]=(Interpolate(vol, vol_ind[*, 0], vol_ind[*, 1], vol_ind[*, 2], missing=missing))
-      (*self.grid).Bx+= Reform((B#ex), self.nx, self.nz)  
-      (*self.grid).By+= Reform((B#ey), self.nx, self.nz) 
-      (*self.grid).Bz+= Reform((B#ez), self.nx, self.nz) 
-    end
-    
-    volume->GetVertexAttributeData,'By',vol
-    if n_elements(vol) ne 0 then begin
-      B[*]=0
-      B[*,1]=(Interpolate(vol, vol_ind[*, 0], vol_ind[*, 1], vol_ind[*, 2], missing=missing))
-      (*self.grid).Bx+= Reform((B#ex), self.nx, self.nz)  
-      (*self.grid).By+= Reform((B#ey), self.nx, self.nz) 
-      (*self.grid).Bz+= Reform((B#ez), self.nx, self.nz)  
-    end  
-    
-    volume->GetVertexAttributeData,'Bz',vol
-    if n_elements(vol) ne 0 then begin
-      B[*]=0
-      B[*,2]=(Interpolate(vol, vol_ind[*, 0], vol_ind[*, 1], vol_ind[*, 2], missing=missing))
-      (*self.grid).Bx+= Reform((B#ex), self.nx, self.nz)  
-      (*self.grid).By+= Reform((B#ey), self.nx, self.nz) 
-      (*self.grid).Bz+= Reform((B#ez), self.nx, self.nz)  
-    end 
  
-    
+  
+  volume->GetVertexAttributeData,'Bx',vol    
+  (*self.grid).B[*,0]=Interpolate(vol, vol_ind[*, 0], vol_ind[*, 1], vol_ind[*, 2], missing=missing)
+  volume->GetVertexAttributeData,'By',vol
+  (*self.grid).B[*,1]=Interpolate(vol, vol_ind[*, 0], vol_ind[*, 1], vol_ind[*, 2], missing=missing)
+  volume->GetVertexAttributeData,'Bz',vol
+  (*self.grid).B[*,2]=Interpolate(vol, vol_ind[*, 0], vol_ind[*, 1], vol_ind[*, 2], missing=missing)
+  
+  
+  btm=model->GetBTM()
+  (*self.grid).B=btm##(*self.grid).B
+
   ;SCALE B
   volume->GetProperty,bscale=bscale
   if n_elements(bscale) ne 0 then begin
-   (*self.grid).Bx=Bscale*(*self.grid).Bx
-   (*self.grid).By=Bscale*(*self.grid).By
-   (*self.grid).Bz=Bscale*(*self.grid).Bz
+    (*self.grid).B=Bscale*(*self.grid).B
   end
 
    ;COMPUTE B
-   B=sqrt((*self.grid).Bx^2+(*self.grid).By^2+(*self.grid).Bz^2)
+   B=sqrt(total((*self.grid).B^2,2))
+   
    idx=self->name2idx('B')
    if (size(idx))[0] ne 0 then begin
      (*self.grid).parms[*,*,idx]=B
      assigned[idx]=1
    end
    
+   idx=self->name2idx('Bx')
+   if (size(idx))[0] ne 0 then begin
+     (*self.grid).parms[*,*,idx]=(*self.grid).B[*,0]
+     assigned[idx]=1
+   end
+   
+   idx=self->name2idx('By')
+   if (size(idx))[0] ne 0 then begin
+     (*self.grid).parms[*,*,idx]=(*self.grid).B[*,1]
+     assigned[idx]=1
+   end
+   
    idx=self->name2idx('Bz')
    if (size(idx))[0] ne 0 then begin
-     (*self.grid).parms[*,*,idx]=(*self.grid).Bz
+     (*self.grid).parms[*,*,idx]=(*self.grid).B[*,2]
      assigned[idx]=1
    end
    
@@ -852,7 +816,7 @@ PRO gxScanBox::Slice,row
    idx=self->name2idx('phi')
    if (size(idx))[0] ne 0 then begin
      if (size(idx))[0] ne 0 then begin
-      (*self.grid).parms[*,*,idx]=atan((*self.grid).By,(*self.grid).Bx)/!dtor
+      (*self.grid).parms[*,*,idx]=atan((*self.grid).B[*,1],(*self.grid).B[*,0])/!dtor;atan(By,Bx)/!dtor
       assigned[idx]=1
      end
    end  
@@ -860,7 +824,7 @@ PRO gxScanBox::Slice,row
    ;COMPUTE THETA
    idx=self->name2idx('theta')
    if (size(idx))[0] ne 0 then begin
-     temp=acos((*self.grid).Bz/temporary(B))
+     temp=acos((*self.grid).B[*,2]/B);acos(Bz/B)
      good=where(finite(temp) eq 1,comp=comp,ncomp=ncomp)
      if ncomp gt 0 then  temp[comp]=0
      (*self.grid).parms[*,*,idx]=temp/!dtor
@@ -870,17 +834,12 @@ PRO gxScanBox::Slice,row
    ;COMPUTE ETA
    idx=self->name2idx('TRfactor')
    if (size(idx))[0] ne 0 then begin
-     volume->GetVertexAttributeData,'Bx',vol
-     Bx=Reform((Interpolate(vol, vol_ind[*, 0], vol_ind[*, 1], vol_ind[*, 2], missing=missing)), self.nx, self.nz)  
-     volume->GetVertexAttributeData,'By',vol
-     By=Reform((Interpolate(vol, vol_ind[*, 0], vol_ind[*, 1], vol_ind[*, 2], missing=missing)), self.nx, self.nz)  
-     volume->GetVertexAttributeData,'Bz',vol
-     Bz=Reform((Interpolate(vol, vol_ind[*, 0], vol_ind[*, 1], vol_ind[*, 2], missing=missing)), self.nx, self.nz)  
-     B=sqrt(temporary(Bx)^2+temporary(By)^2+Bz^2)
+     (*self.grid).B=(invert(btm)##(*self.grid).B)
      ;theta is the angle between B and Bz (between the field and normal to TR)
-     costheta=abs(temporary(Bz)/temporary(B))
+     costheta=abs((*self.grid).B[*,2])/B
      ;ez is the box z-axis versor (normal to TR) in the observer coordinate system, where LOS is the z axis
      ;So, phi is the angle betwen the TR normal and LOS, so cosphi is the z component of the ez versor
+     ez=btm[*,2]
      dz=sqrt((*self.parms)[self->name2idx('dS')].value);pixel area
      r=gx_rsun(unit='cm')
      mincosphi=sin(0.5*acos(1-dz/R))
@@ -918,12 +877,18 @@ pro gxScanBox::SaveLOS
  if file ne '' then begin
   widget_control,/hourglass
   self->CleanGrid
-  MULTI_SAVE,/new,log,{row:-1L,parms:(*self.grid).parms},file=file, $
-     header={renderer:self.renderer ,info:(*self.info),nx:self.nx,ny:self.ny,xrange:self.xrange,yrange:self.yrange}
+  ;order  matters
+  self.ImgViewWid->OnStartScan
+  self.ImgViewWid->GetProperty,fovmap=fovmap
+  ;order matters
+  MULTI_SAVE,/new,log,{row:-1L,parms:(*self.grid).parms,grid:transpose(reform((*(*self.grid).grid)[*,*,0,*]),[1,2,0])},file=file, $
+     header={renderer:self.renderer ,info:(*self.info),fovmap:fovmap,nx:self.nx,ny:self.ny,xrange:self.xrange,yrange:self.yrange}
+
+  
   for row=0l,self.ny-1 do begin
    self->slice,row
    self->TV_SLICE
-   MULTI_SAVE,log,{row:row,parms:(*self.grid).parms}
+   MULTI_SAVE,log,{row:row,parms:(*self.grid).parms,grid:transpose(reform((*(*self.grid).grid)[*,*,row,*]),[1,2,0])}
   end
   close,log
  end
