@@ -60,7 +60,7 @@ pro aia,parms,rowdata,path=path,logtdem=logtdem,dem_run=dem_run,qrun=qrun,lrun=l
      if cutoff ge 0 then rparms[9,0:cutoff]=n_hi0
      tr_idx=max(where((ulong(rparms[7,*]) and gx_voxelid(/euv)) ne 0))
      point_in=where((rparms[2,*] gt 0 and rparms[7,*] gt 1 and rparms[9,*] lt n_hi0), Nvox)
-     if tr_idx ge 0 then print,'1:',tr_idx,minmax(point_in)
+     ;if tr_idx ge 0 then print,'1:',tr_idx,minmax(point_in)
      if Nvox gt 0 then begin
         parmin=rparms[*,point_in]
         norm=parmin[0,*]*parmin[1,*]/((4.5e7)^2)
@@ -71,7 +71,7 @@ pro aia,parms,rowdata,path=path,logtdem=logtdem,dem_run=dem_run,qrun=qrun,lrun=l
            tr_idx=max(where((ulong(parmin[7,*]) and gx_voxelid(/euv)) ne 0))
            if tr_idx ge 0 then begin
            point_in=where((parmin[2,*] gt 0 and parmin[9,*] lt n_hi0))
-           print,'2:',tr_idx,minmax(point_in)
+           ;print,'2:',tr_idx,minmax(point_in)
            dem_interpolate,n_tr,t_tr,dem_tr,path=path,logtdem=logtdem,dem_run=dem_tr_run,lrun=lrun,qrun=qrun,$
              larr=parmin[5,tr_idx],qarr=parmin[4,tr_idx],/tr,ss=parmin[11,0]
              tr_factor=parmin[13,tr_idx] gt 0?parmin[12,tr_idx]:1
@@ -91,7 +91,7 @@ pro aia,parms,rowdata,path=path,logtdem=logtdem,dem_run=dem_run,qrun=qrun,lrun=l
              rowdata[pix,chan]= rowdata[pix,chan]+ alog(10.)*dlogt*total(norm*((g*(10.^logtdem))#dem))
              if addTR eq 1 then begin
                rowdata[pix,chan]= rowdata[pix,chan]+ norm_tr*tr_factor*alog(10.)*dlogt*total((g*(10.^logtdem))*dem_tr)
-               print,tr_factor
+               ;print,tr_factor
              end 
            end
          end

@@ -13,7 +13,6 @@ pro dem_interpolate,n,t,dem,path=path,logtdem=logtdem,dem_run=dem_run,qrun=qrun,
   t0=systime(/s)
   x=lrun[0,*]
   dlogt=logtdem[1]-logtdem[0]
-  dt=(10^dlogt-1)*(10^logtdem)
   n=fltarr(n_elements(larr))
   T=fltarr(n_elements(larr))
   if arg_present(dem) then dem=fltarr(n_elements(logtdem), n_elements(larr)) 
@@ -45,15 +44,13 @@ for k=0l, n_elements(larr)-1 do begin
    a34=(a3*dy4+a4*dy3)/(dy3+dy4)
   
    if arg_present(dem) then begin
-     dem[*,k]=(a12*dx3+a34*dx1)/(dx1+dx3)
-     n2=total(dem[*,k]*dt,/double)
-     T[k]=total(dem[*,k]*(10^logtdem)*dt)/n2
-     N[k]=sqrt(n2)
+      dem[*,k]=(a12*dx3+a34*dx1)/(dx1+dx3)
+      N[k]=sqrt(alog(10.)*dlogt*total(dem[*,k]*(10.^logtdem),/double))
+      T[k]=total(dem[*,k]*(10^logtdem)^2,/double)/total(dem[*,k]*(10.^logtdem),/double)   
    endif else begin
-     dem=(a12*dx3+a34*dx1)/(dx1+dx3)
-     n2=total(dem*dt,/double)
-     T[k]=total(dem*(10^logtdem)*dt)/n2
-     N[k]=sqrt(n2)
+      dem=(a12*dx3+a34*dx1)/(dx1+dx3)
+      N[k]=sqrt(alog(10.)*dlogt*total(dem*(10.^logtdem),/double))
+      T[k]=total(dem*((10^logtdem)^2),/double)/total(dem*(10.^logtdem),/double)
    endelse
 
 skip:
