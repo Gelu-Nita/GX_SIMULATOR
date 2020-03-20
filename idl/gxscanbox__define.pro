@@ -58,14 +58,14 @@ xrange=xrange,yrange=yrange,zrange=zrange,Nx=Nx,Ny=Ny,Nz=Nz,nthreads=nthreads,_e
  edit=1
      
  self.wParmsTable=widget_table(font=!defaults.font,base,xsize=4,ysize=n_elements(*self.parms),$
- y_scroll_size=0,x_scroll_size=0,value=*self.parms,COLUMN_WIDTHS =[100,100,100,400],$
+ y_scroll_size=0,x_scroll_size=0,value=*self.parms,COLUMN_WIDTHS =xscale*[100,100,100,400],$
  edit=edit,format=format,$
  column_labels=['Parameter','Value','Unit','Comments'],/RESIZEABLE_COLUMNS,uname='ParmsTable',$
  row_labels=row_labels,SCR_ySIZE=550*xscale)
  geometry1=widget_info(self.wParmsTable,/geometry)
  geometry2=widget_info(self.wSelectRenderer,/geometry)
  self.wRenderer=widget_text(font=!defaults.font,wParmToolbarBase,value=self.renderer,SCR_XSIZE=geometry1.SCR_XSIZE-3*geometry2.SCR_XSIZE,/wrap)
- if n_elements(nthreads) eq 0 then nthreads=!CPU.HW_NCPU
+ if n_elements(nthreads) eq 0 then nthreads=1;!CPU.HW_NCPU
  self.bridges=obj_new('IDL_Container')
  bridge_state=replicate({status:'',task:'',time:'',calls:'',error:''},nthreads)
  for i=0,nthreads-1 do begin
@@ -86,20 +86,22 @@ xrange=xrange,yrange=yrange,zrange=zrange,Nx=Nx,Ny=Ny,Nz=Nz,nthreads=nthreads,_e
   end  
  end 
 
-main_base=get_tlb(wExecBase)
-self.wScan=widget_info(main_base,find_by_uname='SCAN_START')
-self.wPause=widget_info(main_base,find_by_uname='SCAN_PAUSE')
-self.wDebug=widget_info(main_base,find_by_uname='SCAN_DEBUG')
-;self.wAbort=widget_info(main_base,find_by_uname='SCAN_ABORT')
-self.wAbort=widget_info(main_base,find_by_uname='ABORT')
- 
+  main_base=get_tlb(wExecBase)
+  self.wScan=widget_info(main_base,find_by_uname='SCAN_START')
+  self.wPause=widget_info(main_base,find_by_uname='SCAN_PAUSE')
+  self.wDebug=widget_info(main_base,find_by_uname='SCAN_DEBUG')
+  self.wAbort=widget_info(main_base,find_by_uname='ABORT')
+  status_base=widget_base(wExecBase,/row)
  ntasks=self.bridges->Count()
- ;wStatus=widget_label(font=!defaults.font,wToolbarBase,xsize=10,/dynamic_resize,value='')
+ self.wBridges=cw_ObjField(status_base,value=ntasks,increment=1,label='GX Parallel Threads:',uname='wBridges')
+ self.wStatusBar=widget_label(status_base,value='',font=font,/dynamic_resize)
  self.wTaskTable=widget_table(wExecBase,value=bridge_state,xsize=5,ysize=ntasks,$
- y_scroll_size=4,COLUMN_WIDTHS =[100,100,100,100,300],$
+ y_scroll_size=xscale*4,COLUMN_WIDTHS =xscale*[100,100,100,100,300],$
  column_labels=['STATUS','TASK','ON TASK','CALLS','ERROR MESSAGE'],$
  row_labels=[string(1+indgen(ntasks),format='("THREAD",i2)')],$
  /RESIZEABLE_COLUMNS,uname='TaskTable') 
+ 
+ 
  void=self->gxWidget::Init(wParent,self,_extra=_extra)
  return,1
 end
@@ -1084,9 +1086,68 @@ case event.id of
                            widget_control,self.wPowerIndexVolume,Get_Value=pwr_idx
                            goto,update_volume
                          end    
+   self.wBridges: begin
+                   widget_control,/hourglass
+                   widget_control,event.id,get_value=nbridges
+                   nbridges=nbridges>1
+                   widget_control,event.id,set_value=nbridges
+                   if (self.bridges->Count() eq nbridges) then begin
+                     message,'Requested number of bridges matches the number already existing, nothing to be done!',/info
+                     goto, exit_bridges
+                   endif
+                   
+                   widget_control,self.wTaskTable,get_value=bridge_state
+                   
+                   if (self.bridges->Count() gt nbridges) then begin
+                     n=self.bridges->Count()-nbridges
+                     message,string(n,format=(n gt 1)?"('Removing ',g0,' bridges')":"('Removing ',g0,' bridge')"),/info
+                     for i= nbridges, self.bridges->Count()-1  do begin
+                       bridge=self.bridges->Get(position=self.bridges->Count()-1 )
+                       self.bridges->Remove,bridge
+                       widget_control,self.wTaskTable,get_value=bridge_state
+                       obj_destroy,bridge
+                     endfor
+                     bridge_state=bridge_state[0:nbridges-1]
+                     ntasks=n_elements(bridge_state)
+                     row_labels=string(1+indgen(ntasks),format='("THREAD",i2)')
+                     widget_control,self.wTaskTable,set_value=bridge_state,row_labels=[row_labels]
+                     goto,exit_bridges
+                   endif
+                   if (self.bridges->Count() lt nbridges) then begin
+                     n=nbridges-self.bridges->Count()
+                     message,string(n,format=(n gt 1)?"('Adding ',g0,' bridges')":"('Adding ',g0,' bridge')"),/info
+                     start_index=self.bridges->Count()
+                   endif
+                   bridge_state=[bridge_state,replicate({status:'Initializing',task:'',time:'',calls:'',error:''},n)]
+                   ntasks=n_elements(bridge_state)
+                   row_labels=string(1+indgen(ntasks),format='("THREAD",i2)')
+                   widget_control,self.wTaskTable,set_value=bridge_state,table_ysize=ntasks,row_labels=[row_labels]
+                   for i=start_index,nbridges-1 do begin
+                     message,strcompress(string(i+1,format="('Initializing bridge #',i3)")),/info
+                     bridge=obj_new('gxBridge',userdata=self,out=GETENV('IDL_TMPDIR')+GETENV('USER')+strcompress('gxBridge'+string(i)+'.log',/rem))
+                     if obj_valid(bridge) then begin
+                       bridge->SetVar,'id',i
+                       code=bridge->Status(error=error)
+                       case code of
+                         0:bridge_state[i].status='Idle'
+                         1:bridge_state[i].status='Active'
+                         2:bridge_state[i].status='Completed'
+                         3:bridge_state[i].status='Error'
+                         4:bridge_state[i].status='Aborted'
+                         else:bridge_state[i].status='Unknown'
+                       endcase
+                       bridge_state[i].error=error
+                       self.bridges->Add,bridge
+                       widget_control,self.wTaskTable,set_value=bridge_state
+                       widget_control,self.wBridges,set_value=self.bridges->Count()
+                     end
+                   end
+                   exit_bridges:
+                   do_nothing:
+                  end                      
    self.wResetVolumeScale: goto,update_volume                                                                                                                                   
    self.wTV_Slice: self->TV_SLICE    
-   self.wSaveLOS:self->SaveLOS                                                                                           
+   self.wSaveLOS:self->SaveLOS                                                                                          
  else:
  endcase
 return, self->Rewrite(event,auto=auto)
@@ -1166,6 +1227,7 @@ pro gxScanBox::OnStartScan,event,debug=debug
          endcase
        end
      end
+     widget_control,self.wBridges,sensitive=0
      prog_id=gx_progmeter(/init,label='Synthetic map computation progress')
      self.new_view=0
      self.row=-1 
@@ -1229,7 +1291,6 @@ pro gxScanBox::OnCallback,Status, Error,bridge
   bridge_state[id].time=string(t_end-t_start,format="(g0,'s')")
   bridge_state[id].error=error
   bridge_state[id].task=string(row+1,self.ny,format="(i4,' of ',i4)")
-  ;progress=total(float(bridge_state.calls))/self.ny
   progress=float(self.row)/(self.ny-1)
   if progress gt 0 then prog_status=gx_progmeter(prog_id,progress)
   widget_control,self.wTaskTable,set_value=bridge_state
@@ -1270,12 +1331,14 @@ pro gxScanBox::OnCallback,Status, Error,bridge
       self.active=0
     end  
      OnTask=self->OnTask()
+     status_message=strcompress(string(row+1,self.ny,systime(/s)-self.t_start,format="('Progress: ',i4,' rows out of ',i4,' processed in ',f7.3,' seconds')"))
+     widget_control,self.wStatusBar,set_value=status_message
      if self.active eq 0 and OnTask eq 0 and (row+1) eq self.ny then begin
        widget_control,self.wpause,/set_button
        close,self.log
        wait,1
        self.ImgViewWid->OnEndScan
-       print,'SCAN TOTAL TIME:',systime(/s)-self.t_start,'  ',string(row+1,self.ny,format="(i4,' rows of ',i4)")
+       widget_control,self.wBridges,sensitive=1
        widget_control,get_tlb(self.wbase),/clear_events
      end  
 end
@@ -1350,6 +1413,7 @@ pro gxScanBox::OnAbortScan
     widget_control,self.wTaskTable,set_value=bridge_state
    end
    self.ImgViewWid->OnEndScan
+   widget_control,self.wBridges,sensitive=1
    widget_control,get_tlb(self.wbase),/clear_events
 end
 
@@ -1655,7 +1719,7 @@ self={gxScanbox,inherits IDLgrModel, inherits gxWidget,row:0L,$
 Xrange:[0d,0d],Yrange:[0d,0d],Zrange:[0d,0d],Nx:0l,Ny:0l,Nz:0l,dx:0d,dy:0d,dz:0d,$
 wX:0l,wY:0l,wL:0l,wXrange:0L,wyrange:0L,wNx:0l,wNy:0l,wNz:0l,wTV_Slice:0l,wInfo:0l,wToolbar:0l,wHideVolume:0l,TaskManager:obj_new(),ImgViewWid:obj_new(),$
 wHideScanbox:0l,wHideSun:0l,wSlice:0l,wSliceSelect:0l,wSaveLOS:0l,wSquareFOV:0L,wdx:0l,wdy:0l,wAuto:0L,$
-ROI:obj_new(),slicer:obj_new(),wParmsTable:0l,wScan:0L,wPause:0L,wAbort:0L,wDebug:0L,wTaskTable:0L,$
+ROI:obj_new(),slicer:obj_new(),wParmsTable:0l,wScan:0L,wPause:0L,wAbort:0L,wDebug:0L,wTaskTable:0L,wBridges:0l,wStatusBar:0l,$
 renderer:'',wRenderer:0l,wSelectRenderer:0l,pData:ptr_new(),grid:ptr_new(),info:ptr_new(),parms:ptr_new(),bridges:obj_new(),$
 pause:0b,active:0b,new_view:0b,log:0l,t_start:0d,wPlotLOSOptions:0L,wLOS:0L,wPlotLOS:0L,wModelInfo:0l,profiler:obj_new(),Grid2Update:0L,wGrid2Update:0L,wMinVolume:0l,wMaxVolume:0l,wPowerIndexVolume:0l,wResetVolumeScale:0l}
 end
