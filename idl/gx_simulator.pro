@@ -282,8 +282,8 @@ pro gx_simulator_event,event
                   end
                 end
                 
-  state.wScan:state.scanbox->OnStartScan,event
-  state.wDebug:state.scanbox->OnStartScan,event,/debug              
+ state.wScan:state.scanbox->OnStartScan,event
+ state.wDebug:state.scanbox->OnStartScan,event,/debug              
  else:
  endcase
  widget_control,widget_info(event.top,Find_By_Uname='STATEBASE'),set_uvalue=state
@@ -340,13 +340,6 @@ objview_base=WIDGET_BASE(ViewTab,/Align_Center,UNAME='VOLUME VIEW',Title='VOLUME
 wToolbarBase=widget_base(objview_base, /row,/frame,UNAME='TOOLBAR',/toolbar)
 view_menu = WIDGET_BUTTON(wToolbarBase, VALUE=gx_bitmap(filepath('switch_down.bmp', subdirectory=subdirectory)),$
                            /bitmap, /MENU,tooltip='Pulldown menu')
- ;create menu items
-;  wModelsMenu=widget_button(mbar,Value='Models',/menu)
-;  state.wImportModel=widget_button(wModelsMenu,Value='Import Model Data')
-;  state.wUploadModel=widget_button(wModelsMenu,Value='Upload Saved Model')
-;  wHelpMenu=widget_button(mbar,Value='Help',/menu)
-;  state.wHelp=widget_button(wHelpMenu,Value='Help')
-;  state.wAbout=widget_button(wHelpMenu,Value='About')
 
 state.wFOV=widget_button(widget_base(wToolbarBase,/toolbar,/row),$
               value=gx_bitmap(filepath('view.bmp', subdirectory=subdirectory)), $
@@ -404,12 +397,7 @@ state.oObjviewWid = obj_new('gxObjviewWid', $
   space=widget_label(wScanBase,value=' Synthetic map computation: ')
   wRadioButtons=widget_base(wScanBase,/exclusive,/row,/toolbar)
   state.wScan=widget_button(wRadioButtons,value=gx_bitmap(gx_findfile('play.bmp')),tooltip='Compute Radiation Maps (Parallel threads)',/bitmap,uname='SCAN_START')
-  state.wPause=widget_button(wRadioButtons,value=gx_bitmap(gx_findfile('pause.bmp')),tooltip='Pause Map Computation',/bitmap,uname='SCAN_PAUSE')
   if state.expert then state.wDebug=widget_button(wRadioButtons,value=gx_bitmap(gx_findfile('debug.bmp')),tooltip='Debug Map Computation (IDL thread)',/bitmap,uname='SCAN_DEBUG')
-
-
-;  wAbortBase=widget_base(wScanBase,/toolbar,/row,/frame)
-;  state.wAbort=widget_button(wAbortBase,value=gx_bitmap(gx_findfile('abort.bmp')),tooltip='Abort current action',/bitmap,uname='SCAN_ABORT')
 
   ;create SCAN object
   wScanner=Widget_Base(wControlTab,Title='SCANNER')
@@ -419,17 +407,12 @@ state.oObjviewWid = obj_new('gxObjviewWid', $
   widget_control,state.wAbort,set_uvalue= state.Scanbox
   state.Sun->add,state.Scanbox
  
-  
-  
   ;create map view
   wMapControl=Widget_Base(wControlTab,Title='MAGNETIC FIELD EXTRAPOLATION PROJECT',UNAME='MAPCONTROL')
   wMapBase=WIDGET_BASE(ViewTab,/Align_Center,UNAME='MAP VIEW',Title='MAP VIEW',/column)
   ;create gxMapVieWid object
   state.MapView=obj_new('gxMapViewWid',wMapControl,mbar,wMapBase=wMapBase,frame=frame,wxsize=xsize,wysize=ysize)
-  
-  
-
-            
+           
   widget_control,state_base,set_uvalue=state
   WIDGET_CONTROL, /REALIZE, main_base
   XMANAGER, 'gx_simulator', main_base ,/no_block

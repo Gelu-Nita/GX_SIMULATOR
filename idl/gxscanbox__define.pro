@@ -88,7 +88,7 @@ xrange=xrange,yrange=yrange,zrange=zrange,Nx=Nx,Ny=Ny,Nz=Nz,nthreads=nthreads,_e
 
   main_base=get_tlb(wExecBase)
   self.wScan=widget_info(main_base,find_by_uname='SCAN_START')
-  self.wPause=widget_info(main_base,find_by_uname='SCAN_PAUSE')
+  ;self.wPause=widget_info(main_base,find_by_uname='SCAN_PAUSE')
   self.wDebug=widget_info(main_base,find_by_uname='SCAN_DEBUG')
   self.wAbort=widget_info(main_base,find_by_uname='ABORT')
   status_base=widget_base(wExecBase,/row)
@@ -1163,8 +1163,10 @@ pro gxScanBox::DrawPixel,x,y
 end
 
 pro gxScanBox::BridgeReset,bridge
- bridge->Execute,'.reset'
- if !version.os_family eq 'Windows' then bridge->Execute, '@' + pref_get('IDL_STARTUP') else bridge->Execute, '@gx_startup.pro'
+; bridge->Execute,'.reset'
+; if !version.os_family eq 'Windows' then bridge->Execute, '@' + pref_get('IDL_STARTUP') else bridge->Execute, '@gx_startup.pro'
+ gxGetBridgeVar,bridge,(*self.info).execute,vars
+ for k=0,n_elements(vars)-1 do bridge->Execute,'delvar,'+vars[k]
  break_file, self.renderer, disk_log, dir, IDL_Renderer, ext
  dirpath=file_dirname(self.renderer,/mark)
  bridge->SetVar,'dirpath',dirpath
@@ -1182,7 +1184,8 @@ pro gxScanBox::ResetAllBridges
      self->BridgeReset,bridges[i]
      bridges[i]->SetVar,'id',i
      bridges[i]->SetVar,'row',-1
-     bridges[i]->SetVar,'t_start',systime(/s)
+     t_start=systime(/s)
+     bridges[i]->SetVar,'t_start',t_start
      bridges[i]->SetVar,'calls',0
     end
     self.active=0
@@ -1204,9 +1207,13 @@ pro gxScanBox::OnStartScan,event,debug=debug
        'YES':if self.ImgViewWid->SaveLog() eq 0 then goto,cancel
        'CANCEL':begin
                  cancel:
-                 widget_control,self.wpause,/set_button
+;                 widget_control,self.wpause,/set_button
                  self.pause=1
                  self.active=0
+                 widget_control,self.wScan,set_button=0,sensitive=1
+                 if widget_valid(self.wDebug) then begin
+                   widget_control,self.wDebug,set_button=0,sensitive=1
+                 endif
                  return
                 end
        else:
@@ -1228,12 +1235,16 @@ pro gxScanBox::OnStartScan,event,debug=debug
        end
      end
      widget_control,self.wBridges,sensitive=0
+     if ~keyword_set(Debug) then begin
+      if widget_valid(self.wDebug) then widget_control,self.wDebug,sensitive=0
+     endif else widget_control,self.wScan,sensitive=0
      prog_id=gx_progmeter(/init,label='Synthetic map computation progress')
      self.new_view=0
      self.row=-1 
      self.pause=0
+     self.completed=0
      self.active=1
-     newscan=1
+     widget_control,self.wStatusBar,set_value=''
      ; order matters!
      self.ImgViewWid->OnStartScan
      self.ImgViewWid->GetProperty,fovmap=fovmap
@@ -1251,22 +1262,53 @@ pro gxScanBox::OnStartScan,event,debug=debug
    end
    bridges=self.bridges->Get(/all,count=count)
    widget_control,self.wTaskTable,get_value=bridge_state
+   to_execute=bytarr(count)
+;Scheduling LOOP   
     for i=0, count-1 do begin
      status=bridges[i]->Status()
      if (status eq 0) or (status eq 2) then begin
-      if keyword_set(newscan) then begin
-       self->BridgeReset,bridges[i]
-       bridges[i]->SetVar,'id',i
-       bridges[i]->SetVar,'row',-1
-       bridges[i]->SetVar,'calls',0
-       bridges[i]->SetVar,'freqlist',(*self.info).spectrum.x.axis
-       bridge_state[i].calls='0'   
-      end 
-      bridges[i]->SetVar,'t_start',systime(/s)
-      bridges[i]->SetVar,'OnDebug',keyword_set(Debug)
-      bridges[i]->Execute,'wait,.1',/nowait
-     end
-    end
+      self->BridgeReset,bridges[i]
+      bridges[i]->SetVar,'id',i
+      widget_control,self.wTaskTable,get_value=bridge_state
+      bridge_state[i].time=''
+      bridge_state[i].error=''
+      bridge_state[i].calls=0
+      if ~keyword_set(Debug) and (i lt self.ny) then begin
+          self.row+=1   
+          widget_control,self.wSlice,set_value=self.row
+          self->Slice,self.row
+          widget_control,widget_info(get_tlb(self.wBase),Find_By_Uname='STATEBASE'),get_uvalue=state
+          if n_elements(state) ne 0 then state.oObjviewWid->Draw
+          t_start=systime(/s)
+          bridges[i]->SetVar,'t_start',t_start
+          bridges[i]->SetVar,'t_end',t_start
+          bridges[i]->SetVar,'parms',(*self.grid).parms
+          bridges[i]->SetVar,'calls',1
+          bridges[i]->SetVar,'row',self.row   
+          bridges[i]->SetVar,'OnDebug',0
+          bridge_state[i].task=string(i+1,self.ny,format="(i4,' of ',i4)")
+          bridge_state[i].status='Active'
+          to_execute[i]=1     
+      endif else begin
+         bridge_state[i].task='None assigned'
+         bridge_state[i].status='Idle'
+      endelse
+      widget_control,self.wTaskTable,set_value=bridge_state
+     endif
+    endfor
+;ENDScheduling LOOP  
+ if ~keyword_set(Debug) then begin      
+  for id=0, count-1 do begin
+    if to_execute[id] then bridges[id]->Execute,(*self.info).execute,/nowait
+  endfor
+ endif else begin
+  bridge_state[0].task='On Debug'
+  bridge_state[0].status='Active'
+  bridges[0]->SetVar,'row',-1
+  bridges[0]->SetVar,'OnDebug',1
+  bridges[0]->Execute,'wait,0.1',/nowait
+  widget_control,self.wTaskTable,set_value=bridge_state
+ endelse
  endif else self.pause=1
 end
 
@@ -1278,39 +1320,46 @@ pro gxScanBox::OnCallback,Status, Error,bridge
   OnDebug=bridge->GetVar('OnDebug')
   id=bridge->GetVar('id')
   calls=bridge->GetVar('calls')
-  widget_control,self.wTaskTable,get_value=bridge_state
-  bridge_state[id].calls=calls
-  case status of 
-   0:bridge_state[id].status='Idle'
-   1:bridge_state[id].status='Active'
-   2:bridge_state[id].status='Completed'
-   3:bridge_state[id].status='Error'
-   4:bridge_state[id].status='Aborted'
-   else:bridge_state[id].status='Unknown'
-  endcase
-  bridge_state[id].time=string(t_end-t_start,format="(g0,'s')")
-  bridge_state[id].error=error
-  bridge_state[id].task=string(row+1,self.ny,format="(i4,' of ',i4)")
-  progress=float(self.row)/(self.ny-1)
-  if progress gt 0 then prog_status=gx_progmeter(prog_id,progress)
-  widget_control,self.wTaskTable,set_value=bridge_state
   if row ge 0 and row lt self.ny and status eq 2 then begin
    (*self.pData)[*,row,*,*,*]=bridge->GetVar('rowdata')
+   self.completed+=1
    self.ImgViewWid->SelectImg
    parms=bridge->GetVar('parms')
    MULTI_SAVE,self.log,{row:long(row),parms:parms,data:(*self.pData)[*,row,*,*,*]},file=GETENV('IDL_TMPDIR')+GETENV('USER')+'GX_Simulator.log', header=(*self.info)
+   widget_control,self.wTaskTable,get_value=bridge_state
+   case status of
+     0:bridge_state[id].status='Idle'
+     1:bridge_state[id].status='Active'
+     2:bridge_state[id].status='Completed'
+     3:bridge_state[id].status='Error'
+     4:bridge_state[id].status='Aborted'
+     else:bridge_state[id].status='Unknown'
+   endcase
+   bridge_state[id].time=string(t_end-t_start,format="(g0,'s')")
+   bridge_state[id].task=string(row+1,self.ny,format="(i4,' of ',i4)")
+   bridge_state[id].calls=calls
+   bridge_state[id].error=error
+   widget_control,self.wTaskTable,set_value=bridge_state
+   prog=float(self.completed)/(self.ny)
+   if prog gt 0 then prog_status=gx_progmeter(prog_id,prog)
+   status_message=strcompress(string(self.completed,self.ny,systime(/s)-self.t_start,format="('Progress: ',i4,' rows out of ',i4,' in process or processed in ',f7.3,' seconds')"))
+   widget_control,self.wStatusBar,set_value=status_message
+   if (self.completed eq self.ny) and (self.active eq 1) then begin
+    self->OnEndScan
+    return
+   endif
   end 
-     if (self.row lt self.ny-1) then begin
+  if (self.row lt self.ny-1) then begin
         if ~self.pause then begin
           self.row+=1   
           widget_control,self.wSlice,set_value=self.row
           self->Slice,self.row
           widget_control,widget_info(get_tlb(self.wBase),Find_By_Uname='STATEBASE'),get_uvalue=state
           if n_elements(state) ne 0 then state.oObjviewWid->Draw
-          bridge->SetVar,'t_start',systime(/s)
           bridge->SetVar,'parms',(*self.grid).parms
           bridge->SetVar,'calls',calls+1
           bridge->SetVar,'row',self.row
+          bridge->SetVar,'t_start',systime(/s)
           wait,0.1
           ev=widget_event(self.wAbort,/nowait)
           if ev.id eq self.wAbort then self->OnAbortScan
@@ -1327,65 +1376,27 @@ pro gxScanBox::OnCallback,Status, Error,bridge
            bridge->Execute,'wait,0.1',/nowait
           endif else bridge->Execute,(*self.info).execute,/nowait
         endif    
-    endif else begin
-      self.active=0
-    end  
-     OnTask=self->OnTask()
-     status_message=strcompress(string(row+1,self.ny,systime(/s)-self.t_start,format="('Progress: ',i4,' rows out of ',i4,' processed in ',f7.3,' seconds')"))
-     widget_control,self.wStatusBar,set_value=status_message
-     if self.active eq 0 and OnTask eq 0 and (row+1) eq self.ny then begin
-       widget_control,self.wpause,/set_button
-       close,self.log
-       wait,1
-       self.ImgViewWid->OnEndScan
-       widget_control,self.wBridges,sensitive=1
-       widget_control,get_tlb(self.wbase),/clear_events
-     end  
+    endif 
 end
 
-pro gxScanBox::OnPause,event
- self.Pause=event.select
- print,'Pause:',self.pause
-end
-
-function gxScanBox::OnTask
-      bridges=self.bridges->Get(/all,count=count)
-      status=0
-      for i=0,count-1 do begin
-       code=bridges[i]->Status(error=error)
-       if code eq 1 then status=1
-       widget_control,self.wTaskTable,get_value=bridge_state
-        case code of 
-         0:bridge_state[i].status='Idle'
-         1:bridge_state[i].status='Active'
-         2:bridge_state[i].status='Completed'
-         3:bridge_state[i].status='Error'
-         4:bridge_state[i].status='Aborted'
-         else:bridge_state[i].status='Unknown'
-        endcase
-        if code ne 1 then begin
-          t_end=bridges[i]->GetVar('t_end')
-          t_start=bridges[i]->GetVar('t_start')
-          bridge_state[i].time=string(t_end-t_start,format="(g0,'s')")
-          row=bridges[i]->GetVar('row')
-          bridge_state[i].task=string(row+1,self.ny,format="(i4,' of ',i4)")
-          calls=bridges[i]->GetVar('calls')
-          bridge_state[i].calls=calls
-        end
-        bridge_state[i].error=error
-        widget_control,self.wTaskTable,set_value=bridge_state
-      endfor
-      return,status
+pro gxScanBox::OnEndSCan
+  if self.log gt 0 then close,self.log
+  if self.log gt 0 then free_lun,self.log
+  self.active=0
+  self.pause=1
+  wait,1
+  self.ImgViewWid->OnEndScan
+  widget_control,self.wScan,set_button=0,sensitive=1
+  if widget_valid(self.wDebug) then begin
+    widget_control,self.wDebug,set_button=0,sensitive=1
+  endif
+  widget_control,self.wBridges,sensitive=1
+  widget_control,get_tlb(self.wbase),/clear_events
 end
 
 pro gxScanBox::OnAbortScan
-  ;if self.active eq 0 then return
-  close,/all
-  widget_control,self.wScan,set_button=0
-  widget_control,self.wPause,/set_button
-  self.pause=1
+  self.active=1; to make sure deactivated buttons are properly reactivated, self.active will be set to zero by OnEndScan
   self.new_view=1
-  self.active=0
   bridges=self.bridges->Get(/all,count=count)
   for i=0, count-1 do begin
    CATCH, Error_status
@@ -1412,9 +1423,7 @@ pro gxScanBox::OnAbortScan
     bridge_state[i].task=string(self.row,format='(i4)')
     widget_control,self.wTaskTable,set_value=bridge_state
    end
-   self.ImgViewWid->OnEndScan
-   widget_control,self.wBridges,sensitive=1
-   widget_control,get_tlb(self.wbase),/clear_events
+   self->OnEndScan
 end
 
 pro gxScanBox::TV_SLICE
@@ -1715,7 +1724,7 @@ pro gxScanBox::Cleanup
 end
  
 pro gxScanbox__define
-self={gxScanbox,inherits IDLgrModel, inherits gxWidget,row:0L,$
+self={gxScanbox,inherits IDLgrModel, inherits gxWidget,row:0L,completed:0l,$
 Xrange:[0d,0d],Yrange:[0d,0d],Zrange:[0d,0d],Nx:0l,Ny:0l,Nz:0l,dx:0d,dy:0d,dz:0d,$
 wX:0l,wY:0l,wL:0l,wXrange:0L,wyrange:0L,wNx:0l,wNy:0l,wNz:0l,wTV_Slice:0l,wInfo:0l,wToolbar:0l,wHideVolume:0l,TaskManager:obj_new(),ImgViewWid:obj_new(),$
 wHideScanbox:0l,wHideSun:0l,wSlice:0l,wSliceSelect:0l,wSaveLOS:0l,wSquareFOV:0L,wdx:0l,wdy:0l,wAuto:0L,$
