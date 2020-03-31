@@ -5,7 +5,7 @@ pro aia,parms,rowdata,path=path,logtdem=logtdem,dem_run=dem_run,qrun=qrun,lrun=l
      end
  if arg_present(info) then begin
      if n_elements(info) eq 0 then begin
-       Parms=Replicate({Name:'unused',Value:0d,Unit:'',Hint:''},14)
+       Parms=Replicate({Name:'unused',Value:0d,Unit:'',Hint:''},15)
        Parms[0].Name='dS'          & Parms[0].Value=0.180E+19     & Parms[0].Unit='cm^2'     & Parms[0].Hint='Source/pixel Area
        Parms[1].Name='dR'          & Parms[1].Value=0.600E+09     & Parms[1].Unit='cm'       & Parms[1].Hint='Source/voxel Depth
        Parms[2].Name='T_0'         & Parms[2].Value=0.200E+08     & Parms[2].Unit='K'        & Parms[2].Hint='Plasma Temperature
@@ -19,7 +19,8 @@ pro aia,parms,rowdata,path=path,logtdem=logtdem,dem_run=dem_run,qrun=qrun,lrun=l
        Parms[10].Name='n_hi0'    & Parms[10].Value=1         & Parms[10].Unit='cm^{-3}'        & Parms[10].Hint='Neutral Hydrogen density coronal cutoff'
        Parms[11].Name='SS'       & Parms[11].Value=0            & Parms[11].Unit=''        & Parms[11].Hint='Use steady state DEM table'
        Parms[12].Name='TRfactor'     & Parms[12].Value=0            & Parms[12].Unit=''        & Parms[12].Hint='TR factor'
-       Parms[13].Name='ApplyTRfactor'     & Parms[13].Value=1            & Parms[13].Unit=''        & Parms[13].Hint='Apply TR Factor'
+       Parms[13].Name='ApplyTRfactor'     & Parms[13].Value=1            & Parms[13].Unit='0/1'        & Parms[13].Hint='Apply TR Factor'
+       Parms[14].Name='DEMavg'     & Parms[14].Value=0            & Parms[14].Unit='0/1'        & Parms[14].Hint='DEM Interpolation Method'
     endif else parms=info.parms
      restore,response_path
      nchan=n_elements(response.channels)
@@ -65,7 +66,7 @@ pro aia,parms,rowdata,path=path,logtdem=logtdem,dem_run=dem_run,qrun=qrun,lrun=l
         parmin=rparms[*,point_in]
         norm=parmin[0,*]*parmin[1,*]/((4.5e7)^2)
        if useDEM eq 1 then begin
-         dem_interpolate,n,t,dem,path=path,logtdem=logtdem,dem_run=dem_run,qrun=qrun,lrun=lrun,qarr=parmin[4,*],larr=parmin[5,*],ss=parmin[11,0]
+         dem_interpolate,n,t,dem,path=path,logtdem=logtdem,dem_run=dem_run,qrun=qrun,lrun=lrun,qarr=parmin[4,*],larr=parmin[5,*],ss=parmin[11,0],avgdem=parmin[14,0]
          tr_factor=1
          if parmin[8,0] eq 1 then begin
            tr_idx=max(where((ulong(parmin[7,*]) and gx_voxelid(/euv)) ne 0))
@@ -73,7 +74,7 @@ pro aia,parms,rowdata,path=path,logtdem=logtdem,dem_run=dem_run,qrun=qrun,lrun=l
            point_in=where((parmin[2,*] gt 0 and parmin[9,*] lt n_hi0))
            ;print,'2:',tr_idx,minmax(point_in)
            dem_interpolate,n_tr,t_tr,dem_tr,path=path,logtdem=logtdem,dem_run=dem_tr_run,lrun=lrun,qrun=qrun,$
-             larr=parmin[5,tr_idx],qarr=parmin[4,tr_idx],/tr,ss=parmin[11,0]
+             larr=parmin[5,tr_idx],qarr=parmin[4,tr_idx],/tr,ss=parmin[11,0],avgdem=parmin[14,0]
              tr_factor=parmin[13,tr_idx] gt 0?parmin[12,tr_idx]:1
              addTR=(n_tr[0] gt 0 and t_tr[0] gt 0)
            endif else addTR=0

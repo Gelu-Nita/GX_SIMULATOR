@@ -224,8 +224,12 @@ pro gx_simulator_event,event
                        end    
                                             
                        state.sun->Add,model
-                       state.oObjviewWid->Draw                     
+                       state.oObjviewWid->Draw  
+                       ;widget_control,event.top,redraw=0 
+                       t0=systime(/s)& print,t0                 
                        void=obj_new('gxwidget',wParent,model)
+                       print,systime(/s)-t0
+                       ;widget_control,event.top,redraw=1  
                        if ~obj_isa(void,'gxwidget') then begin
                         answ=dialog_message('GX model initialization failed. Operation aborted!')
                         if widget_valid(wParent) then widget_control,wParent,/destroy
@@ -316,7 +320,7 @@ state.view->Add,state.sun
 
 
 main_base= WIDGET_BASE(Title =keyword_set(expert)?'GX SIMULATOR (Expert Version)':'GX SIMULATOR',/column,UNAME='MAINBASE',/TLB_KILL_REQUEST_EVENTS,TLB_FRAME_ATTR=0,$
-  x_scroll_size=0.95*scr[0],y_scroll_size=scr[1]*0.90,/scroll);mbar=mbar
+  x_scroll_size=0.95*scr[0],y_scroll_size=scr[1]*0.90,/scroll)
 
 state_base=widget_base(main_base, /column,UNAME='STATEBASE')
 upper_base=WIDGET_BASE(state_base,/row)

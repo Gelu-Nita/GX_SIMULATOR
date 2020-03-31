@@ -74,7 +74,7 @@ if not exist(wysize) then wysize = wxsize * 1.1
 self.plotman_obj = obj_new ('plotman_heir', mainbase=self.wPlotmanBase, /multi_panel, $
     wxsize=wxsize, wysize=wysize, $
     colortable=colortable, $
-    widgets=widgets, error=error);,font=!defaults.font)
+    widgets=widgets, error=error)
     
 if error then return,0
 

@@ -944,12 +944,15 @@ function gxVolume::NewNT,newkey,oldkey
   self->GetVertexAttributeData,'q0_formula',q0_formula
   self->GetVertexAttributeData,'q0_coeff',q0_coeff
   self->GetVertexAttributeData,'NTkey',oldkey
+  self.parent->GetProperty,wparent=wparent
+  id=widget_info(wparent,find_by_uname='GXMODEL:DEMAVG')
+  if widget_valid(id) then widget_control,id,get_value=demavg 
   default,oldkey,byte('')
   default,newkey,oldkey
   if self.flags.NTDEM then newkey=byte(strcompress('q=['+arr2str(q0_coeff)+'] & q0='+string(byte(q0_formula))+' & q='+string(byte(q_formula))+$
-    ' & NTDEM='+string(self.flags.NTDEM)+' & NTSSDEM='+string(self.flags.NTSSDEM)))
+    ' & NTDEM='+string(self.flags.NTDEM)+' & NTSSDEM='+string(self.flags.NTSSDEM))+(n_elements(demavg) gt 0? string(demavg,format="(' & DEMAVG=',i1)"):''))
   if self.flags.NTSS then newkey=byte(strcompress('q=['+arr2str(q0_coeff)+'] & q0='+string(byte(q0_formula))+' & q='+string(byte(q_formula))+$
-    ' & NTSS='+string(self.flags.NTSS)))
+    ' & NTSS='+string(self.flags.NTSS))+(n_elements(demavg) gt 0? string(demavg,format="(' & DEMAVG=',i1)"):''))
   flags=self->setflags(newNT=(string(newkey) ne string(oldkey)))
   return,flags.newNT
 end
@@ -973,8 +976,12 @@ pro gxVolume::ComputeNT,question=question,quiet=quiet,force=force
   if self.flags.NTDEM then begin
     if n_elements(L) gt 0 and (n_elements(L) eq n_elements(Q))  then begin
       widget_control,/hourglass
-      ss=((keyword_set(ss)?ss:0) eq 1)?1:0
-      dem_interpolate,n,t,Qarr=Q,Larr=L,ss=self.flags.NTSSDEM
+      self.parent->GetProperty,wparent=wparent
+      id=widget_info(wparent,find_by_uname='GXMODEL:DEMAVG')
+      if widget_valid(id) then widget_control,id,get_value=avgdem
+      dem_interpolate,n,t,Qarr=Q,Larr=L,ss=self.flags.NTSSDEM,avgdem=avgdem,duration=duration
+      id=widget_info(wparent,find_by_uname='GXMODEL:DEMDT')
+      if widget_valid(id) then widget_control,id,set_value=strcompress(string(duration,format="('DEM interpolation computed in',f7.2,' s')"))
       self->SetVertexAttributeData,'n',n
       self->SetVertexAttributeData,'T',t
       if self.flags.NTSSDEM then flags=self->setflags(/storedNTSSDEM) $

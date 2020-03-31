@@ -436,14 +436,11 @@ pro gxScanBox::MakeGrid
  
  if self.nx eq 0 or self.ny eq 0 or self.nz eq 0 then return
  
- if ptr_valid(self.grid) then ptr_free,(*self.grid).grid
- 
  ptr_free,self.grid
  
  empty_slice=fltarr(self.nx,self.nz)
-; self.grid=ptr_new({grid:ptr_new(),Bx:empty_slice,By:empty_slice,Bz:empty_slice,$
-;   parms:dblarr(self.nx,self.nz,n_elements(*self.parms)),slice:empty_slice})   
-self.grid=ptr_new({grid:ptr_new(),B:dblarr(self.nx*self.nz,3),$
+  
+ self.grid=ptr_new({grid:ptr_new(),B:dblarr(self.nx*self.nz,3),$
    parms:dblarr(self.nx,self.nz,n_elements(*self.parms)),slice:empty_slice})    
                
 end
@@ -601,6 +598,7 @@ PRO gxScanBox::Slice,row
           assigned[idx]=1 
         end
      end 
+     
 
      idx=self->name2idx('length')
      if (size(idx))[0] ne 0 then begin
@@ -648,6 +646,15 @@ PRO gxScanBox::Slice,row
       assigned[idx]=1
     end
     
+    idx=self->name2idx('DEMAVG')
+    if (size(idx))[0] ne 0 then begin
+       model->GetProperty,wparent=wparent
+       id=widget_info(wparent,find_by_uname='GXMODEL:DEMAVG')
+       if widget_valid(id) then widget_control,id,get_value=demavg
+      (*self.grid).parms[*,*,idx]=demavg
+      assigned[idx]=1
+    end
+       
     
     idx=self->name2idx('hc_angle')
     if (size(idx))[0] ne 0 then begin
@@ -1221,7 +1228,7 @@ pro gxScanBox::OnStartScan,event,debug=debug
      end
      self.ImgViewWid->GetProperty,model=MOI
      if obj_valid(MOI) then begin
-       self.Grid2Update=((moi->GetVolume())->getflags()).newGrid
+       self.Grid2Update=ptr_valid(moi->GetGrid())?((moi->GetVolume())->getflags()).newGrid:1
        if ~ptr_valid(self.grid) or self.Grid2Update then begin
          answ=dialog_message('You must compute the rendering grid to perform this operation. Do you want to proceed now?',/question)
          case strupcase(answ) of

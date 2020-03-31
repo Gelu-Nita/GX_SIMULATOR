@@ -302,8 +302,9 @@ pro gxWidget::CreatePanel
    
     
     wPlotBase=widget_base(wbase,/row,uname=prefix+'ATTRIBUTEPLOTBASE')
-    xsize=fix(450*xscale)
-    ysize=fix(300*xscale)
+    device, get_screen_size=scr
+    ysize = fix (scr[0] * .25)
+    xsize = ysize*(5./4)
     wAttributeplot=widget_draw( wPlotBase, $
         xsize=xsize, $
         ysize=ysize, $
@@ -336,6 +337,24 @@ pro gxWidget::CreatePanel
    wPlotOptions=cw_objPlotOptions(font=font,wOptionBase,uname=prefix+'AttributePlotOptions',/ylog,/xlog)            
   
   if flags.hasBL  then begin
+   if keyword_set(expert) then begin
+    for avgdem=0, 6 do begin
+      dem_interpolate,avgdem=avgdem, method=method,/expert,/info
+      buttons=n_elements(buttons) eq 0?method:[buttons,method]
+    endfor
+   endif else begin
+    for avgdem=0, 3 do begin
+      dem_interpolate,avgdem=avgdem, method=method,/info
+      buttons=n_elements(buttons) eq 0?method:[buttons,method]
+    endfor
+   endelse
+   wLabel=widget_label(wOptionBase,value='DEM Interpolation Method',font=font)
+   wDEMinterpolate=cw_bgroup(font=font,wOptionBase,$
+      buttons,$
+      set_value=0 ,$
+      /exclusive,/return_index,/no_release,uname=prefix+'DEMAVG')
+   wLabel=widget_label(wOptionBase,value='',font=font,/dynamic,uname=prefix+'DEMDT',/Align_left)
+   
    wTRPage=Widget_Base(wComponentTab, title='Transition Region Attributes')
    set_plot,'win'
    device, get_screen_size=scr
@@ -1233,7 +1252,11 @@ end
                          volume->PlotModelAttributes
                          all=self.subject->Get(/all,isa='GXFLUXTUBE',count=count)
                          for t=0,count-1 do all[t]->SelectThermalModel,usedem=usedem   
-                       END    
+                       END  
+     'GXMODEL:DEMAVG': BEGIN
+                        volume=(self.subject->GetVolume())
+                        flags=volume->setflags(newNT=volume->NewNT())
+                       END                    
      'GXMODEL:TRMASKMENU':begin
                             self.subject->ReplaceTRMask,event
                           end  
