@@ -18,7 +18,8 @@ pro Gauss2Drot, u, a, f,noreform=noreform
 ;   f - 1D array containing the computed beam values;
 ;       before plotting etc., it must be converted (e.g., by reform
 ;       procedure) to a 2D array.
-
+;Modification history:       
+;2-April-2020 GN: corrected the Gaussian distribution function by adding a missing "2" in the denominator of the exponents
  N=n_elements(u)/2
  x=u[0 : N-1]
  y=u[N : n_elements(u)-1]
@@ -33,6 +34,6 @@ pro Gauss2Drot, u, a, f,noreform=noreform
  xx= x*cos(theta)+y*sin(theta)
  yy=-x*sin(theta)+y*cos(theta)
  
- f=exp(-xx^2/sx^2-yy^2/sy^2)
+ f=exp(-xx^2/2/sx^2-yy^2/2/sy^2)
  if ~keyword_set(noreform) then f=reform(f, N^2)
 end

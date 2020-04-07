@@ -717,8 +717,9 @@ pro gxImgViewWid::Convolve,compute=compute
   
   for k=0,n_elements(a)-1 do begin
      if self.newPSF eq 1 then begin
-      PSF=gaussian_function([a[k],b[k]]/[dx,dy],/normalize,width=width,/double)
-      if phi ne 0 then PSF=rot(PSF,phi)
+;      PSF=gaussian_function([a[k],b[k]]/[dx,dy],/normalize,width=width,/double)
+;      if phi ne 0 then PSF=rot(PSF,phi)
+      psf=gx_psf([a[k],b[k]]/[dx,dy],phi,width)
       kernel[*,*,k]=psf
      endif else psf=(*self.PSF )[*,*,k]
       img=self->getImg(k,/raw,psf=psf)
@@ -775,30 +776,11 @@ function gxImgViewWid::GetImg,k,idx,raw=raw,psf=psf
   if n_elements(psf) ne 0 then begin
     case size(img,/n_dim) of
       2: begin
-          if n_elements(img[*,*]) mod 2 eq 0 then begin
-            sz=size(img)
-            ksz=size(psf)
-            tmp=dblarr(ksz[1],ksz[2])
-            tmp[0:sz[1]-1,0:sz[2]-1]=img
-            tmp=convol_fft(tmp,PSF)
-            img[*,*]=tmp[0:sz[1]-1,0:sz[2]-1]
-          endif else img=convol_fft(img,PSF)
+          img=convol_fft(img,PSF)
          end
       else: begin 
-             if n_elements(img[*,*]) mod 2 eq 0 then begin
-              sz=size(img)
-              ksz=size(psf)
-              tmp=dblarr(ksz[1],ksz[2],sz[3])
-              tmp[0:sz[1]-1,0:sz[2]-1,*]=img
-              for i=0,sz[3]-1 do tmp[*,*,i]=convol_fft(tmp[*,*,i],PSF)
-;              tmp[*,*,0]=convol_fft(tmp[*,*,0],PSF)
-;              tmp[*,*,1]=convol_fft(tmp[*,*,1],PSF)
-              img[*,*,*]=tmp[0:sz[1]-1,0:sz[2]-1,*]
-              endif else begin
-               for i=0,sz[3]-1 do tmp[*,*,i]=convol_fft(img[*,*,i],PSF,kernel_fft=Kernel)
-;               img[*,*,0]=convol_fft(img[*,*,0],PSF,kernel_fft=Kernel)
-;               img[*,*,1]=convol_fft(img[*,*,1],PSF, kernel_fft=Kernel)
-              endelse
+             sz=size(img)
+             for i=0,sz[3]-1 do img[*,*,i]=convol_fft(img[*,*,i],PSF,kernel_fft=Kernel)
             end
     endcase
     return,img
