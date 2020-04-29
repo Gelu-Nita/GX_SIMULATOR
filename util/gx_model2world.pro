@@ -29,7 +29,7 @@ pro gx_model2world,model,lines=lines,fluxtubes=fluxtubes,fov=fov,box=box,over=ov
   endif
   refmaps=*(model->Refmaps()) 
   for i=0, refmaps->get(/count)-1 do begin
-    if refmaps->get(i,/id) eq 'Bz_reference' then ref=refmaps->get(i,/map)
+    if refmaps->get(i,/id) eq 'Bz_reference' or refmaps->get(i,/id) eq 'LOS_magnetogram' then ref=refmaps->get(i,/map)
   endfor
   if ~valid_map(ref) then begin
     for i=0, refmaps->get(/count)-1 do begin

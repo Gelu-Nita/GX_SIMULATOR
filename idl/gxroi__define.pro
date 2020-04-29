@@ -50,8 +50,10 @@ pro gxROI::DisplayMap,select
  if STRUPCASE(map.xunits) eq 'DEG' then CEA=1
  if strupcase(strmid(map.id,0,4))eq 'BASE' then CEA=1
  self.parent->GetProperty,wParent=wParent
- hide_fov=widget_info(wparent,Find_By_Uname='GXMODEL:HideFovMap')
- hide_cea=widget_info(wparent,Find_By_Uname='GXMODEL:HideMap')
+ if widget_valid(wParent) then begin
+   hide_fov=widget_info(wparent,Find_By_Uname='GXMODEL:HideFovMap')
+   hide_cea=widget_info(wparent,Find_By_Uname='GXMODEL:HideMap')
+ end
  if select le 2 or CEA then begin
   ;map=drot_map(map,ref_map=ref_map)
   sz=size(ref_map.data)
@@ -59,8 +61,10 @@ pro gxROI::DisplayMap,select
   display=self->GetBaseScreen()
   display->SetProperty,ALPHA_CHANNEL=1,BLEND_FUNCTION = [3, 4],hide=0
   (self->GetFOVscreen())->SetProperty,hide=1
-  widget_control,hide_fov,set_button=1
-  widget_control,hide_cea,set_button=0
+  if widget_valid(wParent) then begin
+    widget_control,hide_fov,set_button=1
+    widget_control,hide_cea,set_button=0
+  end  
  endif else begin
   map=gx_remap(map,self.fovmap->get(/xrange),self.fovmap->get(/yrange),[self.nx,self.ny],time=ref_map.time)
   ;map=extract_map(map,xrange=self.fovmap->get(/xrange),yrange=self.fovmap->get(/yrange),/exact)

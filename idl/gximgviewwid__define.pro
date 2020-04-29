@@ -408,6 +408,7 @@ end
 
 pro gxImgViewWid::PlotProfile,objxy
 compile_opt hidden
+  if !version.os_family eq 'Windows' then set_plot,'win' else set_plot,'x'
   widget_control,self.wPlot,get_value=window
   geometry=widget_info(self.wPlot,/geometry)
   wset,self.wPixMap

@@ -11,5 +11,6 @@ pro create_box_20160220
  out_dir='C:\gx_models';
  tmp_dir='C:\jsoc_cache'
  gx_fov2box,time,center_arcsec=center_arcsec,size_pix=size_pix,dx_km=dx_km,out_dir=out_dir,tmp_dir=tmp_dir,/cea,$
-                     /save_empty_box,/save_potential,/save_bounds,/use_potential,/uv,/euv,/empty_box
+                     /save_empty_box,/save_potential,/save_bounds,/uv,/euv,$
+                     use_potential=!version.os_family ne 'Windows',/center_vox
 end

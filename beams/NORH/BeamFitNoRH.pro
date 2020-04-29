@@ -1,4 +1,4 @@
-function BeamFitNoRH,file, x, y, beam, gx=gx, quiet=quiet
+function BeamFitNoRH,file, x, y, beam,gx=gx, quiet=quiet
 norh_rd_img,file, index, data
 beam=norh_beam(index)
 spp=index.norh.sec_per_pix

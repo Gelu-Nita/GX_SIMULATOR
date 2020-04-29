@@ -225,5 +225,6 @@ if tag_exist(pbox,'oidx')  then begin
     break_file,(pbox).id, disk_log, dir, name, ext, fversion, node, /last_dot
     box=add_tag(box,name+'.CHR','id',/no_copy,/duplicate)
   end
+ if tag_exist((pbox),'execute') then  box=add_tag(box,pbox.execute,'execute',/no_copy,/duplicate)
 return,box
 end

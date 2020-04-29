@@ -10,6 +10,9 @@ function gxModel::INIT,EW=EW,NS=NS,_extra=_extra
  self.FullROI=1
  self.subgridpts=10
  self.steps=50000
+ ;Here, the previously unused lock property is internaly repurposed 
+ ;to store the newly introduced WinOS property
+ self.lock=(!VERSION.OS_FAMILY eq 'Windows')
  return,self->IDLgrModel::Init(_extra=_extra)
 end
 
@@ -50,133 +53,138 @@ tr_layer=where((id and 1) gt 0,count)
 if count gt 0 then begin
   tr_idx=max((array_indices(id,tr_layer))[2,*])+1
 endif else tr_idx=0
-default,subgridpts,self.subgridpts
-default,dxdydz,[1., 1., 1.]
-void=self->GetB(Bx=Bx,By=By,Bz=Bz)
-dx=self.YCOORD_CONV[1]
-dy=self.YCOORD_CONV[1]
-dz=self.ZCOORD_CONV[1]
 sx=self.size[1]
 sy=self.size[2]
 sz=self.size[3]
-
 if n_elements(p) eq 0 then p,randomu(seed,3)*[sx,sy,sz]-1
-x=p[0]
-y=p[1]
-z=p[2]
-x0=x
-y0=y
-z0=z
-top=[x,y,z]
-s_top=0
-lb=[interpolate(bx,x,y,z),interpolate(by,x,y,z),interpolate(bz,x,y,z)]
-ls=0.0
-s=0.0
-btop=norm(lb)
-lx=x
-ly=y
-lz=z
-iter=0l
-fin=1
-while iter lt self.steps and x ge 0 and x le sx-1 and y ge 0 and y le sy-1 and z ge 0 and z le sz-1 and fin eq 1 do begin
- if ~keyword_set(no_tr) then $
-  n=n_elements(chromo_layers) gt 0?((z le max(tr))?chromo_layers:subgridpts):subgridpts $
- else n=subgridpts
- iter+=1
- bb=[interpolate(bx,x,y,z),interpolate(by,x,y,z),interpolate(bz,x,y,z)]
- absb=norm(bb)
- dr=bb/absb/n
- dr=dr*min([dx, dy, dz])/[dx, dy, dz] ;*****
- if z lt tr_idx then dr=[0,0,dr[2]/abs(dr[2])]
- ds=norm(dr*[dx,dy,dz])
- fin=finite(ds)
- if fin then begin
- s=s+ds
- x=(x+dr[0]);>0<(sx-1)
- y=(y+dr[1]);>0<(sy-1)
- z=(z+dr[2]);>0<(sy-1)
- dxdydz_current=dxdydz
 
- voxel_test=(abs(x-x0) gt dxdydz_current[0] or abs(y-y0)gt dxdydz_current[1] or abs(z-z0) gt dxdydz_current[2]) 
- if voxel_test or keyword_set(full) then begin
-  if absb lt btop then begin
-   btop=absb
-   top=[x,y,z]
-   s_top=s
-  end
-  lx=[lx,x]
-  ly=[ly,y]
-  lz=[lz,z]
-  ls=[ls,s]
-  lb=[[[lb]],[bb]]
+if ~self.lock  then begin
+  default,subgridpts,self.subgridpts
+  default,dxdydz,[1., 1., 1.]
+  void=self->GetB(Bx=Bx,By=By,Bz=Bz)
+  dx=self.YCOORD_CONV[1]
+  dy=self.YCOORD_CONV[1]
+  dz=self.ZCOORD_CONV[1]
+  x=p[0]
+  y=p[1]
+  z=p[2]
   x0=x
   y0=y
   z0=z
- endif 
- end
-end
-x=p[0]
-y=p[1]
-z=p[2]
-x0=x
-y0=y
-z0=z
-s=0.0
-fin=1
-iter=0l
-while iter lt self.steps and x ge 0 and x le sx-1 and y ge 0 and y le sy-1 and z ge 0 and z le sz-1 and fin eq 1 do begin
- if ~keyword_set(no_tr) then $
-  n=n_elements(chromo_layers) gt 0?((z le max(tr))?chromo_layers:subgridpts):subgridpts $
- else n=subgridpts
- iter+=1
- bb=[interpolate(bx,x,y,z),interpolate(by,x,y,z),interpolate(bz,x,y,z)]
- absb=norm(bb)
- dr=-bb/absb/n
- dr=dr*min([dx, dy, dz])/[dx, dy, dz] ;*****
- if z lt tr_idx then dr=[0,0,dr[2]/abs(dr[2])]
- ds=-norm(dr*[dx,dy,dz])
- fin=finite(ds)
- if fin then begin
- s=s+ds
- x=(x+dr[0]);>0<(sx-1)
- y=(y+dr[1]);>0<(sy-1)
- z=(z+dr[2]);>0<(sy-1)
- dxdydz_current=dxdydz
-
- voxel_test=(abs(x-x0) gt dxdydz_current[0] or abs(y-y0)gt dxdydz_current[1] or abs(z-z0) gt dxdydz_current[2]) 
- if voxel_test or keyword_set(full) then begin
-  if absb lt btop then begin
-   btop=absb
-   top=[x,y,z]
-   s_top=s
+  top=[x,y,z]
+  s_top=0
+  lb=[interpolate(bx,x,y,z),interpolate(by,x,y,z),interpolate(bz,x,y,z)]
+  ls=0.0
+  s=0.0
+  btop=norm(lb)
+  lx=x
+  ly=y
+  lz=z
+  iter=0l
+  fin=1
+  while iter lt self.steps and x ge 0 and x le sx-1 and y ge 0 and y le sy-1 and z ge 0 and z le sz-1 and fin eq 1 do begin
+   if ~keyword_set(no_tr) then $
+    n=n_elements(chromo_layers) gt 0?((z le max(tr))?chromo_layers:subgridpts):subgridpts $
+   else n=subgridpts
+   iter+=1
+   bb=[interpolate(bx,x,y,z),interpolate(by,x,y,z),interpolate(bz,x,y,z)]
+   absb=norm(bb)
+   dr=bb/absb/n
+   dr=dr*min([dx, dy, dz])/[dx, dy, dz] ;*****
+   if z lt tr_idx then dr=[0,0,dr[2]/abs(dr[2])]
+   ds=norm(dr*[dx,dy,dz])
+   fin=finite(ds)
+   if fin then begin
+   s=s+ds
+   x=(x+dr[0]);>0<(sx-1)
+   y=(y+dr[1]);>0<(sy-1)
+   z=(z+dr[2]);>0<(sy-1)
+   dxdydz_current=dxdydz
+  
+   voxel_test=(abs(x-x0) gt dxdydz_current[0] or abs(y-y0)gt dxdydz_current[1] or abs(z-z0) gt dxdydz_current[2]) 
+   if voxel_test or keyword_set(full) then begin
+    if absb lt btop then begin
+     btop=absb
+     top=[x,y,z]
+     s_top=s
+    end
+    lx=[lx,x]
+    ly=[ly,y]
+    lz=[lz,z]
+    ls=[ls,s]
+    lb=[[[lb]],[bb]]
+    x0=x
+    y0=y
+    z0=z
+   endif 
+   end
   end
-  lx=[x,lx]
-  ly=[y,ly]
-  lz=[z,lz]
-  ls=[s,ls]
-  lb=[[bb],[[lb]]]
+  x=p[0]
+  y=p[1]
+  z=p[2]
   x0=x
   y0=y
   z0=z
- endif 
- end
-end
- if n_elements(lx) lt 2 then begin
-  return,obj_new()
- end
- lx=lx>0<(sx-1)
- ly=ly>0<(sy-1)
- lz=lz>0<(sz-1)
- m=min((lx-top[0])^2+(ly-top[1])^2+(lz-top[2])^2,itop)
- lx[itop]=top[0]
- ly[itop]=top[1]
- lz[itop]=top[2]
- ls[itop]=s_top
- ls=ls-s_top
- line=OBJ_NEW('gxBline',lx>0<(sx-1),ly>0<(sy-1),lz>0<(sz-1),top=top,_extra=_extra,tr_height=tr_height)
- line->SetProperty,XCOORD_CONV=self.XCOORD_CONV,YCOORD_CONV=self.YCOORD_CONV,ZCOORD_CONV=self.ZCOORD_CONV
- line->SetVertexAttributeData,'B',lb
- line->SetVertexAttributeData,'s',ls
+  s=0.0
+  fin=1
+  iter=0l
+  while iter lt self.steps and x ge 0 and x le sx-1 and y ge 0 and y le sy-1 and z ge 0 and z le sz-1 and fin eq 1 do begin
+   if ~keyword_set(no_tr) then $
+    n=n_elements(chromo_layers) gt 0?((z le max(tr))?chromo_layers:subgridpts):subgridpts $
+   else n=subgridpts
+   iter+=1
+   bb=[interpolate(bx,x,y,z),interpolate(by,x,y,z),interpolate(bz,x,y,z)]
+   absb=norm(bb)
+   dr=-bb/absb/n
+   dr=dr*min([dx, dy, dz])/[dx, dy, dz] ;*****
+   if z lt tr_idx then dr=[0,0,dr[2]/abs(dr[2])]
+   ds=-norm(dr*[dx,dy,dz])
+   fin=finite(ds)
+   if fin then begin
+   s=s+ds
+   x=(x+dr[0]);>0<(sx-1)
+   y=(y+dr[1]);>0<(sy-1)
+   z=(z+dr[2]);>0<(sy-1)
+   dxdydz_current=dxdydz
+  
+   voxel_test=(abs(x-x0) gt dxdydz_current[0] or abs(y-y0)gt dxdydz_current[1] or abs(z-z0) gt dxdydz_current[2]) 
+   if voxel_test or keyword_set(full) then begin
+    if absb lt btop then begin
+     btop=absb
+     top=[x,y,z]
+     s_top=s
+    end
+    lx=[x,lx]
+    ly=[y,ly]
+    lz=[z,lz]
+    ls=[s,ls]
+    lb=[[bb],[[lb]]]
+    x0=x
+    y0=y
+    z0=z
+   endif 
+   end
+  end
+   if n_elements(lx) lt 2 then begin
+    return,obj_new()
+   end
+   lx=lx>0<(sx-1)
+   ly=ly>0<(sy-1)
+   lz=lz>0<(sz-1)
+   m=min((lx-top[0])^2+(ly-top[1])^2+(lz-top[2])^2,itop)
+   lx[itop]=top[0]
+   ly[itop]=top[1]
+   lz[itop]=top[2]
+   ls[itop]=s_top
+   ls=ls-s_top
+   line=OBJ_NEW('gxBline',lx>0<(sx-1),ly>0<(sy-1),lz>0<(sz-1),top=top,_extra=_extra,tr_height=tr_height)
+   line->SetProperty,XCOORD_CONV=self.XCOORD_CONV,YCOORD_CONV=self.YCOORD_CONV,ZCOORD_CONV=self.ZCOORD_CONV
+   line->SetVertexAttributeData,'B',lb
+   line->SetVertexAttributeData,'s',ls
+ endif else begin
+   line=self->ComputeBlines(p)
+ endelse
+ 
  return,line
 END
 
@@ -571,7 +579,10 @@ function gxModel::ReplaceScanboxData,sdata,nx=nx,ny=ny,compute_grid=compute_grid
 end
 
 pro gxModel::UpdateDef
-
+  ;Here we update the WinOS flag depending on the platform on which the model is restored 
+  ;the repurposed lock property is used to store this flag
+  self.lock=(!VERSION.OS_FAMILY eq 'Windows')
+  
   ;Here we solve a backward compatibility issue related with very old models using "closed" instead of "idx"
   self.volume->GetVertexAttributeData,'idx',idx
   if n_elements(idx) eq 0 then begin
@@ -579,7 +590,7 @@ pro gxModel::UpdateDef
     if n_elements(idx) ne 0 then begin
       self.volume->SetVertexAttributeData,'closed',0
       self.volume->SetVertexAttributeData,'idx',idx
-    endif
+    endif 
   endif
   ;done with closed-idx
   
@@ -740,6 +751,7 @@ pro gxModel::ComputeTRmask,type=type,threshold=threshold,trmap=trmap,test=test
 end
 
 pro gxModel::DisplayTRmask,trmap=trmap
+if !version.os_family eq 'Windows' then set_plot,'win' else set_plot,'x'
 if n_elements(trmap) gt 0 then begin
   wTRDraw=widget_info(self.wparent,find_by_uname='GXMODEL:TRpreview')
 endif else begin
@@ -880,9 +892,9 @@ pro gxModel::Get,key,data
  self.Volume->GetVertexAttributeData,key,data
 end
 
-pro gxModel::UpdateVolume,select,data=data,force=force,_extra=_extra
+pro gxModel::UpdateVolume,select,_extra=_extra;data=data,force=force,_extra=_extra
  if keyword_set(force) then self->RequestVolumeUpdate
- self.Volume->Update,select,data=data,force=force,_extra=_extra
+ self.Volume->Update,select,_extra=_extra;,data=data,force=force,_extra=_extra
 end
 
 pro gxModel::RequestVolumeUpdate,_extra=_extra
@@ -966,6 +978,69 @@ pro gxModel::CreateBline,xyz,any=any
  if obj_valid(bline) then self->Add,bline
 end
 
+function gxModel::BBOX
+  dummy=self->GetB(Bx=Bx,By=By,Bz=Bz)
+  self->GetProperty,dr=dr
+  return,{Bx:temporary(Bx),by:temporary(By),bz:temporary(Bz),dr:dr}
+end
+
+function gxModel::ComputeBlines,inputSeeds,tr_height=tr_height,_extra=_extra
+  
+  default,inputSeeds,(self->Size())[1:3]/2
+  nSeeds=n_elements(inputSeeds)/3
+  maxLength=self.steps*nSeeds>1000000L
+  reduce_passed=0
+  box=self->BBOX()
+  if n_elements(tr_height) eq 0 then begin
+    id=self.volume->VoxelId()
+    tr_layer=where((id and 1) gt 0,count)
+    if count gt 0 then begin
+     tr_idx=max((array_indices(id,tr_layer))[2,*])+1
+    endif else tr_idx=0
+  endif else tr_idx=0
+  chromo_level=tr_idx*box.dr[2]*gx_rsun(unit='km')
+  ;Temporary DLL bug fix
+   sz=self.Size()
+   inputSeeds[0,*]=inputSeeds[0,*]>(tr_idx>1)<(sz[1]-(tr_idx>2))
+   inputSeeds[1,*]=inputSeeds[1,*]>(tr_idx>1)<(sz[2]-(tr_idx>2))
+   inputSeeds[2,*]=inputSeeds[2,*]>(tr_idx>1)<(sz[3]-(tr_idx>2))
+  ;End temporary DLL bug fix
+
+  dll_path=gx_findfile('WWNLFFFReconstruction.dll',folder='gxbox')
+
+  nonStored = gx_box_calculate_lines(dll_path, box $
+                           , status = status, physLength = physLength, avField = avField $
+                           , startIdx = startIdx, endIdx = endIdx, seedIdx = seedIdx $
+                           , inputSeeds = inputSeeds, maxLength = maxLength $
+                           , totalLength = totalLength, nLines = nLines, nPassed = nPassed $
+                           , coords = coords, linesPos = linesPos, linesLength = linesLength, linesIndex = linesIndex $
+                           , codes = codes $
+                           , version_info = version_info $
+                           , reduce_passed = reduce_passed, n_processes = n_processes, chromo_level = chromo_level $
+                           )
+if nLines eq 0 then return, obj_new()
+lines=objarr(nLines)
+linesB= [ interpolate(box.bx,coords[0,*],coords[1,*],coords[2,*]) $
+         , interpolate(box.by,coords[0,*],coords[1,*],coords[2,*]) $
+         , interpolate(box.bz,coords[0,*],coords[1,*],coords[2,*]) $
+         ]
+ absB=sqrt(total(linesB^2,1))
+ status=status[LinesIndex]
+ for i=0,nLines-1 do begin
+   lb=linesB[*,linesPos[i]:linesPos[i]+linesLength[i]-1]
+   data=coords[0:2,linesPos[i]:linesPos[i]+linesLength[i]-1]
+   ls=coords[3,linesPos[i]:linesPos[i]+linesLength[i]-1]*box.dr[0]
+   imin=where(ls eq 0)
+   top=data[*,imin]
+   line=OBJ_NEW('gxBline',data[0,*],data[1,*],data[2,*],top=top,status=status[i],_extra=_extra,tr_height=tr_height)
+   line->SetProperty,XCOORD_CONV=self.XCOORD_CONV,YCOORD_CONV=self.YCOORD_CONV,ZCOORD_CONV=self.ZCOORD_CONV
+   line->SetVertexAttributeData,'B',lb
+   line->SetVertexAttributeData,'s',ls
+   lines[i]=line
+ endfor
+return,lines
+end
+
 pro gxModel::AddBLines
   desc = [ '1, BASE,, ROW', $
     '0, FLOAT, 0, LABEL_LEFT=xstep:, WIDTH=6, TAG=x', $
@@ -984,9 +1059,18 @@ pro gxModel::AddBLines
       if sz[2] MOD a.y ne 0 then ny=sz[2]/a.y else ny=sz[2]/a.y-1 ;
       for i = 1, nx do begin
         for j = 1, ny do begin
+          if ~self.lock then begin
           self->CreateBline,[a.x*i,a.y*j,a.z],/any
+          endif else begin
+            p=n_elements(p) eq 0?[a.x*i,a.y*j,a.z]:[[[p]],[a.x*i,a.y*j,a.z]]
+          endelse
         endfor
       endfor
+      if self.lock then begin
+        lines=self->ComputeBlines(p)
+        good=where(obj_valid(lines) eq 1,count)
+        if count gt 0 then self->add,lines[good]
+      endif
     endif else answ=dialog_message('Coordinates provided are outside the datacube range',/error)
   end
 end  
@@ -1073,7 +1157,7 @@ end
 PRO gxModel::GetProperty,NS=NS,EW=EW,ROI=ROI,FLUXTUBECOUNT=FLUXTUBECOUNT,$
  XCOORD_CONV=XCOORD_CONV,YCOORD_CONV=YCOORD_CONV,ZCOORD_CONV=ZCOORD_CONV,$
  XRANGE=XRANGE,YRANGE=YRANGE,ZRANGE=ZRANGE,ISROI=ISROI,FULLROI=FULLROI,wPARENT=wPARENT,$
- subgridpts=subgridpts,steps=steps,refmaps=refmaps,Bscale=Bscale,dr=dr,_ref_extra=extra,scanbox=scanbox,gyro=gyro
+ subgridpts=subgridpts,steps=steps,refmaps=refmaps,Bscale=Bscale,dr=dr,_ref_extra=extra,scanbox=scanbox,gyro=gyro,WinOS=WinOS
  NS=self.NS
  EW=self.EW
  ROI=self.ROI
@@ -1091,6 +1175,7 @@ PRO gxModel::GetProperty,NS=NS,EW=EW,ROI=ROI,FLUXTUBECOUNT=FLUXTUBECOUNT,$
  wParent=self.wParent
  subgridpts=self.subgridpts
  steps=self.steps
+ WinOS=self.lock
  ;this arg_present check is needed to bypass an IDL bug when restoring the model
  if arg_present(bscale) then self.volume->GetProperty,bscale=bscale
  if arg_present(gyro) then self.volume->GetProperty,gyro=gyro
@@ -1113,7 +1198,7 @@ end
 PRO gxModel::SetProperty,NS=NS,EW=EW,ROI=ROI,FLUXTUBECOUNT=FLUXTUBECOUNT,$
  XCOORD_CONV=XCOORD_CONV,YCOORD_CONV=YCOORD_CONV,ZCOORD_CONV=ZCOORD_CONV,$
  XRANGE=XRANGE,YRANGE=YRANGE,ZRANGE=ZRANGE,ISROI=ISROI,FULLROI=FULLROI,wPARENT=wPARENT,$
- subgridpts=subgridpts,steps=steps,refmaps=refmaps,bscale=bscale,volume=volume,size=size,gyro=gyro,_extra=extra
+ subgridpts=subgridpts,steps=steps,refmaps=refmaps,bscale=bscale,volume=volume,size=size,gyro=gyro,winOS=winOS,_extra=extra
  if exist(NS) then self.NS=NS
  if exist(EW) then self.EW=EW
  if exist(ROI) then self.ROI=ROI
@@ -1139,6 +1224,9 @@ PRO gxModel::SetProperty,NS=NS,EW=EW,ROI=ROI,FLUXTUBECOUNT=FLUXTUBECOUNT,$
  end
  if exist(gyro) then begin
    self.volume->SetProperty,gyro=gyro
+ end
+ if exist(WinOS) then begin
+   self.lock=WinOS
  end
  if isa(volume,'gxvolume') then begin
   self->Remove,self.volume

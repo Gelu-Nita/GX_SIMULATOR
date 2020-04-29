@@ -226,7 +226,7 @@ pro gx_simulator_event,event
                        state.sun->Add,model
                        state.oObjviewWid->Draw  
                        ;widget_control,event.top,redraw=0 
-                       t0=systime(/s)& print,t0                 
+                       t0=systime(/s)               
                        void=obj_new('gxwidget',wParent,model)
                        print,systime(/s)-t0
                        ;widget_control,event.top,redraw=1  
@@ -256,7 +256,7 @@ pro gx_simulator_event,event
                        end
                         model->SetProperty,wParent=wParent
                         widget_control,state.scanbox->GetSliceSelector(),COMBOBOX_INDEX=index,get_value=value
-                       (Model->GetVolume())->Update,state.scanbox->GetSliceSelector(/item),/update
+                       (Model->GetVolume())->Update,state.scanbox->GetSliceSelector(/item),/update,/force
                        if model->isROI() then begin
                            time=model->GetTime()
                            all=state.Sun->get(isa='GXMODEL',/all)

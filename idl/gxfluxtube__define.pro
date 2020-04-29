@@ -178,6 +178,7 @@ PRO gxFluxTube::SetBLines
  n=sz[2]*sz[3]
  data=reform(data,3,n)
  self.centerline->GetProperty,parent=model
+ if !VERSION.OS_FAMILY NE 'Windows' then begin
  for i=0,n-1 do begin
   self->SetBline,reform(data[*,i]),line=line
   if obj_isa(line,'gxBline') then begin
@@ -185,6 +186,19 @@ PRO gxFluxTube::SetBLines
    if n_elements(contour) eq 0 then contour=top else contour=[[contour],[top]]
   end
  end
+ endif else begin
+  self.centerline->GetProperty,parent=parent
+  lines=parent->ComputeBlines(data)
+  good=where(obj_valid(lines) eq 1,count)
+  if count gt 0 then begin
+    lines=lines[good]
+    self->add,lines
+  endif
+  for i=0,count-1 do begin
+    lines[i]->GetProperty,top=top
+    if n_elements(contour) eq 0 then contour=top else contour=[[contour],[top]]
+  endfor
+ endelse
  scale=model->GetScale()
  self->Add,obj_new('idlgrpolyline',contour[0,*],contour[1,*],contour[2,*],color=[0,0,255], name='Top',$
  XCOORD_CONV=scale.XCOORD_CONV,YCOORD_CONV=scale.YCOORD_CONV,ZCOORD_CONV=scale.ZCOORD_CONV,hide=1)

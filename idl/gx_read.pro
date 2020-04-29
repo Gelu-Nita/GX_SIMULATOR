@@ -1,5 +1,4 @@
 function gx_read,file
- void=obj_new('gxvolume')
  if n_elements(file) eq 0 then file=dialog_pickfile(filter='*.gxm',$
                     DEFAULT_EXTENSION='gxm',$
                     /read,/must_exist,$
@@ -14,6 +13,7 @@ function gx_read,file
   restore,file,/relaxed
   FixIDLBug,model
   model->UpdateDef
+  model->DisplayMap,2
   return,model
  endif else return, obj_new()
 end

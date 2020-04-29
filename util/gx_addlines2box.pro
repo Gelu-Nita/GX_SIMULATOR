@@ -1,4 +1,4 @@
-pro gx_addlines2box, box,tr_height_km, status=status, physLength=physLength, avField=avField, startIdx=startIdx, endIdx=endIdx,dll_path=dll_path,_extra = _extra
+pro gx_addlines2box, box,tr_height_km, status=status, physLength=physLength, avField=avField, startIdx=startIdx, endIdx=endIdx,dll_path=dll_path,elapsed_time=elapsed_time,_extra = _extra
   t0=systime(/seconds)
   if tag_exist(box,'bx') then begin
     dim=size(box.bx,/dim)
@@ -18,8 +18,9 @@ pro gx_addlines2box, box,tr_height_km, status=status, physLength=physLength, avF
   default,tr_height_km,1000
   chromo_level=tr_height_km
   if n_elements(dll_path) eq 0 then dll_path=gx_findfile('WWNLFFFReconstruction.dll',folder='gxbox')
-  rc=gx_box_calculate_lines(dll_path, box, status, physLength, avField, startIdx, endIdx,chromo_level=chromo_level,_extra = _extra) 
-  message,strcompress(string(systime(/seconds)-t0,format="('Field line computation performed using DLL implementation in ',g0,' seconds')")),/cont
+  rc=gx_box_calculate_lines(dll_path, box, status=status, physLength=physLength, avField=avField, startIdx=startIdx, endIdx=endIdx,chromo_level=chromo_level,_extra = _extra) 
+  elapsed_time=systime(/seconds)-t0
+  message,strcompress(string(elapsed_time,format="('Field line computation performed using DLL implementation in ',g0,' seconds')")),/cont
   idx=where((status and 4L) eq 4L)
   oidx=where(((status and 2L) eq 2l) and ((status and 4L) eq 0))
   bmed=avField[idx]
@@ -27,6 +28,7 @@ pro gx_addlines2box, box,tr_height_km, status=status, physLength=physLength, avF
   length=physlength[idx]
   olength=physlength[oidx]
   foot1=startIdx[idx]
+  foot2=endIdx[idx]
   ofoot1=startIdx[oidx]
   ofoot2=endIdx[oidx]
   if n_elements(alpha) ne 0 then box=rep_tag_value(box,alpha,'alpha',/no_copy,/duplicate)

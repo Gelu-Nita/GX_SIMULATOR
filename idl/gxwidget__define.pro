@@ -54,7 +54,7 @@ pro gxWidget::CreatePanel
    prefix='GXMODEL:'
    self.subject->GetProperty,NS=NS,EW=EW,ROI=ROI,FLUXTUBECOUNT=FLUXTUBECOUNT,$
                  XCOORD_CONV=XCOORD_CONV,YCOORD_CONV=YCOORD_CONV,ZCOORD_CONV=ZCOORD_CONV,$
-                 XRANGE=XRANGE,YRANGE=YRANGE,ZRANGE=ZRANGE,ISROI=ISROI,FULLROI=FULLROI,STEPS=STEPS,SUBGRIDPTS=SUBGRIDPTS,bscale=bscale,gyro=gyro
+                 XRANGE=XRANGE,YRANGE=YRANGE,ZRANGE=ZRANGE,ISROI=ISROI,FULLROI=FULLROI,STEPS=STEPS,SUBGRIDPTS=SUBGRIDPTS,bscale=bscale,gyro=gyro,winOS=winOS
    wToolbarBase = widget_base(self.wBase, /row, /frame,/TOOLBAR)
 
    wZoom= widget_button(font=font,widget_base(wToolbarBase,/nonexclusive,/row,/toolbar)  , $
@@ -135,29 +135,36 @@ pro gxWidget::CreatePanel
           XTEXTSIZE=10,$; XLABELSIZE=30,$
           INCREMENT=1, $
           UNITS=STRING(176b), $
-          VALUE=EW,Sensitive=1)
+          VALUE=EW,Sensitive=keyword_set(expert))
    wNS=cw_objfield(wLocation, uname=prefix+'NS', LABEL=' NS',$
           XTEXTSIZE=10,$ ; XLABELSIZE=30,$
           INCREMENT=1, $
           UNITS=STRING(176b), $
-          VALUE=NS,Sensitive=1)
+          VALUE=NS,Sensitive=keyword_set(expert))
    wGyro=cw_objfield(wLocation, uname=prefix+'GYRO', LABEL=' PHI',$
           XTEXTSIZE=10,$ ; XLABELSIZE=30,$
           INCREMENT=1, $
           UNITS=STRING(176b), $
-          VALUE=gyro,Sensitive=1)       
+          VALUE=gyro,Sensitive=keyword_set(expert))       
    wLineSteps=wLocation
-   wsteps=cw_objfield(wLineSteps, uname=prefix+'STEPS', LABEL=' Bline steps',$
-          XTEXTSIZE=7,$ ; XLABELSIZE=80,$
-          INCREMENT=1, $
-          UNITS='', $
-          VALUE=steps,Sensitive=1)
-   wSubgridpts=cw_objfield(wLineSteps, uname=prefix+'SUBGRIDPTS', LABEL=' Subgrid steps',$
-          XTEXTSIZE=7,$ ; XLABELSIZE=85,$
-          INCREMENT=1, $
-          UNITS='', $
-          VALUE=subgridpts,Sensitive=1)
-          
+   if keyword_set(expert) then begin
+     wsteps=cw_objfield(wLineSteps, uname=prefix+'STEPS', LABEL=' Bline steps',$
+            XTEXTSIZE=7,$ ; XLABELSIZE=80,$
+            INCREMENT=1, $
+            UNITS='', $
+            VALUE=steps,Sensitive=1)
+     wSubgridpts=cw_objfield(wLineSteps, uname=prefix+'SUBGRIDPTS', LABEL=' Subgrid steps',$
+            XTEXTSIZE=7,$ ; XLABELSIZE=85,$
+            INCREMENT=1, $
+            UNITS='', $
+            VALUE=subgridpts,Sensitive=1)
+    end      
+    if keyword_set(expert) and WinOS then begin
+    wWinOS=cw_bgroup(font=font,wLocation,$
+      ['use DLL (Win-OS only)'],$
+      set_value=[winOS],$
+      /nonexclusive,/return_index,uname=prefix+'WinOS')
+    endif
     volume=self.subject->GetVolume()
     flags=volume->getflags()  
     
@@ -356,7 +363,7 @@ pro gxWidget::CreatePanel
    wLabel=widget_label(wOptionBase,value='',font=font,/dynamic,uname=prefix+'DEMDT',/Align_left)
    
    wTRPage=Widget_Base(wComponentTab, title='Transition Region Attributes')
-   set_plot,'win'
+   if !version.os_family eq 'Windows' then set_plot,'win' else set_plot,'x'
    device, get_screen_size=scr
    xsize = fix (scr[0] * .3)
    ysize = xsize
@@ -940,6 +947,10 @@ end
                widget_control,event.id,get_value=value
                self.subject->SetProperty,subgridpts=value
               END
+     'GXMODEL:WINOS': BEGIN
+                widget_control,event.id,get_value=value
+                self.subject->SetProperty,winos=value[0]
+              END         
     'GXMODEL:ADDFIELDLINEARRAY':self.subject->AddBLines
 
     'GXMODEL:ADDFIELDLINE' :Begin

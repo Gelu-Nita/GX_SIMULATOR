@@ -1,11 +1,18 @@
-FUNCTION gxBline:: INIT,X,Y,Z, top=top,_extra=_extra,tr_height=tr_height
+FUNCTION gxBline:: INIT,X,Y,Z, top=top,status=status,_extra=_extra,tr_height=tr_height
   default,tr_height,gx_tr_height()
   success=self->IDLgrPolyline::Init(X,Y,Z,_extra=_extra)
   if success then begin
   sz=size(z)
+  
+  if ~keyword_set(status) then begin
   ;June 8 2014 GN: Redefined what an open field line is 
   self.open=~((floor(z[0]) le tr_height) and (floor(z[sz[1]-1]) le tr_height))
-  self->SetProperty,color=self.open?[0,0,255]:[0,255,0]
+  endif else begin
+  ;April 10 2020 GN: introduced the status optional input, as returned by the WWNLFFFReconstruction.dll
+  self.open=((status and 4L) eq 0) 
+  endelse
+  
+  self->SetProperty,color=self.open?[255,255,0]:[0,255,0]
    if n_elements(top) eq 3 then self.top=top
   end
   return,success

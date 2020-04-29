@@ -1,6 +1,6 @@
 pro gx_map_convolve,map,beam,spp,beam_array=beam_array,nofft=nofft,widthIn=widthIn
   default,widthIn,51
-  width=withIn
+  width=widthIn
   width or=1; force it to be odd
   sz=size(beam)
   if ~valid_map(map) then begin
@@ -18,7 +18,7 @@ pro gx_map_convolve,map,beam,spp,beam_array=beam_array,nofft=nofft,widthIn=width
       end
     1:begin
        x=(findgen(width[0])-(width[0]-1)/2d)*map.dx
-       y=(findgen(width[1])-(width[1]-1)/2d)*map.dy
+       y=(findgen(width[0])-(width[0]-1)/2d)*map.dy
        Gauss2Drot, [x,y], beam, beam2,/noreform
       end
     else:begin
@@ -26,7 +26,7 @@ pro gx_map_convolve,map,beam,spp,beam_array=beam_array,nofft=nofft,widthIn=width
           return
          end
   endcase
-  beam2=beam2/total(beam2) ;normalizing
+  beam2=beam2/total(beam2,/double) ;normalizing
   if keyword_set(nofft) then map.data=float(convol(double(map.data), double(beam2) ,/edge_zero)>1.e-37) else $
        map.data=float(convol_fft(double(map.data),double(beam2)));convolving
   beam_array=beam2

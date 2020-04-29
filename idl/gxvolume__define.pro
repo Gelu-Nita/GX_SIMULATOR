@@ -100,7 +100,7 @@ end
 
 
 pro gxVolume::PlotModelAttributes 
-
+     if !version.os_family eq 'Windows' then set_plot,'win' else set_plot,'x'
      self.parent->GetProperty,wParent=wParent
      if ~widget_valid(wParent) then return
      wAttributePlot=widget_info(wparent,find_by_uname='GXMODEL:AttributePlot')
@@ -286,6 +286,7 @@ pro gxVolume::DisplayModelStatistics,data
      print,'Model volume=',n*dv,'cm^3'
      print,'Integral['+self.select+'dv]=',m[0]*n*dv
      print,'Integral['+self.select+'^2dv]=',m[1]*n*dv
+     if ~widget_valid(wParent) then return
      wDisplay=widget_info(wParent,find_by_uname='GXMODEL:SelectedParm')
      if ~widget_valid(wDisplay) then return
      widget_control,wDisplay,set_value='Selected Parameter: '+self.select
@@ -545,7 +546,8 @@ pro gxVolume::UpdateBoundaries
   ;  endfor 
 end  
 
-pro gxVolume::Update,select,data=data,plot_model_attributes=plot_model_attributes,getdata=getdata,force=force,update=update,chromo_view=chromo_view,data_range=data_range,pwr_idx=pwr_idx
+pro gxVolume::Update,select,data=data,plot_model_attributes=plot_model_attributes,getdata=getdata,$
+              force=force,update=update,chromo_view=chromo_view,data_range=data_range,pwr_idx=pwr_idx
   compile_opt hidden
   catch, error_stat
  if error_stat ne 0 then begin
@@ -878,8 +880,11 @@ pro gxVolume::Update,select,data=data,plot_model_attributes=plot_model_attribute
    if obj_isa(container,'gxSun') then begin
      top=get_tlb(wParent)
      if widget_valid(top) then begin
-      widget_control,widget_info(top,Find_By_Uname='STATEBASE'),get_uvalue=state
-      state.scanbox->Slice
+      statebase=widget_info(top,Find_By_Uname='STATEBASE')
+      if widget_valid(statebase) then begin
+        widget_control,statebase,get_uvalue=state
+        state.scanbox->Slice
+      end
      endif
    end
   flags=self->setflags(newData=0)

@@ -1,6 +1,7 @@
 function gxScanbox::Init,wParent,wInfo=wInfo,wToolbar=wToolbar,wScanner=wScanner,wImgBase=wImgBase,$
 xrange=xrange,yrange=yrange,zrange=zrange,Nx=Nx,Ny=Ny,Nz=Nz,nthreads=nthreads,_extra=_extra
  compile_opt hidden
+ if !version.os_family eq 'Windows' then set_plot,'win' else set_plot,'x'
  device, get_screen_size=scr
  xscale=scr[0]/1920.
  font=!defaults.font
@@ -1434,6 +1435,7 @@ pro gxScanBox::OnAbortScan
 end
 
 pro gxScanBox::TV_SLICE
+  if !version.os_family eq 'Windows' then set_plot,'win' else set_plot,'x'
   widget_control,self.wGrid2Update,set_value=''
   if ~ptr_valid(self.grid) then begin
     widget_control,self.wGrid2Update,set_value='WARNING: No grid defined yet! Please compute the grid.'

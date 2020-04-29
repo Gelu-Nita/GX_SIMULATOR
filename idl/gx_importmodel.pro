@@ -194,6 +194,6 @@ function gx_ImportModel,source,box=box
     end
     model->SetRoi
     model->UpdateDef
-    model->ResetPosition  
+    model->DisplayMap,2 
     return,model
 end
