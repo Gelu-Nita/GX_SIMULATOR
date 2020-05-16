@@ -16,6 +16,7 @@ function gxModel::INIT,EW=EW,NS=NS,_extra=_extra
  return,self->IDLgrModel::Init(_extra=_extra)
 end
 
+
 pro gxModel::CurlB,cx,cy,cz,Bx=Bx,By=By,Bz=Bz
   self->GetProperty,xcoord_conv=dx,ycoord_conv=dy,zcoord_conv=dz
   dummy=self->GetB(Bx=Bx,By=By,Bz=Bz)
@@ -42,9 +43,9 @@ function gxModel::GetBaseIndex
  return,base_index
 end
 
-function gxModel::GetB,p,Bx=Bx,By=By,Bz=Bz
+function gxModel::GetB,p,Bx=Bx,By=By,Bz=Bz,volume=volume
 ;p is expressed in self's box fractional index coordinates
-if obj_valid(self.volume) then return,self.volume->GetB(p,Bx=Bx,By=By,Bz=Bz) else return,[0,0,0]*!Values.f_nan
+if obj_valid(self.volume) then return,self.volume->GetB(p,Bx=Bx,By=By,Bz=Bz,volume=volume) else return,[0,0,0]*!Values.f_nan
 end
 
 function gxModel::GetBLine,p,dxdydz,subgridpts=subgridpts,tr_height=tr_height,no_tr=no_tr,full=full,_extra=_extra
@@ -84,7 +85,7 @@ if ~self.lock  then begin
   fin=1
   while iter lt self.steps and x ge 0 and x le sx-1 and y ge 0 and y le sy-1 and z ge 0 and z le sz-1 and fin eq 1 do begin
    if ~keyword_set(no_tr) then $
-    n=n_elements(chromo_layers) gt 0?((z le max(tr))?chromo_layers:subgridpts):subgridpts $
+    n=n_elements(chromo_layers) gt 0?((z le max(tr_idx))?chromo_layers:subgridpts):subgridpts $
    else n=subgridpts
    iter+=1
    bb=[interpolate(bx,x,y,z),interpolate(by,x,y,z),interpolate(bz,x,y,z)]
@@ -130,7 +131,7 @@ if ~self.lock  then begin
   iter=0l
   while iter lt self.steps and x ge 0 and x le sx-1 and y ge 0 and y le sy-1 and z ge 0 and z le sz-1 and fin eq 1 do begin
    if ~keyword_set(no_tr) then $
-    n=n_elements(chromo_layers) gt 0?((z le max(tr))?chromo_layers:subgridpts):subgridpts $
+    n=n_elements(chromo_layers) gt 0?((z le max(tr_idx))?chromo_layers:subgridpts):subgridpts $
    else n=subgridpts
    iter+=1
    bb=[interpolate(bx,x,y,z),interpolate(by,x,y,z),interpolate(bz,x,y,z)]
@@ -182,144 +183,9 @@ if ~self.lock  then begin
    line->SetVertexAttributeData,'B',lb
    line->SetVertexAttributeData,'s',ls
  endif else begin
-   line=self->ComputeBlines(p)
+   line=self->ComputeBlines(p,tr_height_km=0)
  endelse
  
- return,line
-END
-
-function gxModel::GetBLineM,p,dxdydz,subgridpts=subgridpts,tr_height=tr_height,no_tr=no_tr,full=full,_extra=_extra
-common blinem, blm_bx, blm_by, blm_bz, blm_id ;#####
-tr_layer=where((blm_id and 1) gt 0,count)     ;#####
-if count gt 0 then begin
-  tr_idx=max((array_indices(blm_id,tr_layer))[2,*])+1 ;#####
-endif else tr_idx=0
-default,subgridpts,self.subgridpts
-default,dxdydz,[1., 1., 1.]
-dx=self.YCOORD_CONV[1]
-dy=self.YCOORD_CONV[1]
-dz=self.ZCOORD_CONV[1]
-sx=self.size[1]
-sy=self.size[2]
-sz=self.size[3]
-
-if n_elements(p) eq 0 then p,randomu(seed,3)*[sx,sy,sz]-1
-x=p[0]
-y=p[1]
-z=p[2]
-x0=x
-y0=y
-z0=z
-top=[x,y,z]
-s_top=0
-lb=[interpolate(blm_bx,x,y,z),interpolate(blm_by,x,y,z),interpolate(blm_bz,x,y,z)] ;#####
-ls=0.0
-s=0.0
-btop=norm(lb)
-lx=x
-ly=y
-lz=z
-iter=0l
-fin=1
-while iter lt self.steps and x ge 0 and x le sx-1 and y ge 0 and y le sy-1 and z ge 0 and z le sz-1 and fin eq 1 do begin
- if ~keyword_set(no_tr) then $
-  n=n_elements(chromo_layers) gt 0?((z le max(tr))?chromo_layers:subgridpts):subgridpts $
- else n=subgridpts
- iter+=1
- bb=[interpolate(blm_bx,x,y,z),interpolate(blm_by,x,y,z),interpolate(blm_bz,x,y,z)] ;#####
- absb=norm(bb)
- dr=bb/absb/n
- dr=dr*min([dx, dy, dz])/[dx, dy, dz] ;*****
- if z lt tr_idx then dr=[0,0,dr[2]/abs(dr[2])]
- ds=norm(dr*[dx,dy,dz])
- fin=finite(ds)
- if fin then begin
- s=s+ds
- x=(x+dr[0]);>0<(sx-1)
- y=(y+dr[1]);>0<(sy-1)
- z=(z+dr[2]);>0<(sy-1)
- dxdydz_current=dxdydz
-
- voxel_test=(abs(x-x0) gt dxdydz_current[0] or abs(y-y0)gt dxdydz_current[1] or abs(z-z0) gt dxdydz_current[2]) 
- if voxel_test or keyword_set(full) then begin
-  if absb lt btop then begin
-   btop=absb
-   top=[x,y,z]
-   s_top=s
-  end
-  lx=[lx,x]
-  ly=[ly,y]
-  lz=[lz,z]
-  ls=[ls,s]
-  lb=[[[lb]],[bb]]
-  x0=x
-  y0=y
-  z0=z
- endif 
- end
-end
-x=p[0]
-y=p[1]
-z=p[2]
-x0=x
-y0=y
-z0=z
-s=0.0
-fin=1
-iter=0l
-while iter lt self.steps and x ge 0 and x le sx-1 and y ge 0 and y le sy-1 and z ge 0 and z le sz-1 and fin eq 1 do begin
- if ~keyword_set(no_tr) then $
-  n=n_elements(chromo_layers) gt 0?((z le max(tr))?chromo_layers:subgridpts):subgridpts $
- else n=subgridpts
- iter+=1
- bb=[interpolate(blm_bx,x,y,z),interpolate(blm_by,x,y,z),interpolate(blm_bz,x,y,z)] ;#####
- absb=norm(bb)
- dr=-bb/absb/n
- dr=dr*min([dx, dy, dz])/[dx, dy, dz] ;*****
- if z lt tr_idx then dr=[0,0,dr[2]/abs(dr[2])]
- ds=-norm(dr*[dx,dy,dz])
- fin=finite(ds)
- if fin then begin
- s=s+ds
- x=(x+dr[0]);>0<(sx-1)
- y=(y+dr[1]);>0<(sy-1)
- z=(z+dr[2]);>0<(sy-1)
- dxdydz_current=dxdydz
-
- voxel_test=(abs(x-x0) gt dxdydz_current[0] or abs(y-y0)gt dxdydz_current[1] or abs(z-z0) gt dxdydz_current[2]) 
- if voxel_test or keyword_set(full) then begin
-  if absb lt btop then begin
-   btop=absb
-   top=[x,y,z]
-   s_top=s
-  end
-  lx=[x,lx]
-  ly=[y,ly]
-  lz=[z,lz]
-  ls=[s,ls]
-  lb=[[bb],[[lb]]]
-  x0=x
-  y0=y
-  z0=z
- endif 
- end
-end
- if n_elements(lx) lt 2 then begin
-  return,obj_new()
- end
- lx=lx>0<(sx-1)
- ly=ly>0<(sy-1)
- lz=lz>0<(sz-1)
- m=min((lx-top[0])^2+(ly-top[1])^2+(lz-top[2])^2,itop)
- lx[itop]=top[0]
- ly[itop]=top[1]
- lz[itop]=top[2]
- ls[itop]=s_top
- ls=ls-s_top
- line=OBJ_NEW('gxBline',lx>0<(sx-1),ly>0<(sy-1),lz>0<(sz-1),top=top,_extra=_extra,tr_height=tr_height)
- line->SetProperty,XCOORD_CONV=self.XCOORD_CONV,YCOORD_CONV=self.YCOORD_CONV,ZCOORD_CONV=self.ZCOORD_CONV
- line->SetVertexAttributeData,'B',lb
- line->SetVertexAttributeData,'s',ls
  return,line
 END
 
@@ -579,6 +445,9 @@ function gxModel::ReplaceScanboxData,sdata,nx=nx,ny=ny,compute_grid=compute_grid
 end
 
 pro gxModel::UpdateDef
+  ;Here we upgrade combo_bodel if necessary
+  self.upgrade_combo_model
+  
   ;Here we update the WinOS flag depending on the platform on which the model is restored 
   ;the repurposed lock property is used to store this flag
   self.lock=(!VERSION.OS_FAMILY eq 'Windows')
@@ -631,9 +500,7 @@ pro gxModel::UpdateDef
         dy=self.ycoord_conv[1]
         dz=self.zcoord_conv[1]
         m=max([dx,dy,dz])
-        self.volume->GetVertexAttributeData,'Bx',Bx
-        self.volume->GetVertexAttributeData,'By',By
-        self.volume->GetVertexAttributeData,'Bz',Bz
+        dummmy=self->GetB(Bx=Bx,By=By,Bz=Bz)
         curl,bx,by,bz,cx,cy,cz,order=3, dx=dx/m, dy=dy/m, dz=dz/m
         alpha=bx*cx+by*cy+bz*cz
         alpha=alpha/(bx*bx+by*by+bz*bz)
@@ -656,9 +523,10 @@ pro gxModel::UpdateDef
   
   ;Add voxel IDs if missing
   self.volume->GetVertexAttributeData,'voxel_id',id
-  if n_elements(id) ne self.size[1]*self.size[2]*self.size[3] then begin
+  sz=self->Size(/volume)
+  if n_elements(id) ne sz[1]*sz[2]*sz[3] then begin
     ;Here we define a default volume with no chromosphere and no TR
-    id=ulonarr(self.size[1],self.size[2],self.size[3])+4
+    id=ulonarr(sz[1],sz[2],sz[3])+4
     self.volume->SetVertexAttributeData,'voxel_id',id
     self.volume->UpdateVoxelId,/force
     self.volume->GetVertexAttributeData,'voxel_id',id
@@ -902,8 +770,77 @@ pro gxModel::RequestVolumeUpdate,_extra=_extra
 end
 
 
-function gxModel::Size
- return,self.size
+function gxModel::Size,volume=volume,chromo_layers=chromo_layers, corona_base=corona_base
+ sz=self.size
+ chromo_layers=self->GetVertexData('chromo_layers')
+ if ~isa(chromo_layers,/number) then begin
+  if isa(self->corona(),'gxcorona') then (self->corona())->GetProperty,chromo_h=chromo_layers else chromo_layers=0
+ endif else corona_base=self->GetVertexData('corona_base')
+ if ~isa(corona_base,/number) then corona_base=chromo_layers
+ if keyword_set(volume) and corona_base gt 0 then sz[3]=sz[3]-corona_base+chromo_layers
+ return,sz
+end
+
+function gxModel::IsCombo,bsize=bsize,csize=csize,_ref_extra=extra
+  bsize=self->Size(_extra=extra)
+  csize=self->Size(/volume)
+  return,~array_equal(bsize[1:3],csize[1:3])
+end
+
+function gxModel::GetVertexData,var
+  return,self.volume->GetVertexData(var)
+end
+
+function gxModel::Box2Volume,data,idx,box2vol=box2vol,bsize=bsize,csize=csize,corona_only=corona_only
+  isa_combo=(self->IsCombo(bsize=bsize,csize=csize))
+  box_idx=lindgen(bsize[1],bsize[2],bsize[3])
+  if isa_combo then begin
+    box2chromo=self->GetVertexData('box2chromo')
+    chromo_layers=self->GetVertexData('chromo_layers')
+    corona_base=self->GetVertexData('corona_base')
+    dim=size(box2chromo,/dim)
+    compute=1
+    if n_elements(dim) eq 3 then begin
+      if array_equal(dim,[csize[1:2],chromo_layers]) then begin
+        compute=0
+      endif
+    endif
+    if compute then begin
+      dz=self->GetVertexData('dz')
+      h=(total(dz,3,/cum))[*,*,0:csize[3]-1]
+      box2chromo=lonarr(csize[1],csize[2],chromo_layers)    
+      c_idx=floor(h/self.zcoord_conv[1])
+      for i=0,csize[1]-1 do begin
+        for j=0, csize[2]-1 do begin
+          for k=0,chromo_layers-1 do begin
+           box2chromo[i,j,k]=box_idx[i,j,c_idx[i,j,k]]
+          endfor
+        endfor
+      endfor
+      self.volume->SetVertexAttributeData,'box2chromo',box2chromo
+    endif 
+    box2vol=lonarr(csize[1],csize[2],csize[3])
+    box2vol[*,*,0:chromo_layers-1]=box2chromo
+    box2vol[*,*,chromo_layers:*]=box_idx[*,*,corona_base:*]
+  endif else box2vol=box_idx
+  
+  if isa(data,/string) then data=self.GetVertexData(data)
+  if isa(data,/number,/array) then begin
+   data_size=size(data)
+   if array_equal(data_size[1:3],csize[1:3]) then return,data
+  endif
+  if ~isa(idx) then idx=self.GetVertexData('idx')
+  if isa(idx,/string) then idx=self.GetVertexData(idx)
+  if isa(idx,/number) and isa(data,/number) and (n_elements(idx) eq n_elements(data)) then begin
+    vol=replicate(data[0]*0,bsize[1],bsize[2],bsize[3])
+    vol[idx]=data
+    vol=vol[box2vol]
+    if keyword_set(corona_only) then begin
+       chromo_idx=self->GetVertexData('chromo_idx')
+       if isa(chromo_idx,/number,/array) then vol[chromo_idx]=0
+    endif
+    return,vol
+  endif else return,!null
 end
 
 function gxModel::GetScale
@@ -978,32 +915,88 @@ pro gxModel::CreateBline,xyz,any=any
  if obj_valid(bline) then self->Add,bline
 end
 
-function gxModel::BBOX
-  dummy=self->GetB(Bx=Bx,By=By,Bz=Bz)
+function gxModel::BBOX,volume=volume
+  dummy=self->GetB(Bx=Bx,By=By,Bz=Bz,volume=volume)
   self->GetProperty,dr=dr
   return,{Bx:temporary(Bx),by:temporary(By),bz:temporary(Bz),dr:dr}
 end
 
-function gxModel::ComputeBlines,inputSeeds,tr_height=tr_height,_extra=_extra
-  
-  default,inputSeeds,(self->Size())[1:3]/2
+function gxModel::GenerateSeeds, x0=x0,y0=y0,z0=z0,dx=dx,dy=dy,dz=dz,nx=nx,ny=ny,nz=nz
+  default,x0,0
+  default,y0,0
+  default,z0,0
+  default,dx,1
+  default,dy,1
+  default,dz,1
+  default,nx,1
+  default,ny,1
+  default,nz,1
+  maxx=(self.size())[1]
+  maxy=(self.size())[2]
+  maxz=(self.size())[3]
+  nx = nx>1<maxx
+  ny = ny>1<maxy
+  nz = nz>1<maxz
+  dx = dx>0<maxx
+  dy = dy>0<maxy
+  dz = dz>0<maxz
+  x0 = x0>0<maxx
+  y0 = y0>0<maxy
+  z0 = z0>0<maxz
+  seeds=!null
+  desc = [ '1, BASE,, ROW', $
+    string(x0,format="('0, FLOAT,', g0,', LABEL_LEFT=x0:, WIDTH=12, TAG=x0')"), $
+    string(y0,format="('0, FLOAT,', g0,', LABEL_LEFT=y0:, WIDTH=12, TAG=y0')"), $
+    string(z0,format="('2, FLOAT,', g0,', LABEL_LEFT=z0:, WIDTH=12, TAG=z0')"), $
+    '1, BASE,, ROW', $
+    string(dx,format="('0, FLOAT,', g0,', LABEL_LEFT=dx:, WIDTH=12, TAG=dx')"), $
+    string(dy,format="('0, FLOAT,', g0,', LABEL_LEFT=dy:, WIDTH=12, TAG=dy')"), $
+    string(dz,format="('2, FLOAT,', g0,', LABEL_LEFT=dz:, WIDTH=12, TAG=dz')"), $
+    '1, BASE,, ROW', $
+    string(nx,format="('0, FLOAT,', g0,', LABEL_LEFT=nx:, WIDTH=12, TAG=nx')"), $
+    string(ny,format="('0, FLOAT,', g0,', LABEL_LEFT=ny:, WIDTH=12, TAG=ny')"), $
+    string(nz,format="('2, FLOAT,', g0,', LABEL_LEFT=nz:, WIDTH=12, TAG=nz')"), $
+    '1, BASE,, ROW', $
+    '0, BUTTON, OK, QUIT,' $
+    + 'TAG=OK', $
+    '2, BUTTON, Cancel, QUIT,TAG=Quit']
+  a = CW_FORM(desc, /COLUMN,Title='Magnetic Field Line Seeds')
+  if a.ok then begin
+    nx = a.nx>1<maxx
+    ny = a.ny>1<maxy
+    nz = a.nz>1<maxz
+    dx = a.dx>0<maxx
+    dy = a.dy>0<maxy
+    dz = a.dz>0<maxz
+    x0 = ((nx gt 1)?a.x0-nx*dx/2:a.x0)>0<maxx
+    y0 = ((ny gt 1)?a.y0-ny*dy/2:a.y0)>0<maxy
+    z0 = ((nz gt 1)?a.z0-nz*dz/2:a.z0)>0<maxz
+    seeds = dblarr(3, nx*ny*nz)
+    cnt = 0
+    for ix = 0, nx-1 do begin
+      for iy = 0, ny-1 do begin
+        for iz = 0, nz-1 do begin
+          seeds[*, cnt++] = [(x0+ix*dx)>0<maxx, (y0+iy*dy)>0<maxy, (z0+iz*dz)>0<maxz]
+        endfor
+      endfor
+    endfor
+  end
+  return,seeds
+end
+
+function gxModel::ComputeBlines,inputSeeds,tr_height_km=tr_height_km,_extra=_extra
+  if n_elements(inputSeeds)/3 lt 1 then return, obj_new()
   nSeeds=n_elements(inputSeeds)/3
   maxLength=self.steps*nSeeds>1000000L
   reduce_passed=0
   box=self->BBOX()
-  if n_elements(tr_height) eq 0 then begin
-    id=self.volume->VoxelId()
-    tr_layer=where((id and 1) gt 0,count)
-    if count gt 0 then begin
-     tr_idx=max((array_indices(id,tr_layer))[2,*])+1
-    endif else tr_idx=0
-  endif else tr_idx=0
-  chromo_level=tr_idx*box.dr[2]*gx_rsun(unit='km')
+  default,tr_height_km,0
+  chromo_level=tr_height_km
   ;Temporary DLL bug fix
-   sz=self.Size()
-   inputSeeds[0,*]=inputSeeds[0,*]>(tr_idx>1)<(sz[1]-(tr_idx>2))
-   inputSeeds[1,*]=inputSeeds[1,*]>(tr_idx>1)<(sz[2]-(tr_idx>2))
-   inputSeeds[2,*]=inputSeeds[2,*]>(tr_idx>1)<(sz[3]-(tr_idx>2))
+;   sz=self.Size()
+;   inputSeeds[0,*]=inputSeeds[0,*]>(tr_idx>1)<(sz[1]-(tr_idx>2))
+;   inputSeeds[1,*]=inputSeeds[1,*]>(tr_idx>1)<(sz[2]-(tr_idx>2))
+;   inputSeeds[2,*]=inputSeeds[2,*]>(tr_idx>1)<(sz[3]-(tr_idx>2))
   ;End temporary DLL bug fix
 
   dll_path=gx_findfile('WWNLFFFReconstruction.dll',folder='gxbox')
@@ -1018,6 +1011,7 @@ function gxModel::ComputeBlines,inputSeeds,tr_height=tr_height,_extra=_extra
                            , version_info = version_info $
                            , reduce_passed = reduce_passed, n_processes = n_processes, chromo_level = chromo_level $
                            )
+if n_elements(nlines) eq 0 then return, obj_new()
 if nLines eq 0 then return, obj_new()
 lines=objarr(nLines)
 linesB= [ interpolate(box.bx,coords[0,*],coords[1,*],coords[2,*]) $
@@ -1041,38 +1035,17 @@ linesB= [ interpolate(box.bx,coords[0,*],coords[1,*],coords[2,*]) $
 return,lines
 end
 
-pro gxModel::AddBLines
-  desc = [ '1, BASE,, ROW', $
-    '0, FLOAT, 0, LABEL_LEFT=xstep:, WIDTH=6, TAG=x', $
-    '0, FLOAT, 0, LABEL_LEFT=ystep:, WIDTH=6, TAG=y', $
-    '2, FLOAT, 0, LABEL_LEFT=zlayer:, WIDTH=6, TAG=z', $
-    '1, BASE,, ROW', $
-    '0, BUTTON, OK, QUIT,' $
-    + 'TAG=OK', $
-    '2, BUTTON, Cancel, QUIT']
-  a = CW_FORM(desc, /COLUMN,Title='x,y step at layer z')
-  if a.ok then begin
-    void=self->GetB(Bx=Bx)
-    sz=size(bx)
-    if (a.x lt sz[1]) and (a.y lt sz[2]) and (a.z lt sz[3]) and (a.x ge 1) and (a.y ge 1) and (a.z ge 0) then begin
-      if sz[1] MOD a.x ne 0 then nx=sz[1]/a.x else nx=sz[1]/a.x-1 ; define x,y blines number inside volume
-      if sz[2] MOD a.y ne 0 then ny=sz[2]/a.y else ny=sz[2]/a.y-1 ;
-      for i = 1, nx do begin
-        for j = 1, ny do begin
-          if ~self.lock then begin
-          self->CreateBline,[a.x*i,a.y*j,a.z],/any
-          endif else begin
-            p=n_elements(p) eq 0?[a.x*i,a.y*j,a.z]:[[[p]],[a.x*i,a.y*j,a.z]]
-          endelse
-        endfor
-      endfor
+pro gxModel::AddBLines,_extra=_extra
+ inputSeeds=self->GenerateSeeds(_extra=_extra)
+ nSeeds=n_elements(inputSeeds)/3 
+ if nSeeds lt 1 then return
       if self.lock then begin
-        lines=self->ComputeBlines(p)
+        lines=self->ComputeBlines(inputSeeds)
         good=where(obj_valid(lines) eq 1,count)
         if count gt 0 then self->add,lines[good]
-      endif
-    endif else answ=dialog_message('Coordinates provided are outside the datacube range',/error)
-  end
+      endif else begin
+        for i=0, nSeeds-1 do self->CreateBline,InputSeeds[*,i],/any
+      endelse
 end  
 
 pro gxModel::RemoveBlines
@@ -1237,21 +1210,20 @@ PRO gxModel::SetProperty,NS=NS,EW=EW,ROI=ROI,FLUXTUBECOUNT=FLUXTUBECOUNT,$
  self->IDLgrModel::SetProperty,_extra=extra
 end
 
-function gxModel::Grid
- sz=self->Size()
+function gxModel::Grid,_extra=_extra
+ sz=self->Size( _extra=_extra)
  return,float(transpose(array_indices(sz[1:3],lindgen(sz[1]*sz[2]*sz[3]),/dim)))
 end
 
-function gxModel::R
-; (self.volume)->GetVertexAttributeData,'dz',dz
-; if n_elements(dz) eq 0 then begin
- grid=self->Grid()
- grid[*,0]=(grid[*,0]+0.5)*self.xcoord_conv[1]+self.xrange[0]
- grid[*,1]=(grid[*,1]+0.5)*self.ycoord_conv[1]+self.yrange[0]
- grid[*,2]=(grid[*,2])*self.zcoord_conv[1]+self.zrange[0]+1
- ;return,sqrt(total(grid^2,2));grid[*,2];
- return,grid[*,2];
-; endif else return,total(dz,3,/double)+dz[*,*,0]/2+1
+function gxModel::R,volume=volume,_extra=_extra
+ dim=(self->size(volume=volume,_extra=_extra))[1:3]
+ if keyword_set(volume) then (self.volume)->GetVertexAttributeData,'dz',dz
+ if n_elements(dz) eq 0 then begin
+   dz=replicate(self.zcoord_conv[1],dim)
+ endif  
+ dz=[[[dblarr(dim[0],dim[1])]],[[dz]]]
+ h=(total(dz,3,/cum))[*,*,0:dim[2]-1]
+ return,1+h
 end
 
 function gxModel::Corona
@@ -1327,8 +1299,6 @@ function gxModel::GetBTM, TopViewCorrection=TopViewCorrection
 end
 
 
-
-
 function gxModel::IsRoi
   return,self.IsRoi
 end
@@ -1337,6 +1307,135 @@ function gxModel::GetName
 self->GetProperty,id=name
  return,name
 end
+
+pro gxModel::upgrade_combo_model,verbose=verbose
+  ;this routine is called automatical by gxModel::Upgrade
+  ;for the purpose of converting ald format combo models (resolved chromosphere+corobal part)
+  ;to the updated format that display a true chromosphere height/ corona height scale and
+  ;supports proper handling of fluxtubes added to such models.
+  ;15-May-2020
+  IsCombo=self->IsCombo(bsize=bsize,csize=csize,chromo_layers=chromo_layers, corona_base=corona_base)
+  if IsCombo then begin
+    if keyword_set(verbose) then message,'This is a properly formated combo model, nothing to be upgraded!',/cont
+    return
+  endif
+  if chromo_layers eq 0 then begin
+    if keyword_set(verbose) then message,'This is a not a combo model, nothing to be upgraded!',/cont
+    return
+  endif
+  answ=dialog_message(['This combo model has an outdated format!', $
+  'In order to take advantage of all current GX Simulator combo models functionalities, you must choose to convert it to the newst format.'+$
+  'However, the conversion might result in slighly modified volume properties or in missing some previously defined properties, ' +$
+  'which will be reset to the GX Simulator default values..',$
+  'Do you want to upgrade this model, or to keep its original format? '],/question)
+  if strupcase(answ) eq 'NO' then begin
+     message,'Keeping the old combo model format!',/cont
+     return
+  endif
+  message,'Upgrading this combo model the new combo model format!',/cont
+  box=self->BBOX()
+  dz=self->GetVertexData('dz')
+  self.ZCOORD_CONV[1]=dz[0,0,bsize[3]-1]
+  chromo_bcube=fltarr(bsize[1],bsize[2],chromo_layers,3)
+  chromo_bcube[*,*,*,0]=box.Bx[*,*,0:chromo_layers-1]
+  chromo_bcube[*,*,*,1]=box.By[*,*,0:chromo_layers-1]
+  chromo_bcube[*,*,*,2]=box.Bz[*,*,0:chromo_layers-1]
+  h=(self->R(/volume)-1)
+  corona_base=floor(h[0,0,chromo_layers+1]/self.zcoord_conv[1])-1
+  self.size[3]=self.size[3]-chromo_layers+corona_base
+  bx=(by=(bz=fltarr(self.size[1:3])))
+  bx[*,*,corona_base:*]=box.bx[*,*,chromo_layers:*]
+  by[*,*,corona_base:*]=box.by[*,*,chromo_layers:*]
+  bz[*,*,corona_base:*]=box.bz[*,*,chromo_layers:*]
+  box_h=(Self->R()-1)[*,*,0:corona_base-1]
+  for i=0,bsize[1]-1 do begin
+    for j=0,bsize[2]-1 do begin
+      for k=0,corona_base-1 do begin
+        m=min(abs(h[i,j,*]-box_h[i,j,k]),kmin)
+        bx[i,j,k]=box.bx[i,j,kmin]
+        by[i,j,k]=box.by[i,j,kmin]
+        bz[i,j,k]=box.bz[i,j,kmin]
+      endfor
+    endfor
+  endfor
+  old_volume=self.volume
+  self->remove,old_volume
+  data=bytarr(self.size[1:3])
+  self.volume=obj_new('gxVolume',data,name='Volume',XCOORD_CONV=self.XCOORD_CONV,YCOORD_CONV=self.YCOORD_CONV,ZCOORD_CONV=self.ZCOORD_CONV,/interpolate,hints=2)
+  self.volume->SetProperty,data0=data,XCOORD_CONV=self.XCOORD_CONV,YCOORD_CONV=self.YCOORD_CONV,ZCOORD_CONV=self.ZCOORD_CONV
+  self.volume->SetVertexAttributeData,'Bx',bx
+  self.volume->SetVertexAttributeData,'By',by
+  self.volume->SetVertexAttributeData,'Bz',bz
+  self.volume->SetVertexAttributeData,'chromo_bcube',chromo_bcube
+  self.volume->SetVertexAttributeData,'corona_base',corona_base
+  self.volume->SetVertexAttributeData,'chromo_layers',chromo_layers
+  self.volume->SetVertexAttributeData,'dz',dz
+  volume_tags=['chromo_idx','n_htot','n_hi','n_p','chromo_n','chromo_T','tr']
+  for k=0,n_elements(volume_tags)-1 do begin
+    data=old_volume->GetVertexData(volume_tags[k])
+    if isa(data) then self.volume->SetVertexAttributeData,volume_tags[k],data
+  endfor
+  
+  idx=old_volume->GetVertexData('idx')
+  void=self->Box2Volume(box2vol=box2vol)
+  chromo_idx=self->GetVertexData('chromo_idx')
+  if isa(idx,/number,/array) then begin
+   vol=dblarr(csize[1:3])
+   box_vol=dblarr(bsize[1:3])
+   volume_tags=['bmed','length', 'n', 'T','foot1', 'foot2']
+     for k=0, n_elements(volume_tags)-1 do begin
+       data=old_volume->GetVertexData(volume_tags[k])
+       if isa(data) then begin
+         box_vol[*]=0
+         vol[*]=0
+         vol[idx]=data
+         if isa(chromo_idx,/number,/array) then vol[chromo_idx]=0
+         box_vol[box2vol]=vol
+         data=box_vol[where(box_vol ne 0)]
+         self.volume->SetVertexAttributeData,volume_tags[k],data
+       end
+     endfor
+       box_vol[*]=0
+       vol[*]=0
+       vol[idx]=idx
+       if isa(chromo_idx,/number,/array) then vol[chromo_idx]=0
+       box_vol[box2vol]=vol
+       idx=where(box_vol ne 0)
+       self.volume->SetVertexAttributeData,'idx',idx
+  endif
+  
+  oidx=old_volume->GetVertexData('oidx')
+  if isa(oidx,/number,/array) then begin
+   vol=dblarr(csize[1:3])
+   box_vol=dblarr(bsize[1:3])
+   volume_tags=['obmed','olength', 'ofoot1', 'ofoot2']
+     for k=0, n_elements(volume_tags)-1 do begin
+       data=old_volume->GetVertexData(volume_tags[k])
+       if isa(data) then begin
+         box_vol[*]=0
+         vol[*]=0
+         vol[oidx]=data
+         if isa(chromo_idx,/number,/array) then vol[chromo_idx]=0
+         box_vol[box2vol]=vol
+         data=box_vol[where(box_vol ne 0)]
+         self.volume->SetVertexAttributeData,volume_tags[k],data
+       end
+     endfor
+       box_vol[*]=0
+       vol[*]=0
+       vol[oidx]=oidx
+       if isa(chromo_idx,/number,/array) then vol[chromo_idx]=0
+       box_vol[box2vol]=vol
+       oidx=where(box_vol ne 0)
+       self.volume->SetVertexAttributeData,'oidx',oidx
+  endif
+  
+  obj_destroy,old_volume
+  self->add,self.volume
+  self->UpdateRoi,/replace
+end
+
+
 pro gxModel__define
 self={gxModel,inherits gxComponent,$
 NS:0d,EW:0d,volume:obj_new(),ROI:obj_new(),refmaps:ptr_new(),$

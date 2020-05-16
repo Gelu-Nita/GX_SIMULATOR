@@ -41,12 +41,16 @@ function gxObjViewWid::Init,wParent, oSubjects, toolbar_parent=toolbar_parent,_e
               /bitmap,tooltip='Create Flux Tube')
 
   self.wBaseMapContextMenu= WIDGET_BASE(self.wDraw, /CONTEXT_MENU, UNAME="BaseMapContextMenu")
-  wDeleteButton=Widget_Button(self.wBaseMapContextMenu,Value='Create field line',uname='BASEMAP:CREATEFIELDLINE')
-
+  wCreateButton=Widget_Button(self.wBaseMapContextMenu,Value='Create field line',uname='BASEMAP:CREATEFIELDLINE')
+  wSeedButton=Widget_Button(self.wBaseMapContextMenu,Value='Seed field lines at this basemap location',uname='BASEMAP:CREATESEEDEDFIELDLINES')
+  
   self.wBlineContextMenu= WIDGET_BASE(self.wBase, /CONTEXT_MENU, UNAME="BlineContextMenu")
-  wCreateButton=Widget_Button(self.wBlineContextMenu,Value='Create flux tube',uname='BLINE:CREATEFLUXTUBE')
+
   wLockButton=Widget_Button(self.wBlineContextMenu,Value='Lock',uname='BLINE:LOCK')
+  wSeedButton=Widget_Button(self.wBlineContextMenu,Value='Seed field lines at top of this line',uname='BLINE:CREATESEEDEDFIELDLINES')
+  wCreateButton=Widget_Button(self.wBlineContextMenu,Value='Create flux tube',uname='BLINE:CREATEFLUXTUBE')
   wDeleteButton=Widget_Button(self.wBlineContextMenu,Value='Delete field line',uname='BLINE:DELETE')
+
 
   self.wFluxTubeContextMenu= WIDGET_BASE(self.wBase, /CONTEXT_MENU, UNAME="FluxTubeContextMenu")
   wDeleteButton=Widget_Button(self.wFluxTubeContextMenu,Value='Delete flux tube',uname='FLUXTUBE:DELETE')
@@ -150,14 +154,30 @@ if error_status ne 0 then begin
 
 case strupcase(widget_info(event.id,/uname)) of
  'BASEMAP:CREATEFIELDLINE':begin
-		                   wait,0.2
-		                   widget_control,self.wBaseMapContextMenu,get_uvalue=info
-		                   result=self.oWindow->PickData(self.oViewgroup->Get(/current),$
-		                   info.oSelected,[info.location.x,info.location.y],xyz)
-		                   info.oSelected->GetProperty,parent=oModel
-		                   oModel->CreateBline,xyz
-		                   self->Draw
+      		                   wait,0.2
+      		                   widget_control,self.wBaseMapContextMenu,get_uvalue=info
+      		                   result=self.oWindow->PickData(self.oViewgroup->Get(/current),$
+      		                   info.oSelected,[info.location.x,info.location.y],xyz)
+      		                   info.oSelected->GetProperty,parent=oModel
+      		                   oModel->CreateBline,xyz
+      		                   self->Draw
                            end
+ 'BASEMAP:CREATESEEDEDFIELDLINES':begin
+                             wait,0.2
+                             widget_control,self.wBaseMapContextMenu,get_uvalue=info
+                             result=self.oWindow->PickData(self.oViewgroup->Get(/current),$
+                               info.oSelected,[info.location.x,info.location.y],xyz)
+                             info.oSelected->GetProperty,parent=oModel
+                             oModel->AddBLines,x0=xyz[0],y0=xyz[1],z0=xyz[2]
+                             self->Draw
+                           end  
+                           
+ 'BLINE:CREATESEEDEDFIELDLINES':begin
+                             wait,0.2
+                             widget_control,self.wBlineContextMenu,get_uvalue=info
+                             info.parent->AddBLines,x0=info.top[0],y0=info.top[1],z0=info.top[2]
+                             self->Draw
+                           end                                                  
  'BLINE:DELETE':begin
                     wait,0.2
                     widget_control,self.wBlineContextMenu,get_uvalue=oSelected

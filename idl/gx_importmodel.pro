@@ -5,6 +5,17 @@ function gx_ImportModel,source,box=box
     MESSAGE, /INFO, !ERROR_STATE.MSG
     return,obj_new()
  end
+   if n_elements(source) eq 0 then begin
+    source=dialog_pickfile(filter='*.sav',$
+                  DEFAULT_EXTENSION='sav',$
+                  /read,/must_exist,$
+                  title='Please select a file containig a {Bx,By,Bz} datacube structure')
+   if ~file_exist(source)  then return, obj_new()            
+   endif
+   if ~(size(source,/tname) eq 'STRING' or size(source,/tname) eq 'STRUCT') then begin
+    message,'Input variable is neither a file name, nor a structure, operation aborted!' ,/cont
+    return, obj_new()
+   endif
    if size(source,/tname) eq 'STRING' then begin
     file=source
     osav=obj_new('idl_savefile',file)
@@ -16,6 +27,7 @@ function gx_ImportModel,source,box=box
         catch,/cancel
         restore,source,/relaxed
         result=box
+        i--
         goto,skip
       endif
       osav->restore,names[i]
@@ -192,6 +204,15 @@ function gx_ImportModel,source,box=box
     if tag_exist(box,'chromo_layers') then begin
       volume->SetVertexAttributeData,'chromo_layers',box.chromo_layers
     end
+    
+    if tag_exist(box,'chromo_bcube') then begin
+      volume->SetVertexAttributeData,'chromo_bcube',box.chromo_bcube
+    end
+    
+    if tag_exist(box,'corona_base') then begin
+      volume->SetVertexAttributeData,'corona_base',box.corona_base
+    end   
+    
     model->SetRoi
     model->UpdateDef
     model->DisplayMap,2 

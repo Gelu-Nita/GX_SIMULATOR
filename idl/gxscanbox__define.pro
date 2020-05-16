@@ -490,14 +490,13 @@ PRO gxScanBox::Slice,row
   if ~obj_valid(model) then begin
     goto, unassigned
   endif
-  
-  grid=model->GetGrid()
+ void=model->Box2Volume(box2vol=box2vol) 
+ grid=model->GetGrid()
  if ptr_valid(grid) then (*self.grid).grid=grid
   if ~ptr_valid(grid) then goto, unassigned
 
-  sz=model->Size()
+  sz=model->Size(/volume)
   dr=reform((*grid)[0,*,row,*])
-  ;r=reform(((model->R())))
   g=reform((*grid)[1:3,*,row,*])
   vol_ind=transpose(reform(g,3,self.nx*self.nz))
   missing=0
@@ -511,7 +510,7 @@ PRO gxScanBox::Slice,row
     end
   endif
   
-  r=reform(model->R(),sz[1],sz[2],sz[3])
+  r=model->R(/volume)
   radius=interpolate(temporary(r),vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
   
   ;ASSIGN dz
@@ -572,29 +571,25 @@ PRO gxScanBox::Slice,row
     ;n_0
     idx=self->name2idx('n_0')
     if (size(idx))[0] ne 0 then begin
-      volume->GetVertexAttributeData,'n0',n0
-      (*self.grid).parms[*,*,idx]=interpolate(temporary(n0),vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
-      assigned[idx]=1
+      vol=model->Box2Volume('n0')
+      if isa(vol)then begin
+        (*self.grid).parms[*,*,idx]=interpolate(vol,vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
+        assigned[idx]=1
+      end
     end
 
     ;T_0
     idx=self->name2idx('T_0')
     if (size(idx))[0] ne 0 then begin
-      volume->GetVertexAttributeData,'T0',T0 
-      (*self.grid).parms[*,*,idx]=interpolate(temporary(T0),vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
+      vol=model->Box2Volume('T0')
+      (*self.grid).parms[*,*,idx]=interpolate(vol,vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
       assigned[idx]=1
     end
       
-
-    
-     volume->GetVertexAttributeData,'idx',closed
-
      idx=self->name2idx('bmed')
      if (size(idx))[0] ne 0 then begin
-       volume->GetVertexAttributeData,'bmed',bmed
-       if n_elements(bmed) gt 0 and n_elements(closed) gt 0 then begin
-         vol[*]=0
-         vol[closed]=temporary(bmed)
+       vol=model->Box2Volume('bmed')
+       if isa(vol)then begin
          (*self.grid).parms[*,*,idx]=interpolate(vol,vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
           assigned[idx]=1 
         end
@@ -603,10 +598,10 @@ PRO gxScanBox::Slice,row
 
      idx=self->name2idx('length')
      if (size(idx))[0] ne 0 then begin
-       volume->GetVertexAttributeData,'length',length
-       if n_elements(length) gt 0 and n_elements(closed) gt 0 then begin
-         vol[*]=1e11
-         vol[closed]=gx_rsun()*temporary(length)/2
+       vol=model->Box2Volume('length')
+       if isa(vol)then begin
+         ;vol[*]=1e11
+         vol=gx_rsun()*vol/2
          (*self.grid).parms[*,*,idx]=interpolate(vol,vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
           assigned[idx]=1 
        end 
@@ -614,10 +609,8 @@ PRO gxScanBox::Slice,row
 
     idx=self->name2idx('Q')
     if (size(idx))[0] ne 0 then begin
-      volume->GetVertexAttributeData,'Q',Q
-      if n_elements(Q) gt 0 and n_elements(closed) gt 0 then begin
-        vol[*]=0
-        vol[closed]=temporary(Q)
+      vol=model->Box2Volume('Q')
+      if isa(vol)then begin
         (*self.grid).parms[*,*,idx]=interpolate(vol,vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
         assigned[idx]=1
       end  
@@ -651,12 +644,13 @@ PRO gxScanBox::Slice,row
     if (size(idx))[0] ne 0 then begin
        model->GetProperty,wparent=wparent
        id=widget_info(wparent,find_by_uname='GXMODEL:DEMAVG')
-       if widget_valid(id) then widget_control,id,get_value=demavg
-      (*self.grid).parms[*,*,idx]=demavg
-      assigned[idx]=1
+       if widget_valid(id) then begin
+        widget_control,id,get_value=demavg
+        (*self.grid).parms[*,*,idx]=demavg
+        assigned[idx]=1
+       endif
     end
        
-    
     idx=self->name2idx('hc_angle')
     if (size(idx))[0] ne 0 then begin
       model->GetProperty,ns=ns,ew=ew
@@ -665,12 +659,12 @@ PRO gxScanBox::Slice,row
     end
    
 
-    volume->GetVertexAttributeData,'chromo_idx',chromo_idx
+    chromo_idx=model->GetVertexData('chromo_idx')
     ; start for backward compatibility Dec 18 2014!!!!
-    if n_elements(chromo_idx) eq 0 then volume->GetVertexAttributeData,'idx',chromo_idx
+    if n_elements(chromo_idx) eq 0 then chromo_idx=model->GetVertexData('idx')
     ; end for backward compatibility Dec 18 2014!!!!
-    if n_elements(chromo_idx) gt 0 then begin
-     volume->GetVertexAttributeData,'n_htot',n_htot
+    if isa(chromo_idx,/number,/array) then begin
+     n_htot=model->GetVertexData('n_htot')
      if n_elements(n_htot) eq n_elements(chromo_idx) then begin
       var=temporary(n_htot)
       vol[*]=0
@@ -683,7 +677,7 @@ PRO gxScanBox::Slice,row
       end
      endif
 
-     volume->GetVertexAttributeData,'n_hi',n_hi
+     n_hi=model->GetVertexData('n_hi')
      if n_elements(n_hi) eq n_elements(chromo_idx)  then begin
        var=temporary(n_hi)
        vol[*]=0
@@ -696,7 +690,7 @@ PRO gxScanBox::Slice,row
        end
      endif
 
-     volume->GetVertexAttributeData,'n_p',n_p
+     n_p=model->GetVertexData('n_p')
      if n_elements(n_p) eq n_elements(chromo_idx) then begin
        var=temporary(n_p)
        vol[*]=0
@@ -713,6 +707,8 @@ PRO gxScanBox::Slice,row
     
     ;LOOP OVER FLUXTUBES
     tubes=model->Get(/all,ISA='gxFluxtube',count=tcount)
+    bsize=model->Size()
+    vol=(tmp=dblarr(bsize[1],bsize[2],bsize[3]))  
       for j=0,tcount-1 do begin
         vol[*]=0
         tubes[j]->GetProperty,T0=T0,eps=eps,kappa=kappa,emin=emin,emax=emax,$
@@ -722,9 +718,8 @@ PRO gxScanBox::Slice,row
         ocount=n_elements(owned)      
         if ocount gt 1 then begin
           vol[*]=0
-          tmp=vol
           vol[owned]=1
-          (*self.grid).slice=interpolate(vol,vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
+          (*self.grid).slice=interpolate(vol[box2vol],vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
            slice_owned=where((*self.grid).slice eq 1,comp=cowned,nowned)  
            if nowned gt 0 then begin
             owned2d=array_indices((*self.grid).slice,slice_owned)
@@ -752,6 +747,8 @@ PRO gxScanBox::Slice,row
    
    vertex_parms=['n_nth','THETA_C','THETA_B','dMu','a4']
    idx_parms=['n_b','THETA_C','THETA_B','dMu','a_4']
+   bsize=model->Size()
+   vol=(tmp=dblarr(bsize[1],bsize[2],bsize[3]))
    for k=0,n_elements(idx_parms)-1 do begin
      idx=self->name2idx(idx_parms[k])
      if idx ge 0 then assigned[idx]=1
@@ -772,17 +769,17 @@ PRO gxScanBox::Slice,row
           end
         end
       end
-      (*self.grid).parms[*,*,idx]+=interpolate(vol,vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
+      (*self.grid).parms[*,*,idx]+=interpolate(vol[box2vol],vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
      endif
    end  
    
  
   
-  volume->GetVertexAttributeData,'Bx',vol    
+  vol=volume->GetBx(/volume)  
   (*self.grid).B[*,0]=Interpolate(vol, vol_ind[*, 0], vol_ind[*, 1], vol_ind[*, 2], missing=missing)
-  volume->GetVertexAttributeData,'By',vol
+  vol=volume->GetBy(/volume) 
   (*self.grid).B[*,1]=Interpolate(vol, vol_ind[*, 0], vol_ind[*, 1], vol_ind[*, 2], missing=missing)
-  volume->GetVertexAttributeData,'Bz',vol
+  vol=volume->GetBz(/volume) 
   (*self.grid).B[*,2]=Interpolate(vol, vol_ind[*, 0], vol_ind[*, 1], vol_ind[*, 2], missing=missing)
   
   
@@ -1067,7 +1064,7 @@ case event.id of
                      self.ImgViewWid->GetProperty,model=model
                      if obj_valid(model) then begin
                         volume=(model->GetVolume())
-                        volume->Update,select,data_range=data_range,pwr_idx=pwr_idx,/update;explicitely request volume update
+                        volume->Update,select,range=data_range,pwr_idx=pwr_idx,/update;explicitely request volume update
                         widget_control,self.wMinVolume,Set_Value=data_range[0]
                         widget_control,self.wMaxVolume,Set_Value=data_range[1]
                         widget_control,self.wPowerIndexVolume,Set_Value=pwr_idx

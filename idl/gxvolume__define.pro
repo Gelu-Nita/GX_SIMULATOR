@@ -23,14 +23,66 @@ compile_opt hidden
  return,result
 end
 
-function gxVolume::GetB,p,bx=Bx,by=By,Bz=Bz
+function gxVolume::GetB,p,bx=Bx,by=By,Bz=Bz,volume=volume
 ;p is expressed in self's box fractional index coordinates
 self->GetVertexAttributeData,'Bx',Bx
 self->GetVertexAttributeData,'By',By
 self->GetVertexAttributeData,'Bz',Bz
+if keyword_set(volume) then begin
+  self->GetVertexAttributeData,'chromo_bcube',chromo_bcube
+  self->GetVertexAttributeData,'corona_base', corona_base
+  sz=size(chromo_bcube)
+  if sz[0] eq 4 and n_elements(corona_base) ne 0 then begin
+    Bx=[[[chromo_bcube[*,*,*,0]]],[[bx[*,*,corona_base:*]]]]
+    By=[[[chromo_bcube[*,*,*,1]]],[[by[*,*,corona_base:*]]]]
+    Bz=[[[chromo_bcube[*,*,*,0]]],[[bz[*,*,corona_base:*]]]]
+  endif
+end
 if (n_elements(p) eq 3) and (n_elements(Bx) ne 0) $
 then return,[interpolate(bx,p[0],p[1],p[2]),interpolate(by,p[0],p[1],p[2]),interpolate(bz,p[0],p[1],p[2])]$
 else return,[0,0,0]
+end
+
+function gxVolume::GetBx,volume=volume
+  ;p is expressed in self's box fractional index coordinates
+  self->GetVertexAttributeData,'Bx',Bx
+  if keyword_set(volume) then begin
+    self->GetVertexAttributeData,'chromo_bcube',chromo_bcube
+    self->GetVertexAttributeData,'corona_base', corona_base
+    sz=size(chromo_bcube)
+    if sz[0] eq 4 and n_elements(corona_base) ne 0 then begin
+      Bx=[[[chromo_bcube[*,*,*,0]]],[[bx[*,*,corona_base:*]]]]
+    endif
+  end
+  return,bx
+end
+
+function gxVolume::GetBy,volume=volume
+  ;p is expressed in self's box fractional index coordinates
+  self->GetVertexAttributeData,'By',By
+  if keyword_set(volume) then begin
+    self->GetVertexAttributeData,'chromo_bcube',chromo_bcube
+    self->GetVertexAttributeData,'corona_base', corona_base
+    sz=size(chromo_bcube)
+    if sz[0] eq 4 and n_elements(corona_base) ne 0 then begin
+      By=[[[chromo_bcube[*,*,*,0]]],[[by[*,*,corona_base:*]]]]
+    endif
+  end
+  return,by
+end
+
+function gxVolume::GetBz,volume=volume
+  ;p is expressed in self's box fractional index coordinates
+  self->GetVertexAttributeData,'Bz',Bz
+  if keyword_set(volume) then begin
+    self->GetVertexAttributeData,'chromo_bcube',chromo_bcube
+    self->GetVertexAttributeData,'corona_base', corona_base
+    sz=size(chromo_bcube)
+    if sz[0] eq 4 and n_elements(corona_base) ne 0 then begin
+      Bz=[[[chromo_bcube[*,*,*,0]]],[[bz[*,*,corona_base:*]]]]
+    endif
+  end
+  return,bz
 end
 
 function gxVolume::Size
@@ -297,7 +349,7 @@ pro gxVolume::DisplayModelStatistics,data
 end
 
 function gxVolume::SetQ,q_formula
-  q_default='q0*(B/q[1])^2/(L/q[2])'
+  q_default='q0*(B/q[1])/(L/q[2])^0.75'
   self->GetVertexAttributeData,'q_formula',undo
   if n_elements(undo) eq 0 then undo=q_default
   undo=string(undo)
@@ -318,9 +370,11 @@ function gxVolume::SetQ,q_formula
   self->GetVertexAttributeData,'curlb',curlb 
   self->GetVertexAttributeData,'length',L
   self->GetVertexAttributeData,'dz',dz
+  ;TO BE REVISITED!!!
   if n_elements(dz) gt 0 then dz=max(dz) else dz=self.zcoord_conv[1]
   short_idx=where(L lt dz,short_count)
   if short_count gt 0 then L[short_idx]=0
+  ;!!!!!!!!!!!!!!!!!!
   l=gx_rsun()*l/2
   result=execute('newQ='+q_formula)
   if result eq  0 then begin
@@ -342,7 +396,7 @@ function gxVolume::SetQ,q_formula
 end
 
 function gxVolume::SetQ0,q0_formula,q_formula=q_formula
-  q0_default='q[0]';'q[0]*(q[1]+tanh((abs(alpha)-q[2])*q[4])-tanh((abs(alpha)-q[3])*q[4]))'
+  q0_default='q[0]'
   self->GetVertexAttributeData,'q0_formula',undo
   if n_elements(undo) eq 0 then undo=q0_default
   undo=string(undo)
@@ -379,9 +433,6 @@ end
 function gxVolume::Selected
  return.self.select
 end
-
-
-
 
       
 pro gxVolume::UpdateVoxelId,force=force
@@ -433,8 +484,6 @@ pro gxVolume::UpdateVoxelId,force=force
      if count gt 0 then edge=where(id[coridx+1] eq 1UL or id[coridx-1] eq 1,count)
      if count gt 0 then id[coridx[edge]]+=gx_voxelid(/tr,/euv)
     end  
-
-
 
   if n_elements(tr) eq 0 then begin
     ;This is done only if TR not been defined above
@@ -522,32 +571,16 @@ end
 function gxVolume::VoxelId
  self->GetVertexAttributeData,'voxel_id',voxel_id
  return,voxel_id
-end
-
-pro gxVolume::UpdateBoundaries
-  ;Update Boundaries
-  ;  id=voxel_id
-  ;  dim=size(voxel_id,/dim)
-  ;  Nx=dim[0]
-  ;  Ny=dim[1]
-  ;  Nz=dim[2]
-  ;  for i=0, Nx-1 do begin
-  ;    status=gx_progmeter(prog_id,i/float(Nx-1))
-  ;    for j=0, Ny-1 do begin
-  ;      for r=0, Nz-1 do begin
-  ;        ue=where(id[(i-1)>0 : (i+1)<(Nx-1), $
-  ;          (j-1)>0 : (j+1)<(Ny-1), $
-  ;          (r-1)>0 : (r+1)<(Nz-1)] ne voxel_id[i, j, r] or (voxel_id[i, j, r] and 1UL ne 0), ke)
-  ;        if ke ne 0 then begin
-  ;          voxel_id[i,j,r]=voxel_id[i,j,r] or ishft(1ul, 30)
-  ;        endif
-  ;      endfor
-  ;    endfor
-  ;  endfor 
 end  
 
+function gxVolume::GetVertexData,var
+  if isa(var,/string) and ~isa(var,/array) then $
+    self->GetVertexAttributeData,var,data
+  return,isa(data,/number)?data:!null
+end
+
 pro gxVolume::Update,select,data=data,plot_model_attributes=plot_model_attributes,getdata=getdata,$
-              force=force,update=update,chromo_view=chromo_view,data_range=data_range,pwr_idx=pwr_idx
+              force=force,update=update,chromo_view=chromo_view,range=range,pwr_idx=pwr_idx
   compile_opt hidden
   catch, error_stat
  if error_stat ne 0 then begin
@@ -574,188 +607,134 @@ pro gxVolume::Update,select,data=data,plot_model_attributes=plot_model_attribute
   self->SetColor,/auto
   case self.select of
   'Bx'  :begin
-         self->GetVertexAttributeData,'Bx',data
+         data=self->GetBx(/volume)
          if self->undefined(data) then goto,undefined
         end
   'By'  :begin
-         self->GetVertexAttributeData,'By',data
+         data=self->GetBy(/volume)
          if self->undefined(data) then goto,undefined
         end
   'Bz'  :begin
-         self->GetVertexAttributeData,'Bz',data
+         data=self->GetBz(/volume)
          if self->undefined(data) then goto,undefined
         end
   'B'  :begin
-         self->GetVertexAttributeData,'Bx',Bx
+         bx=self->GetBx(/volume)
          if self->undefined(Bx)then goto,undefined
-         self->GetVertexAttributeData,'By',By
+         by=self->GetBy(/volume)
          if self->undefined(By) then goto,undefined
-         self->GetVertexAttributeData,'Bz',Bz
+         bz=self->GetBz(/volume)
          if self->undefined(Bz) then goto,undefined
          data=sqrt(Bx^2+by^2+Bz^2)
-         ;data=bytscl(data)
         end
    'curlB':begin
           if n_elements(select) eq 0 then goto, no_recompute
           widget_control,/hourglass
-          self->GetVertexAttributeData,'curlb',curlb
-          if n_elements(curlb) eq 0 then begin
+          data=self.parent->box2volume('idx','curlb',box2vol=box2vol)
+          if ~isa(data,/number) then begin
             ;compute curl
-            self->GetVertexAttributeData,'Bx',Bx
-            if self->undefined(Bx)then goto,undefined
-            self->GetVertexAttributeData,'By',By
-            if self->undefined(By) then goto,undefined
-            self->GetVertexAttributeData,'Bz',Bz
-            if self->undefined(Bz) then goto,undefined
-            self.parent->GetProperty,xcoord_conv=dx,ycoord_conv=dy,zcoord_conv=dz
-            m=max([dx,dy,dz])
-            dx=dx[1]/m
-            dy=dy[1]/m
-            dz=dz[1]/m
-            curl,bx,by,bz,cx,cy,cz,order=3, dx=dx, dy=dy, dz=dz
+            box=self.parent->BBOX()
+            m=max(box.dr)
+            dx=box.dr[0]/m
+            dy=box.dr[1]/m
+            dz=box.dr[2]/m
+            curl,box.bx,box.by,box.bz,cx,cy,cz,order=3, dx=dx, dy=dy, dz=dz
             data=sqrt(cx^2+cy^2+cz^2)
             ;curl computed
-          endif else begin
-            self->GetVertexAttributeData,'idx',idx
-            self->GetProperty,data0=data
-            data=float(data*0)
-            data[idx]=curlb
-          endelse
+            data=data[box2vol]
+          endif 
         end   
    'divB+':begin
           if n_elements(select) eq 0 then goto, no_recompute
           widget_control,/hourglass
           ;compute divB
-          self->GetVertexAttributeData,'Bx',Bx
-          if self->undefined(Bx)then goto,undefined
-          self->GetVertexAttributeData,'By',By
-          if self->undefined(By) then goto,undefined
-          self->GetVertexAttributeData,'Bz',Bz
-          if self->undefined(Bz) then goto,undefined
-          self.parent->GetProperty,xcoord_conv=dx,ycoord_conv=dy,zcoord_conv=dz
-          m=max([dx,dy,dz])
-          dx=dx[1]/m
-          dy=dy[1]/m
-          dz=dz[1]/m
-          div,bx,by,bz,D,order=3, dx=dx, dy=dy, dz=dz
-          data=D>0
+          box=self.parent->BBOX()
+          m=max(box.dr)
+          dx=box.dr[0]/m
+          dy=box.dr[1]/m
+          dz=box.dr[2]/m
+          div,box.bx,box.by,box.bz,data,order=3, dx=dx, dy=dy, dz=dz
+          void=self.parent->box2volume(box2vol=box2vol)
+          data=data[box2vol]>0
         end
     'divB-':begin
           if n_elements(select) eq 0 then goto, no_recompute
           widget_control,/hourglass
           ;compute divB
-          self->GetVertexAttributeData,'Bx',Bx
-          if self->undefined(Bx)then goto,undefined
-          self->GetVertexAttributeData,'By',By
-          if self->undefined(By) then goto,undefined
-          self->GetVertexAttributeData,'Bz',Bz
-          if self->undefined(Bz) then goto,undefined
-          self.parent->GetProperty,xcoord_conv=dx,ycoord_conv=dy,zcoord_conv=dz
-          m=max([dx,dy,dz])
-          dx=dx[1]/m
-          dy=dy[1]/m
-          dz=dz[1]/m
-          div,bx,by,bz,D,order=3, dx=dx, dy=dy, dz=dz
-          data=D<0
+          box=self.parent->BBOX()
+          m=max(box.dr)
+          dx=box.dr[0]/m
+          dy=box.dr[1]/m
+          dz=box.dr[2]/m
+          div,box.bx,box.by,box.bz,data,order=3, dx=dx, dy=dy, dz=dz
+          void=self.parent->box2volume(box2vol=box2vol)
+          data=data[box2vol]<0
         end    
     'helB-':begin
           if n_elements(select) eq 0 then goto, no_recompute
           widget_control,/hourglass
-          self->GetVertexAttributeData,'alpha',alpha
-          if n_elements(alpha) eq 0 then begin
+          data=self.parent->box2volume('idx','alpha',box2vol=box2vol)
+          if ~isa(data,/number) then begin
             ;compute curl
-            self->GetVertexAttributeData,'Bx',Bx
-            if self->undefined(Bx)then goto,undefined
-            self->GetVertexAttributeData,'By',By
-            if self->undefined(By) then goto,undefined
-            self->GetVertexAttributeData,'Bz',Bz
-            if self->undefined(Bz) then goto,undefined
-            self.parent->GetProperty,xcoord_conv=dx,ycoord_conv=dy,zcoord_conv=dz
-            m=max([dx,dy,dz])
-            dx=dx[1]/m
-            dy=dy[1]/m
-            dz=dz[1]/m
-            curl,bx,by,bz,cx,cy,cz,order=3, dx=dx, dy=dy, dz=dz
-            data=bx*cx+by*cy+bz*cz
-            data=data/(bx*bx+by*by+bz*bz)
-          endif else begin
-           self->GetVertexAttributeData,'idx',idx
-           self->GetProperty,data0=data
-           data=data*0
-           data[idx]=alpha
-          endelse
+            box=self.parent->BBOX()
+            m=max(box.dr)
+            dx=box.dr[0]/m
+            dy=box.dr[1]/m
+            dz=box.dr[2]/m
+            curl,box.bx,box.by,box.bz,cx,cy,cz,order=3, dx=dx, dy=dy, dz=dz
+            ;curl computed
+            data=box.bx*cx+box.by*cy+box.bz*cz
+            data=data/(box.bx^2+box.by^2+box.bz^2)
+            data=data[box2vol]
+          endif 
           data[where(data gt 0)]=1./0
-        end   
-       
+        end    
       'helB+':begin
           if n_elements(select) eq 0 then goto, no_recompute
           widget_control,/hourglass
-          self->GetVertexAttributeData,'alpha',alpha
-          if n_elements(alpha) eq 0 then begin
+          data=self.parent->box2volume('idx','alpha',box2vol=box2vol)
+          if ~isa(data,/number) then begin
             ;compute curl
-            self->GetVertexAttributeData,'Bx',Bx
-            if self->undefined(Bx)then goto,undefined
-            self->GetVertexAttributeData,'By',By
-            if self->undefined(By) then goto,undefined
-            self->GetVertexAttributeData,'Bz',Bz
-            if self->undefined(Bz) then goto,undefined
-            self.parent->GetProperty,xcoord_conv=dx,ycoord_conv=dy,zcoord_conv=dz
-            m=max([dx,dy,dz])
-            dx=dx[1]/m
-            dy=dy[1]/m
-            dz=dz[1]/m
-            curl,bx,by,bz,cx,cy,cz,order=3, dx=dx, dy=dy, dz=dz
+            box=self.parent->BBOX()
+            m=max(box.dr)
+            dx=box.dr[0]/m
+            dy=box.dr[1]/m
+            dz=box.dr[2]/m
+            curl,box.bx,box.by,box.bz,cx,cy,cz,order=3, dx=dx, dy=dy, dz=dz
+            ;curl computed
             data=bx*cx+by*cy+bz*cz
-            data=data/(bx*bx+by*by+bz*bz)
-          endif else begin
-           self->GetVertexAttributeData,'idx',idx
-           self->GetProperty,data0=data
-           data=data*0
-           data[idx]=alpha
-          endelse
+            data=data/(box.bx^2+box.by^2+box.bz^2)
+            data=data[box2vol]
+          endif
           data[where(data lt 0)]=1./0
         end                              
-   'n_0':begin 
-         self->GetVertexAttributeData,'n0',data
-         if chromo_view eq 0 then begin
-          chromo_idx=where((voxel_id and 1) ne 0,chromo_count)
-          if chromo_count gt 0 then data[chromo_idx]=0
-         endif
-        end
-   'T_0':begin 
-         self->GetVertexAttributeData,'T0',data
-         if chromo_view eq 0 then begin
-           chromo_idx=where((voxel_id and 1) ne 0,chromo_count)
-           if chromo_count gt 0 then data[chromo_idx]=0
-         endif
-        end    
-   'n_b':begin 
-             sz=self.parent->Size()
-             data=fltarr(sz[1],sz[2],sz[3])
-             ndata=data
-            ;LOOP OVER FLUXTUBES
-            tubes=self.parent->Get(/all,ISA='gxFluxtube',count=tcount)
-            for j=0,tcount-1 do begin
-              ndata[*]=0
-              tubes[j]->GetProperty,centerbase=base
-              base->GetVertexAttributeData,'n_nth',n_nth
-              base->GetVertexAttributeData,'owned',owned
-              base->GetVertexAttributeData,'N_IDX',n_idx
-              if n_elements(owned) gt 1 then begin
-               ndata[n_idx]=n_nth
-               data[owned]=ndata[owned]
+     'n_0': data=self->GetVertexData('n0')
+     'T_0': data=self->GetVertexData('T0')     
+     'n_b':begin 
+              void=self.parent->box2volume(box2vol=box2vol,bsize=sz)
+              data=(ndata=dblarr(sz[1],sz[2],sz[3]))
+              ;LOOP OVER FLUXTUBES
+              tubes=self.parent->Get(/all,ISA='gxFluxtube',count=tcount)
+              for j=0,tcount-1 do begin
+                ndata[*]=0
+                tubes[j]->GetProperty,centerbase=base
+                base->GetVertexAttributeData,'owned',owned
+                if n_elements(owned) gt 1 then begin
+                 base->GetVertexAttributeData,'n_nth',n_nth
+                 base->GetVertexAttributeData,'N_IDX',n_idx
+                 ndata[n_idx]=n_nth
+                 data[owned]=ndata[owned]
+                end 
               end 
-             end      
-         if self->undefined(data) then goto,undefined
-        end
+              data=data[box2vol]     
+          end
     'dMu':begin 
-          sz=self.parent->Size()
-          data=fltarr(sz[1],sz[2],sz[3])
-          vol=data
-          tubes=self.parent->Get(/all,ISA='gxFluxtube',count=tcount)
-          ;LOOP OVER FLUXTUBES
+           void=self.parent->box2volume(box2vol=box2vol,bsize=sz)
+           data=(vol=dblarr(sz[1],sz[2],sz[3]))
+           tubes=self.parent->Get(/all,ISA='gxFluxtube',count=tcount)
+           ;LOOP OVER FLUXTUBES
             for j=0,tcount-1 do begin
-              tubes[j]->GetProperty,T0=T0,centerbase=base
+              tubes[j]->GetProperty,centerbase=base
               base->GetVertexAttributeData,'owned',owned
               if n_elements(owned) gt 1 then begin
                base->GetVertexAttributeData,'N_IDX',n_idx
@@ -764,15 +743,15 @@ pro gxVolume::Update,select,data=data,plot_model_attributes=plot_model_attribute
                data[owned]=vol[owned]
               end    
             end
+            data=data[box2vol] 
            end  
       'theta_C':begin 
-          sz=self.parent->Size()
-          data=fltarr(sz[1],sz[2],sz[3])
-          vol=data
-          tubes=self.parent->Get(/all,ISA='gxFluxtube',count=tcount)
-          ;LOOP OVER FLUXTUBES
+           void=self.parent->box2volume(box2vol=box2vol,bsize=sz)
+           data=(vol=dblarr(sz[1],sz[2],sz[3]))
+           tubes=self.parent->Get(/all,ISA='gxFluxtube',count=tcount)
+           ;LOOP OVER FLUXTUBES
             for j=0,tcount-1 do begin
-              tubes[j]->GetProperty,T0=T0,centerbase=base
+              tubes[j]->GetProperty,centerbase=base
               base->GetVertexAttributeData,'owned',owned
               if n_elements(owned) gt 1 then begin
                base->GetVertexAttributeData,'N_IDX',n_idx
@@ -781,15 +760,15 @@ pro gxVolume::Update,select,data=data,plot_model_attributes=plot_model_attribute
                data[owned]=vol[owned]
               end    
             end
+            data=data[box2vol] 
            end  
      'theta_b':begin 
-          sz=self.parent->Size()
-          data=fltarr(sz[1],sz[2],sz[3])
-          vol=data
-          tubes=self.parent->Get(/all,ISA='gxFluxtube',count=tcount)
-          ;LOOP OVER FLUXTUBES
+           void=self.parent->box2volume(box2vol=box2vol,bsize=sz)
+           data=(vol=dblarr(sz[1],sz[2],sz[3]))
+           tubes=self.parent->Get(/all,ISA='gxFluxtube',count=tcount)
+           ;LOOP OVER FLUXTUBES
             for j=0,tcount-1 do begin
-              tubes[j]->GetProperty,T0=T0,centerbase=base
+              tubes[j]->GetProperty,centerbase=base
               base->GetVertexAttributeData,'owned',owned
               if n_elements(owned) gt 1 then begin
                base->GetVertexAttributeData,'N_IDX',n_idx
@@ -798,15 +777,15 @@ pro gxVolume::Update,select,data=data,plot_model_attributes=plot_model_attribute
                data[owned]=vol[owned]
               end    
             end
+            data=data[box2vol] 
            end  
      'a_4':begin 
-          sz=self.parent->Size()
-          data=fltarr(sz[1],sz[2],sz[3])
-          vol=data
-          tubes=self.parent->Get(/all,ISA='gxFluxtube',count=tcount)
-          ;LOOP OVER FLUXTUBES
+           void=self.parent->box2volume(box2vol=box2vol,bsize=sz)
+           data=(vol=dblarr(sz[1],sz[2],sz[3]))
+           tubes=self.parent->Get(/all,ISA='gxFluxtube',count=tcount)
+           ;LOOP OVER FLUXTUBES
             for j=0,tcount-1 do begin
-              tubes[j]->GetProperty,T0=T0,centerbase=base
+              tubes[j]->GetProperty,centerbase=base
               base->GetVertexAttributeData,'owned',owned
               if n_elements(owned) gt 1 then begin
                base->GetVertexAttributeData,'N_IDX',n_idx
@@ -815,64 +794,67 @@ pro gxVolume::Update,select,data=data,plot_model_attributes=plot_model_attribute
                data[owned]=vol[owned]
               end    
             end
+            data=data[box2vol] 
            end  
       'Q0': begin
-             self->GetVertexAttributeData,'Q0',q0
-             if n_elements(q0) eq 0 or n_elements(idx) eq 0 then goto, undefined
-             self->GetProperty,data0=data
-             data=data*0.0
-             data[idx]=q0         
+             data=self.parent->box2volume('Q0')
+             if self->undefined(data) then goto,undefined    
             end 
-       'Q': begin
-              self->GetVertexAttributeData,'Q',q
-              if n_elements(q) eq 0 or n_elements(idx) eq 0 then goto, undefined
-              self->GetProperty,data0=data
-              data=data*0.0
-              data[idx]=q
+      'Q': begin
+             data=self.parent->box2volume('Q0')
+             if self->undefined(data) then goto,undefined   
             end     
-        'Length': begin
-            if n_elements(length) eq 0 or n_elements(idx) eq 0 then goto, undefined
-              self->GetProperty,data0=data
-              data=data*0.0
-              data[idx]=length
+      'Length': begin
+             data=self.parent->box2volume('length')
+             if self->undefined(data) then goto,undefined 
             end          
    else: begin 
-          self->SetColor,0
-          sz=self.parent->Size()
-          result=execute('corona->GetProperty,'+self.select+'=value',1,1)
-          data=fltarr(sz[1],sz[2],sz[3])
-          vol=data
-          if n_elements(value) eq 1 then data[*]=value
-          tubes=self.parent->Get(/all,ISA='gxFluxtube',count=tcount)
-          ;LOOP OVER FLUXTUBES
-            for j=0,tcount-1 do begin
-             vol[*]=0
-              tubes[j]->GetProperty,T0=T0,centerbase=base
-              base->GetVertexAttributeData,'owned',owned
-              if n_elements(owned) gt 1 then begin
-               base->GetVertexAttributeData,'N_IDX',n_idx
-               result=execute('tubes[j]->GetProperty,'+self.select+'=value',1,1)
-               if n_elements(value) eq 0 then goto,undefined
-               vol[n_idx]=value
-               data[owned]=vol[owned]
-              end    
-            end 
-            goto,defined      
+;          self->SetColor,0
+;          sz=self.parent->Size()
+;          result=execute('corona->GetProperty,'+self.select+'=value',1,1)
+;          data=fltarr(sz[1],sz[2],sz[3])
+;          vol=data
+;          if n_elements(value) eq 1 then data[*]=value
+;          tubes=self.parent->Get(/all,ISA='gxFluxtube',count=tcount)
+;          ;LOOP OVER FLUXTUBES
+;            for j=0,tcount-1 do begin
+;             vol[*]=0
+;              tubes[j]->GetProperty,T0=T0,centerbase=base
+;              base->GetVertexAttributeData,'owned',owned
+;              if n_elements(owned) gt 1 then begin
+;               base->GetVertexAttributeData,'N_IDX',n_idx
+;               result=execute('tubes[j]->GetProperty,'+self.select+'=value',1,1)
+;               if n_elements(value) eq 0 then goto,undefined
+;               vol[n_idx]=value
+;               data[owned]=vol[owned]
+;              end    
+;            end 
+;         goto,defined      
          undefined:
-         self->GetProperty,data0=data
+         void=self.parent->box2volume(box2vol=data)
          data=data*0
         end
    endcase
    defined:
-   min_val=min(data[where(data gt 0)],max=max_val)
-   default,data_range,[min_val,max_val]
-   default,pwr_idx,1
    if keyword_set(getdata) then return
+  
+
    
    message,strcompress(self.select+' range: ['+arr2str(minmax(data)))+']',/cont
-   self->SetProperty,data0=bytscl(data^pwr_idx,min=data_range[0]^pwr_idx,max=data_range[1]^pwr_idx),/interpolate,volume_select=0
-   ;self->SetProperty,data0=bytscl((data>data_range[0]<data_range[1])^pwr_idx),/interpolate,volume_select=0
-   ;self->SetProperty,data0=bytscl(data^0.2),/interpolate,volume_select=0
+   IsCombo=self.parent->IsCombo(csize=csize,bsize=bsize,chromo_layers=chromo_layers, corona_base=corona_base)
+   if ~keyword_set(chromo_view) and chromo_layers gt 0 then begin
+    data[*,*,0:chromo_layers-1]=0
+   endif
+   if IsCombo then begin
+    mean_chromo_data=total(data[*,*,0:chromo_layers-1],3)/chromo_layers
+    data=data[*,*,chromo_layers-corona_base:*]
+    for i=0, corona_base-1 do data[*,*,i]=mean_chromo_data
+   endif
+   min_val=min(data[where(data gt 0)],max=max_val)
+   default,range,[min_val,max_val]
+   default,pwr_idx,1
+   data0=bytscl(data^pwr_idx,min=range[0]^pwr_idx,max=range[1]^pwr_idx)
+   self->SetProperty,data0=data0,/interpolate,volume_select=0
    self->DisplayModelStatistics,data 
    no_recompute:
    self->PlotModelAttributes
@@ -915,13 +897,6 @@ end
 pro gxVolume::ClearVolumeUpdateRequest
    self->SetVertexAttributeData,'update',0L
 end
-
-;function gxVolume::NeedsUpdate
-; self->GetVertexAttributeData,'update',update
-; default,update,0L
-; self->SetVertexAttributeData,'update',update
-; return,update
-;end 
 
 function gxVolume::getflags
  return,self.Flags
@@ -1012,11 +987,8 @@ pro gxVolume::ComputeNT,question=question,quiet=quiet,force=force
 end
 
 pro gxVolume::ComputeN0T0,tube_id=tube_id
-  self->GetProperty,data0=data0,zcoord_conv=zcoord_conv
-  sz=size(data0)
-  z=dindgen(sz[3])*zcoord_conv[1]
   r=self.parent->R()
-  r=reform(r,sz[1],sz[2],sz[3])
+  sz=size(r)
   cn=fltarr(sz[1],sz[2],sz[3])
   cT0=cn
   p=cn
@@ -1059,7 +1031,7 @@ pro gxVolume::ComputeN0T0,tube_id=tube_id
      endif
      end
      T=T*self.Tscale
-     n=n*self.nscale
+     n=n*self.Tscale
      if n_elements(blend) eq 0 then blend=0
      if blend eq 1 then begin
        ;This option has been hidden to the non-expert users
@@ -1096,7 +1068,6 @@ pro gxVolume::ComputeN0T0,tube_id=tube_id
     if keyword_set(hide) then goto,skip_tube
     base->GetVertexAttributeData,'n_th',n_th
     base->GetVertexAttributeData,'N_IDX',n_idx
-
     p0[n_idx]=(cT0*cn)[n_idx]+T0*n_th
     ;------------------------------
     owned=where(p0 gt p,ocount)
@@ -1109,7 +1080,7 @@ pro gxVolume::ComputeN0T0,tube_id=tube_id
       ndata[owned]=nvol[owned]
       tvol[n_idx]=p0[n_idx]/(ndata+cn)[n_idx]
       tdata[owned]=tvol[owned]
-      tube_id[owned]=ulong(j+1);ulong(2)^j
+      tube_id[owned]=ulong(j+1)
     end
     skip_tube:
   end
@@ -1117,7 +1088,7 @@ pro gxVolume::ComputeN0T0,tube_id=tube_id
   ;LOOP AGAIN OVER FLUXTUBES TO DETERMINE UNIQ FLUXTUBE OWNERSHIP
   for j=0,tcount-1 do begin
     tubes[j]->GetProperty,centerbase=base,hide=hide
-    owned=where(tube_id eq ulong(j+1),ocount);ulong(2)^j,ocount)
+    owned=where(tube_id eq ulong(j+1),ocount)
     base->SetVertexAttributeData,'owned',owned
   endfor
   
@@ -1128,23 +1099,27 @@ pro gxVolume::ComputeN0T0,tube_id=tube_id
   ;if count gt 0 then ndata[corona_owned]=cn[corona_owned]
   ;--------------------
   
-  coronal_n=ndata
-  coronal_t=tdata
-  
-  self->GetVertexAttributeData,'chromo_idx',chromo_idx
-  if n_elements(chromo_idx) ne 0 then begin
-    self->GetVertexAttributeData,'chromo_n',chromo_n
-    self->GetVertexAttributeData,'chromo_T',chromo_t
-    ndata[chromo_idx]=chromo_n
-    tdata[chromo_idx]=chromo_t
-  endif else begin
+  if ~self.parent->IsCombo() then begin
     if chromo_count gt 0 then begin
       ndata[chromo_owned]=chromo_n
       tdata[chromo_owned]=chromo_t
       tr=(array_indices(r,max(chromo_owned)))[2]+1
       self->setvertexattributedata,'chromo_layers',tr
     end
+  endif else begin
+    void=self.parent->Box2Volume(box2vol=box2vol)
+    ndata=ndata[box2vol]
+    tdata=tdata[box2vol]
+    tube_id=tube_id[box2vol]
+    chromo_idx=self->GetVertexData('chromo_idx')
+    if isa(chromo_idx,/number,/array) then begin
+      self->GetVertexAttributeData,'chromo_n',chromo_n
+      self->GetVertexAttributeData,'chromo_T',chromo_t
+      ndata[chromo_idx]=chromo_n
+      tdata[chromo_idx]=chromo_t
+    endif
   endelse
+
   self->SetVertexAttributeData,'n0',ndata
   self->SetVertexAttributeData,'T0',tdata
 end

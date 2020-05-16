@@ -15,6 +15,7 @@
 ;/generic_only: set this keyword to stop the script after the information related the computed volume magnetic lines are added to the box
 ;/euv: use this keyword to download the context SDO EUV maps and add tem as reference maps in the box structure
 ;/uv: use this keyword to download the context SDO UV maps and add tem as reference maps in the box structure
+;hmifiles: use this keyword to suply a valid hmi filepath structure pinting to a local repository, in order to bypass the attempt to download them 
 ;_extra: use this keyword to provide additional keywards that may be used by various routines called by the pipeline , such as
 ;_extra keywords that may be used by gx_box_create.pro
 ; /cea: to use CEA projection
@@ -35,7 +36,7 @@
 pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km, out_dir = out_dir, tmp_dir = tmp_dir,$
                         empty_box_only=empty_box_only,save_empty_box=save_empty_box,potential_only=potential_only,$
                         save_potential=save_potential,save_bounds=save_bounds,use_potential=use_potential, use_idl=use_idl,$
-                        nlfff_only=nlfff_only, generic_only=generic_only,centre=centre,euv=euv,uv=uv,_extra=_extra
+                        nlfff_only=nlfff_only, generic_only=generic_only,centre=centre,euv=euv,uv=uv,hmifiles=hmifiles,_extra=_extra
   setenv, 'WCS_RSUN=6.96d8'
   
   break_file, ROUTINE_FILEPATH(), dsk_log, dir, routine_name, ext
@@ -45,11 +46,13 @@ pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km
     dummy=execute('set=keyword_set('+par.kw_args[i]+')')
     if set eq 1 then begin
       dummy=execute('val='+par.kw_args[i])
-      if size(val,/tname) ne 'STRING' then begin
-      val=n_elements(val) eq 1?arr2str(val):'['+arr2str(val)+']'
-      endif else val="'"+val+"'"
-      val=strcompress(val)
-      exec+=', '+par.kw_args[i]+'='+val
+      if size(val,/tname) ne 'STRUCT' then begin
+        if size(val,/tname) ne 'STRING' then begin
+        val=n_elements(val) eq 1?arr2str(val):'['+arr2str(val)+']'
+        endif else val="'"+val+"'"
+        val=strcompress(val)
+        exec+=', '+par.kw_args[i]+'='+val   
+      end
     endif
   endfor
   if size(_extra,/tname) eq 'STRUCT' then begin
@@ -72,9 +75,15 @@ pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km
   
   if not keyword_set(dx_km) then dx_km = 1000d
   if not keyword_Set(size_pix) then size_pix = [128,128,64]
-  files = gx_box_download_hmi_data(time, tmp_dir)
+  if size(hmifiles,/tname) eq 'STRUCT' then begin
+   if tag_exist(hmifiles,'field') $
+              and tag_exist(hmifiles,'inclination')  $
+              and tag_exist(hmifiles,'azimuth') $
+              and tag_exist(hmifiles,'disambig') $
+   then files=hmifiles else files = gx_box_download_hmi_data(time, tmp_dir)                  
+  endif else files = gx_box_download_hmi_data(time, tmp_dir)
   data=readfits(files.continuum,header)
-  time=atime(sxpar(header,'date_obs'))
+  time=atime(sxpar(header,'date_obs'))              
   if keyword_set(uv) or keyword_set(euv) then aia_files=gx_box_download_AIA_data(time, cache_dir = tmp_dir, uv=uv, euv=euv, _extra=_extra)
   if size(aia_files,/tname) eq 'STRUCT' then files = create_struct(files,aia_files)
   message,strcompress(string(systime(/seconds)-t0,format="('Data already found in the local repository or downloaded in ',g0,' seconds')")),/cont
@@ -159,7 +168,7 @@ pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km
     obj_destroy,model
     message,strcompress(string(systime(/seconds)-t0,format="('Field line computation performed in ',g0,' seconds')")),/cont
   endif else begin
-    reduce_passed=0
+    reduce_passed=1
     if tag_exist(_extra,'center_vox') then begin
       reduce_passed=~keyword_set(_extra.center_vox)
     endif else if tag_exist(_extra,'reduce_passed') then reduce_passed=_extra.reduce_passed

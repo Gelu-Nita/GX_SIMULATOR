@@ -79,15 +79,15 @@ pro gxWidget::CreatePanel
 
    wExecBase=widget_base(wToolbarBase,/row,/toolbar)
    
-   wAddFieldLine= widget_button(font=font, wExecBase, $
-              value=gx_bitmap(filepath('roi.bmp', subdirectory=subdirectory)), $
-              /bitmap,tooltip='Create fieldline at xyz location',uname=prefix+'ADDFIELDLINE')
-  wAddFieldLinesArray = widget_button(font=font, wExecBase, $
-              value=gx_bitmap(filepath('roi.bmp', subdirectory=subdirectory)), $
-              /bitmap,tooltip='Create fieldlines array at z-layer',uname=prefix+'ADDFIELDLINEARRAY')           
-   wImportGuideLine= widget_button(font=font, wExecBase, $
-              value=gx_bitmap(filepath('freehand.bmp', subdirectory=subdirectory)), $
-              /bitmap,tooltip='Import guide line',uname=prefix+'GUIDELINE')
+   
+   wLINESFROMSEEDS= widget_button(font=font, wExecBase, $
+     value=gx_bitmap(filepath('roi.bmp', subdirectory=subdirectory)), $
+     /bitmap,tooltip='Create fieldlines at seeded locations',uname=prefix+'LINESFROMSEEDS')
+   
+   wImportSeeds= widget_button(font=font, wExecBase, $
+     value=gx_bitmap(filepath('freehand.bmp', subdirectory=subdirectory)), $
+     /bitmap,tooltip='Import fieldlines seeds',uname=prefix+'ImportSeeds')
+   
    wImportLOSMap= widget_button(font=font, wExecBase, $
               value=gx_bitmap(filepath('surface.bmp', subdirectory=subdirectory)), $
               /bitmap,tooltip='Import LOS reference map',uname=prefix+'LOSMAP')  
@@ -107,11 +107,17 @@ pro gxWidget::CreatePanel
    ;xlabelsize=85
    xtextsize=10
    wDimensions=widget_base(self.wbase,/row)
-   sz=self.subject->Size()
    pbr=pb0r(self.subject->GetTime())*60
-   wVolumeInfo = widget_label(font=font,wDimensions, $
-        VALUE='['+self.subject->GetTime()+'] ' +string(sz[1],sz[2],sz[3],xcoord_conv[1],xcoord_conv[1]*pbr[2],$
-              format="('Dimension: [',i3,',',i3,',',i3,'] Resolution: ',g0,'R (',g0,' arcsec)')")) 
+   if self.subject->IsCombo(csize=csz,bsize=sz) then begin
+     wVolumeInfo = widget_label(font=font,wDimensions, $
+       VALUE='['+self.subject->GetTime()+'] ' +string(sz[1],sz[2],sz[3],csz[3],xcoord_conv[1],xcoord_conv[1]*pbr[2],$
+       format="('Dimension: [',i3,',',i3,',',i3,'(',i3,')] Resolution: ',g0,'R (',g0,' arcsec)')"))
+   endif else begin
+     wVolumeInfo = widget_label(font=font,wDimensions, $
+       VALUE='['+self.subject->GetTime()+'] ' +string(sz[1],sz[2],sz[3],xcoord_conv[1],xcoord_conv[1]*pbr[2],$
+       format="('Dimension: [',i3,',',i3,',',i3,'] Resolution: ',g0,'R (',g0,' arcsec)')"))
+   endelse
+  
    wSelectBase=widget_base(self.wBase,/row)   
    wBaseMapMenu=widget_button(font=font,wSelectBase,/menu,value='Reference Map Actions')
    wLOSMapImport=widget_button(font=font,wBaseMapMenu,value='Import LOS Reference Map',uname=prefix+'LOSMAP')
@@ -279,7 +285,7 @@ pro gxWidget::CreatePanel
         
      volume->GetVertexAttributeData,'q0_coeff',q
      if n_elements(q) eq 0 then begin
-       q=[1e-3,1e2,1e9,0,0]
+       q=[0.415e-3,1e2,1e9,0,0]
        volume->SetVertexAttributeData,'q0_coeff',q
      end
      
@@ -491,7 +497,6 @@ pro gxWidget::CreatePanel
     widget_control,wTop,set_button=1-top_hide                    
    
     xtextsize=7
-    ;xlabelsize=200
    
     wCrossBase=widget_base(wGeometry,/row)
     wCrossBaseC1=widget_base(wCrossBase,/column)
@@ -951,65 +956,41 @@ end
                 widget_control,event.id,get_value=value
                 self.subject->SetProperty,winos=value[0]
               END         
-    'GXMODEL:ADDFIELDLINEARRAY':self.subject->AddBLines
-
-    'GXMODEL:ADDFIELDLINE' :Begin
-                              desc = [ '1, BASE,, ROW', $
-                                       '0, FLOAT, 0, LABEL_LEFT=x:, WIDTH=6, TAG=x', $
-                                       '0, FLOAT, 0, LABEL_LEFT=y:, WIDTH=6, TAG=y', $
-                                       '2, FLOAT, 0, LABEL_LEFT=z:, WIDTH=6, TAG=z', $
-                                       '1, BASE,, ROW', $
-                                       '0, BUTTON, OK, QUIT,' $
-                                       + 'TAG=OK', $
-                                       '2, BUTTON, Cancel, QUIT']
-                              a = CW_FORM(desc, /COLUMN,Title='Field line gridpoint')
-                              if a.ok then begin
-                               void=self.subject->GetB(Bx=Bx)
-                               sz=size(bx)    
-                               if (a.x lt sz[1]) and (a.y lt sz[2]) and (a.z lt sz[3]) and (a.x ge 0) and (a.y ge 0) and (a.z ge 0) then begin
-                                self.subject->CreateBline,[a.x,a.y,a.z],/any
-                               endif else answ=dialog_message('Coordinates provided are outside the datacube range',/error)
-                              end
-                            End         
-     'GXMODEL:GUIDELINE':Begin
+    'GXMODEL:LINESFROMSEEDS':begin
+                              model=self.subject
+                              sz=model->Size()
+                              self.subject->AddBLines,x0=sz[1]/2.,y0=sz[2]/2.,z0=0,dx=10,dy=10,dz=1,nx=sz[1]/10,ny=sz[2]/10,nz=1
+                            end 
+        
+    'GXMODEL:IMPORTSEEDS':Begin
                             file=dialog_pickfile(filter='*.sav',$
                                  DEFAULT_EXTENSION='sav',$
                                  /read,/must_exist,$
-                                 title='Please select a file to upload a saved guide line for this model')
+                                 title='Please select a file to upload an input magnetic field seed array for this model')
                             if file ne '' then begin
                             osav=obj_new('idl_savefile',file)
                             names=osav->names()
                             for i=0,n_elements(names)-1 do begin
                              osav->restore,names[i]
-                             e=execute('result=size('+names[i]+',/tname)')
-                             if result eq 'STRUCT' then begin
-                              e=execute('loops=temporary('+names[i]+')')
-                              tags=tag_names(loops)
-                              valid=0
-                              for j=0,n_elements(tags)-1 do if tags[j] eq 'X' then valid=1
-                              if valid then begin
-                               valid=0
-                               for j=0,n_elements(tags)-1 do if tags[j] eq 'BT' then valid=1
-                               scale=self.subject->GetScale()
-                               for k=0,n_elements(loops)-1 do begin
-                                 if valid then begin
-                                  e=execute('bt=loops[k].bt')
-                                  m=min(bt,s)
-                                  top=[loops[k].x[s],loops[k].y[s],loops[k].z[s]]
-                                 end
-                                 x=loops[k].x
-                                 y=loops[k].y
-                                 z=loops[k].z
-                                 fin=where((finite(x) and finite(y) and finite(x)) eq 1,fcount)
-                                 if fcount gt 0 then begin
-                                 bline=obj_new('gxbline',x[fin],y[fin],z[fin],top=top,XCOORD_CONV=scale.XCOORD_CONV,YCOORD_CONV=scale.YCOORD_CONV,ZCOORD_CONV=scale.ZCOORD_CONV)
-                                 self.subject->add,bline
-                                 end
-                               end
-                              end
-                             end
-                            end
-                            end
+                             e=execute('result=n_elements('+names[i]+')/3')
+                             if result ge 1 then begin
+                              e=execute('inputSeeds=temporary('+names[i]+')')
+                              dim=size(inputSeeds,/dim)
+                              if n_elements(dim) eq 2 and dim[0] eq 3 then begin
+                                found=1
+                                self.subject->GetProperty,winOS=winOS
+                                if winOS then begin
+                                  lines=self.subject->ComputeBlines(inputSeeds)
+                                  good=where(obj_valid(lines) eq 1,count)
+                                  if count gt 0 then self.subject->add,lines[good]
+                                endif else begin
+                                  for i=0, nSeeds-1 do self.subject->CreateBline,InputSeeds[*,i],/any
+                                endelse
+                              endif
+                             endif
+                            endfor
+                           endif   
+                           if n_elements(found) eq 0 then answ=dialog_message('No valid InputSeeds variable found in this file!',/info)                     
                          End 
      'GXMODEL:LOSMAP':Begin
                             files=dialog_pickfile(title='Please select one more more files containg maps saved as IDL map structure, IDL objects, or fits',filter=['*.sav','*.map','*.f*s'],/must_exist,/multiple)

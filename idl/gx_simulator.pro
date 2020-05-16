@@ -175,7 +175,16 @@ pro gx_simulator_event,event
    'GXSPEC2PLOTMAN':begin
                   widget_control,widget_info(event.top,find_by_uname='ViewTab'),set_tab_current=2
                   event=state.MapView->HandleEvent(event)
-                end                                            
+                end    
+   'INPUTMODEL':begin
+               if tag_exist(event,'model') then begin
+                   widget_control,widget_info(event.top,find_by_uname='ViewTab'),set_tab_current=0
+                   widget_control,widget_info(event.top,find_by_uname='ControlTab'),set_tab_current=0
+                   model=event.model
+                   goto,UploadModel
+                  endif
+             end
+                                                        
  ELSE:
  ENDCASE
 
@@ -294,7 +303,9 @@ pro gx_simulator_event,event
 end
 
 
-pro gx_simulator,nthreads,expert=expert,_extra=_extra
+pro gx_simulator,nthreads_or_model,expert=expert,_extra=_extra
+if isa(nthreads_or_model,/number) then nthreads=nthreads_or_model
+if isa(nthreads_or_model,'gxmodel') then model=nthreads_or_model
 setenv, 'WCS_RSUN=6.96d8'
 if !version.os_family eq 'Windows' then set_plot,'win' else set_plot,'x'
 defsysv,'!DEFAULTS',EXISTS=exists
@@ -423,14 +434,6 @@ state.oObjviewWid = obj_new('gxObjviewWid', $
   widget_control,widget_info(wStatusBar,/child),get_uvalue=oStatusBar
   oStatusBar->Erase
   state.scanbox->ComputeFOV
-
-;  ;temporary bug fix for the xwidump ssw routine
-;  which,'gx_simulator',outfile=outfile,/quiet
-;  gxpath=file_dirname(outfile,/mark)
-;  cdir=curdir()
-;  cd,str_replace(gxpath,'idl','support')
-;  RESOLVE_ROUTINE, 'xwidump', /COMPILE_FULL_FILE ,/either 
-;  cd,cdir
-;  ;end of fix
+  if isa(model,'gxmodel') then widget_control,main_base,send_event={inputmodel,id:0l,top:0l,handler:0l,model:model}
 end
 

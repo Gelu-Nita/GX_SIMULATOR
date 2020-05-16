@@ -1,4 +1,4 @@
-function gxCorona::Init,R=R,size=size,_extra=_extra
+function gxCorona::Init,_extra=_extra
 compile_opt hidden
  catch, error_stat
  if error_stat ne 0 then begin
@@ -6,11 +6,6 @@ compile_opt hidden
     MESSAGE, /INFO, !ERROR_STATE.MSG
     return, 0
  end
- default,R,1.5
- default,size,[64,64,64]
- self.R=R
- self.size=size
- dr=2*self.R/self.size
  result=self->gxComponent::Init(_extra=_extra)
  self.n0=1e8
  self.T0=1e6
@@ -23,35 +18,9 @@ compile_opt hidden
  self.kappa=4
  self.emin=0.001
  self.emax=10
- data=fltarr(self.size[0],self.size[1],self.size[2])
- sz=size(data)
- xcoord_conv=[0,dr[0]]
- ycoord_conv=[0,dr[1]]
- zcoord_conv=[0,dr[2]]
-
- self.volume=obj_new('gxVolume',data,xcoord_conv=[0,dr[0]],ycoord_conv=[0,dr[1]],zcoord_conv=[0,dr[2]],zbuffer=1,_extra=_extra,/interpolate,/ZERO_OPACITY_SKIP)
- self.volume->SetProperty,_extra=_extra
- self->Reset
- self->Translate,-self.R,-self.R,-self.R
- rgb_curr=bytarr(3,256)
- tvlct,rgb_curr,/get
- loadct,39
- rgb=bytarr(3,256)
- tvlct,rgb,/get
- self.volume->SetProperty,rgb_table0=rgb
- tvlct,rgb_curr
  return,result
 end
 
-function gxCorona::GetVolume
-;p is expressed in self's box fractional index coordinates
-return,self.volume
-end
-
-function gxCorona::Size
- self->GetProperty,data0=data0
- return,size(data0)
-end
 
 pro  gxCorona::SetProperty,n0=n0,T0=T0,p=p,n_th=n_th,wParent=wParent,emin=emin,emax=emax,dist_e=dist_e,kappa=kappa,$
                            chromo_n=chromo_n,chromo_T=chromo_T,chromo_h=chromo_h,chromo_view=chromo_view,blend=blend,ignore=ignore,_extra=_extra
@@ -70,7 +39,6 @@ pro  gxCorona::SetProperty,n0=n0,T0=T0,p=p,n_th=n_th,wParent=wParent,emin=emin,e
  if exist(kappa) then self.kappa=kappa
  if exist(blend) then self.blend=blend
  if exist(ignore) then self.ignore=ignore
- self.volume->SetProperty,_extra=_extra
  self->gxComponent::SetProperty,_extra=_extra
 end
 
@@ -92,7 +60,6 @@ pro gxCorona::GetProperty,n0=n0,T0=T0,p=p,n_th=n_th,wParent=wParent,emin=emin,em
  kappa=self.kappa
  blend=self.blend
  ignore=self.ignore
- self.volume->GetProperty,_extra=extra
  self->gxComponent::GetProperty,_extra=extra
 end
 
@@ -152,10 +119,8 @@ END
 
 pro gxCorona::UpdateVolume,_extra=_extra
  widget_control,/hourglass
- R=1
- self->GetProperty,xcoord_conv=xcoord_conv,data0=data0,p=p,n_th=n_th,n0=n0,T0=T0
- sz=size(data0)
- radius=findgen(sz[1])*xcoord_conv[1]/2
+ if ~obj_isa(self.parent,'gxmodel') then return
+ radius=reform((self.parent->R(/box))[0,0,*])
  n_th=self->GetDensity(radius,h=h)
  good=where(h ge 0)
  n_th=n_th(good)

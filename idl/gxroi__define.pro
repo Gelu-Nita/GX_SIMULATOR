@@ -62,8 +62,8 @@ pro gxROI::DisplayMap,select
   display->SetProperty,ALPHA_CHANNEL=1,BLEND_FUNCTION = [3, 4],hide=0
   (self->GetFOVscreen())->SetProperty,hide=1
   if widget_valid(wParent) then begin
-    widget_control,hide_fov,set_button=1
-    widget_control,hide_cea,set_button=0
+   if widget_valid(hide_fov) then  widget_control,hide_fov,set_button=1
+   if widget_valid(hide_cea) then  widget_control,hide_cea,set_button=0
   end  
  endif else begin
   map=gx_remap(map,self.fovmap->get(/xrange),self.fovmap->get(/yrange),[self.nx,self.ny],time=ref_map.time)
@@ -71,8 +71,10 @@ pro gxROI::DisplayMap,select
   display=self.fovimage
  (self->GetFOVscreen())->SetProperty,hide=0
  (self->GetBaseScreen())->SetProperty,ALPHA_CHANNEL=0,BLEND_FUNCTION = [3, 4]
- widget_control,hide_fov,set_button=0
- widget_control,hide_cea,set_button=1
+ if widget_valid(wParent) then begin
+  if widget_valid(hide_fov) then  widget_control,hide_fov,set_button=0
+  if widget_valid(hide_cea) then widget_control,hide_cea,set_button=1
+ end  
  endelse
  if obj_isa(display,'IDLgrImage') then display->SetProperty,data=bytscl(map.data);bytscl(alog10((map.data)-min(map.data)+1))
 end

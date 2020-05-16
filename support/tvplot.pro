@@ -169,8 +169,14 @@ xout = xout, yout = yout,aspect_ratio=aspect_ratio
 ;	ISTP SB RAS, 2013, Jun.
 ; Sergey Anfinogentov (anfinogentov@iszf.irk.ru):
 ; The aspect_ratio parameter introduced. .
+; 
+; NJIT, 2020, May
+; Gelu Nita (gnita@njit.edu)
+; REFORM of input data applied to ensure 2-dimensuons 
+; if data is provided as a 3D array slice
 ;-
 
+Image=reform(Image)
 
 Sz=size(Image)
 

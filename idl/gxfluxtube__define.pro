@@ -11,14 +11,15 @@ FUNCTION gxFluxTube::INIT,centerline=centerline,_extra=_extra
  
  
  ;**********02Sep2016
- centerline->GetProperty,data=data
+ centerline->GetProperty,data=data,lock=lock
  centerline->GetVertexAttributeData,'s',s
  centerline->GetVertexAttributeData,'B',lb
  top=min(abs(s),idx)
  p=data[*,idx]
  full=parent->GetBline(p,/full)
  parent->Remove,centerline
- centerline=full
+ centerline=full[0]
+ centerline->SetProperty,lock=lock
  parent->Add,centerline
 ;*******02Sep2016
 
@@ -178,17 +179,17 @@ PRO gxFluxTube::SetBLines
  n=sz[2]*sz[3]
  data=reform(data,3,n)
  self.centerline->GetProperty,parent=model
- if !VERSION.OS_FAMILY NE 'Windows' then begin
- for i=0,n-1 do begin
-  self->SetBline,reform(data[*,i]),line=line
-  if obj_isa(line,'gxBline') then begin
-  line->GetProperty,top=top
-   if n_elements(contour) eq 0 then contour=top else contour=[[contour],[top]]
-  end
- end
+ model->GetProperty,winOS=WinOS
+ if ~winOS then begin
+   for i=0,n-1 do begin
+    self->SetBline,reform(data[*,i]),line=line
+    if obj_isa(line,'gxBline') then begin
+    line->GetProperty,top=top
+     if n_elements(contour) eq 0 then contour=top else contour=[[contour],[top]]
+    end
+   end
  endif else begin
-  self.centerline->GetProperty,parent=parent
-  lines=parent->ComputeBlines(data)
+  lines=model->ComputeBlines(data,tr_height_km=0)
   good=where(obj_valid(lines) eq 1,count)
   if count gt 0 then begin
     lines=lines[good]
@@ -827,6 +828,39 @@ PRO gxFluxTube::Update_A4,c_idx,B2B0=B2B0
  a4=self->A4(c_idx,B2B0=B2B0)
  self.base->SetVertexAttributeData,'a4',a4
 END
+
+;pro gxFluxTube::Box2Volume
+;  
+;  boxsize=self.Parent->Size(/box,chromo_offset=chromo_offset,chromo_bcube_height=chromo_bcube_height,chromo_layers=chromo_layers)
+;  
+;  self.base->GetVertexAttributeData,'N_IDX',n_idx
+;  self.base->GetVertexAttributeData,'n_th',n_th
+;  self.base->GetVertexAttributeData,'n_nth',n_nth
+;  self.base->GetVertexAttributeData,'owned',owned
+;
+;  base->GetVertexAttributeData,'C_IDX',c_idx
+;  self.base->GetVertexAttributeData,'a4',a4
+;  self.base->GetVertexAttributeData,'dMu',dMU
+;  self.base->GetVertexAttributeData,'THETA_B',theta_b
+;  self.base->GetVertexAttributeData,'THETA_C',theta_c
+;  
+;  corona_idx=where(n_idx ge chromo_bcube_height*sz[1]*sz[2],count,comp=chromo_idx,ncomp=ncomp)
+;  if count gt 0 then n_idx[corona_idx]=n_idx[corona_idx]+chromo_offset
+;  if ncomp gt 0 then begin
+;    cidx=array_indices(boxsize[1:3],/dim,n_idx[chromo_idx])
+;    chromo=bytarr(sz[1],sz[2],chromo_layers+1)
+;    nth=dblarr(sz[1],sz[2],chromo_layers+1)
+;    for k =0,ncomp-1 do begin
+;      chromo[cidx[0,k],cidx[1,k],*]=1
+;      nth[cidx[0,k],cidx[1,k],*]=n_th[chromo_idx[k]]
+;    endfor
+;    cidx=where(chromo eq 1,count)
+;    if count gt 0 then begin
+;      n_idx=[cidx,n_idx[corona_idx]]
+;      n_th=[nth[cidx],n_th[corona_idx]]
+;    endif
+;  endif
+;end  
 
 PRO gxFluxTube::SelectEnergyDistribution,index
  if n_elements(index) eq 0 then begin
@@ -1669,31 +1703,6 @@ PRO gxFluxTube::SelectPADistribution,index
  self->UpdatePADistribution
 END
 
-PRO gxFluxTube::SetOrigin
-; self.centerline->GetVertexAttributeData,'s',s
-; self.base->GetVertexAttributeData,'N_IDX',n_idx
-; self.base->GetVertexAttributeData,'C_IDX',c_idx
-; self.parent->GetProperty,xcoord_conv=xcoord_conv,ycoord_conv=ycoord_conv,zcoord_conv=zcoord_conv,owner=ownerlist
-; sz=self.parent->Size()
-; idx=where(float(s) eq self.s0)
-; location=n_idx[where(c_idx eq idx[0])]
-; if ptr_valid(ownerlist) then begin
-;  volume=self.parent->GetVolume()
-;  volume->GetVertexAttributeData, 'owner',owner
-;  self_owned=where((*ownerlist).obj eq self,count)
-;  if count gt 0 then begin
-;   self_id=(*ownerlist)[self_owned].id
-;   owned=where(owner[location] eq self_id,count)
-;   if count gt 0 then location=location[owned]
-;  end
-; end
-; data=array_indices(sz[1:3],location,/dim)
-; origin=self->GetByName('origin')
-; if obj_valid(origin) then origin->SetProperty,data=data $
-; else self->Add,obj_new('idlgrpolygon',data[0,*],data[1,*],data[2,*],xcoord_conv=xcoord_conv,ycoord_conv=ycoord_conv,zcoord_conv=zcoord_conv,color=[255,0,0],name='origin',style=0)
-END
-
-
 PRO gxFluxtube::DisplayB2B0ratio
   self.centerline->GetVertexAttributeData,'B',Bvec
   self.centerline->GetVertexAttributeData,'s',s
@@ -1731,7 +1740,6 @@ PRO gxFluxtube::DisplayB2B0ratio
     oplot,[1,1]*self.s0/l,!y.crange,color=0
     oplot,!x.crange,[1,1],color=0
   !p.multi=pmulti
-  self->SetOrigin
 END
 
 

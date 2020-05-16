@@ -34,6 +34,15 @@ PRO gxBline::GetProperty,lock=lock,open=open,center=center,top=top,_ref_extra=ex
  self->IDLgrPolyline::GetProperty,_extra=extra
 END
 
+FUNCTION gxBline::GetB
+ self->GetVertexAttributeData,'B',B
+ return,b
+END
+
+FUNCTION gxBline::GetS
+  self->GetVertexAttributeData,'s',s
+  return,s
+END
 
 FUNCTION gxBline::GetBmed,above_tr=above_tr,tr_height=tr_height
  default,tr_height,gx_tr_height()

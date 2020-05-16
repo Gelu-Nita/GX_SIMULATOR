@@ -5,7 +5,7 @@
 ;To plot on a prexisting LOS map, use /over
 pro gx_model2world,model,lines=lines,fluxtubes=fluxtubes,fov=fov,box=box,over=over,$
                   scolor=scolor,lcolor=lcolor,ocolor=ocolor,box_color=box_color,fcolor=fcolor,$
-                  sthick=sthick,lthick=lthick,_extra=_extra,all=all
+                  sthick=sthick,lthick=lthick,refmap=ref,_extra=_extra,all=all
   default,model,obj_new()
   default,scolor,250
   default,lcolor,150

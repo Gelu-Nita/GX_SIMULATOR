@@ -9,6 +9,7 @@ function gx_box2model,box
  if tag_exist(box,'bcube') then size=(size(box.bcube))[0:3]
  if n_elements(size) ne 4 then return,obj_new()
  
+ 
  if tag_exist(box,'add_base_layer') then add_base_layer=box.add_base_layer else add_base_layer=1
  
  size[3]+=add_base_layer
@@ -65,10 +66,8 @@ function gx_box2model,box
  zrange=[0,sz-1]*dz
  
  data=bytarr(sx,sy,sz)
- 
  volume=obj_new('gxVolume',data,name='Volume',XCOORD_CONV=XCOORD_CONV,YCOORD_CONV=YCOORD_CONV,ZCOORD_CONV=ZCOORD_CONV,/interpolate,hints=2)
-
-
+ 
  validBxByBz=(tag_exist(box,'Bx') and tag_exist(box,'By') and tag_exist(box,'Bz'))
  validB=tag_exist(box,'bcube') 
  valid=(validBxByBz eq 1) or (validB eq 1)
