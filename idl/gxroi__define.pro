@@ -76,7 +76,7 @@ pro gxROI::DisplayMap,select
   if widget_valid(hide_cea) then widget_control,hide_cea,set_button=1
  end  
  endelse
- if obj_isa(display,'IDLgrImage') then display->SetProperty,data=bytscl(map.data);bytscl(alog10((map.data)-min(map.data)+1))
+ if obj_isa(display,'IDLgrImage') then display->SetProperty,data=bytscl(map.data)
 end
 
 function gxROI::ReplaceData,data,nx=nx,ny=ny,compute_grid=compute_grid
@@ -92,7 +92,6 @@ function gxROI::ReplaceData,data,nx=nx,ny=ny,compute_grid=compute_grid
   if ~keyword_set(compute_grid) then begin
     return,(((self.parent)->GetVolume())->getflags()).newGrid
   endif
-  ;return,(!version.os_family eq 'Windows')?self->ComputeGrid():self->ComputeGrid_old()
   return,self->ComputeGrid()
 end  
 
@@ -139,7 +138,7 @@ function gxROI::ComputeGrid,model=model
   dy=ycoord_conv[1]
   volume=model->GetVolume()
   volume->GetVertexAttributeData,'dz',dz
-  dim=(model->size())[1:3]
+  dim=(model->size(/volume))[1:3]
   max_size=total(dim)
   grid=dblarr(4,nx,ny,max_size)-1
   if n_elements(dz) eq 0 then begin
@@ -264,7 +263,7 @@ function gxROI::ComputeGrid_old,model=model
   volume=model->GetVolume()
   volume->GetVertexAttributeData,'dz',dz
   volume->GetVertexAttributeData,'voxel_id',voxel_id
-  dim=(model->size())[1:3]
+  dim=(model->size(/volume))[1:3]
   if n_elements(dz) eq 0 then begin
     dz=replicate(zcoord_conv[1],dim)
   endif

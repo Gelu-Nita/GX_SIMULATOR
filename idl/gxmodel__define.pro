@@ -791,7 +791,7 @@ function gxModel::GetVertexData,var
   return,self.volume->GetVertexData(var)
 end
 
-function gxModel::Box2Volume,data,idx,box2vol=box2vol,bsize=bsize,csize=csize,corona_only=corona_only
+function gxModel::Box2Volume,data,idx,box2vol=box2vol,bsize=bsize,csize=csize,corona_only=corona_only,recompute=recompute
   isa_combo=(self->IsCombo(bsize=bsize,csize=csize))
   box_idx=lindgen(bsize[1],bsize[2],bsize[3])
   if isa_combo then begin
@@ -800,14 +800,13 @@ function gxModel::Box2Volume,data,idx,box2vol=box2vol,bsize=bsize,csize=csize,co
     corona_base=self->GetVertexData('corona_base')
     dim=size(box2chromo,/dim)
     compute=1
-    if n_elements(dim) eq 3 then begin
+    if (n_elements(dim) eq 3) and ~keyword_set(recompute) then begin
       if array_equal(dim,[csize[1:2],chromo_layers]) then begin
         compute=0
       endif
     endif
     if compute then begin
-      dz=self->GetVertexData('dz')
-      h=(total(dz,3,/cum))[*,*,0:csize[3]-1]
+      h=self->R(/volume)-1
       box2chromo=lonarr(csize[1],csize[2],chromo_layers)    
       c_idx=floor(h/self.zcoord_conv[1])
       for i=0,csize[1]-1 do begin
@@ -890,7 +889,7 @@ end
 
 
 function gxModel::GetROIBox,xrange=xrange,yrange=yrange,zrange=zrange
-  if n_elements(xrange) eq 0 or n_elements(yrange) eq 0 or n_elements(yrange) eq 0 then $
+  if n_elements(xrange) eq 0 or n_elements(yrange) eq 0 or n_elements(zrange) eq 0 then $
     self.volume->GetProperty,xrange=xrange,yrange=yrange,zrange=zrange
   p=dblarr(3,8)
   for i=0,7 do p[*,i] = [xrange[(i AND 1)], yrange[((i/2) AND 1)], zrange[((i/4) AND 1)]]
@@ -1382,7 +1381,15 @@ pro gxModel::upgrade_combo_model,verbose=verbose
   if isa(idx,/number,/array) then begin
    vol=dblarr(csize[1:3])
    box_vol=dblarr(bsize[1:3])
+   box_vol[*]=0
+   vol[*]=0
+   vol[idx]=idx
+   if isa(chromo_idx,/number,/array) then vol[chromo_idx]=0
+   box_vol[box2vol]=vol
+   box_idx=where(box_vol ne 0)
+   self.volume->SetVertexAttributeData,'idx',box_idx
    volume_tags=['bmed','length', 'n', 'T','foot1', 'foot2']
+     
      for k=0, n_elements(volume_tags)-1 do begin
        data=old_volume->GetVertexData(volume_tags[k])
        if isa(data) then begin
@@ -1391,23 +1398,23 @@ pro gxModel::upgrade_combo_model,verbose=verbose
          vol[idx]=data
          if isa(chromo_idx,/number,/array) then vol[chromo_idx]=0
          box_vol[box2vol]=vol
-         data=box_vol[where(box_vol ne 0)]
+         data=box_vol[box_idx]
          self.volume->SetVertexAttributeData,volume_tags[k],data
        end
      endfor
-       box_vol[*]=0
-       vol[*]=0
-       vol[idx]=idx
-       if isa(chromo_idx,/number,/array) then vol[chromo_idx]=0
-       box_vol[box2vol]=vol
-       idx=where(box_vol ne 0)
-       self.volume->SetVertexAttributeData,'idx',idx
   endif
   
   oidx=old_volume->GetVertexData('oidx')
   if isa(oidx,/number,/array) then begin
    vol=dblarr(csize[1:3])
    box_vol=dblarr(bsize[1:3])
+   box_vol[*]=0
+   vol[*]=0
+   vol[oidx]=oidx
+   if isa(chromo_idx,/number,/array) then vol[chromo_idx]=0
+   box_vol[box2vol]=vol
+   box_oidx=where(box_vol ne 0)
+   self.volume->SetVertexAttributeData,'oidx',box_oidx
    volume_tags=['obmed','olength', 'ofoot1', 'ofoot2']
      for k=0, n_elements(volume_tags)-1 do begin
        data=old_volume->GetVertexData(volume_tags[k])
@@ -1417,17 +1424,10 @@ pro gxModel::upgrade_combo_model,verbose=verbose
          vol[oidx]=data
          if isa(chromo_idx,/number,/array) then vol[chromo_idx]=0
          box_vol[box2vol]=vol
-         data=box_vol[where(box_vol ne 0)]
+         data=box_vol[box_oidx]
          self.volume->SetVertexAttributeData,volume_tags[k],data
        end
      endfor
-       box_vol[*]=0
-       vol[*]=0
-       vol[oidx]=oidx
-       if isa(chromo_idx,/number,/array) then vol[chromo_idx]=0
-       box_vol[box2vol]=vol
-       oidx=where(box_vol ne 0)
-       self.volume->SetVertexAttributeData,'oidx',oidx
   endif
   
   obj_destroy,old_volume

@@ -35,7 +35,7 @@ if keyword_set(volume) then begin
   if sz[0] eq 4 and n_elements(corona_base) ne 0 then begin
     Bx=[[[chromo_bcube[*,*,*,0]]],[[bx[*,*,corona_base:*]]]]
     By=[[[chromo_bcube[*,*,*,1]]],[[by[*,*,corona_base:*]]]]
-    Bz=[[[chromo_bcube[*,*,*,0]]],[[bz[*,*,corona_base:*]]]]
+    Bz=[[[chromo_bcube[*,*,*,2]]],[[bz[*,*,corona_base:*]]]]
   endif
 end
 if (n_elements(p) eq 3) and (n_elements(Bx) ne 0) $
@@ -65,7 +65,7 @@ function gxVolume::GetBy,volume=volume
     self->GetVertexAttributeData,'corona_base', corona_base
     sz=size(chromo_bcube)
     if sz[0] eq 4 and n_elements(corona_base) ne 0 then begin
-      By=[[[chromo_bcube[*,*,*,0]]],[[by[*,*,corona_base:*]]]]
+      By=[[[chromo_bcube[*,*,*,1]]],[[by[*,*,corona_base:*]]]]
     endif
   end
   return,by
@@ -79,7 +79,7 @@ function gxVolume::GetBz,volume=volume
     self->GetVertexAttributeData,'corona_base', corona_base
     sz=size(chromo_bcube)
     if sz[0] eq 4 and n_elements(corona_base) ne 0 then begin
-      Bz=[[[chromo_bcube[*,*,*,0]]],[[bz[*,*,corona_base:*]]]]
+      Bz=[[[chromo_bcube[*,*,*,2]]],[[bz[*,*,corona_base:*]]]]
     endif
   end
   return,bz
@@ -334,7 +334,7 @@ pro gxVolume::DisplayModelStatistics,data
      mm=minmax(data)
      print,'Mean of '+self.select+'=',m[0]
      print,'Sdev of '+self.select+'=',sdev
-     print,'Voxel volume (dv])=',dv,'cm^3'
+     print,'Voxel volume (dv)=',dv,'cm^3'
      print,'Model volume=',n*dv,'cm^3'
      print,'Integral['+self.select+'dv]=',m[0]*n*dv
      print,'Integral['+self.select+'^2dv]=',m[1]*n*dv
@@ -877,14 +877,14 @@ function gxVolume::hasBL,length=lenght,bmed=bmed,idx=idx
   self->GetVertexAttributeData,'length',length
   self->GetVertexAttributeData,'bmed',bmed
   self->GetVertexAttributeData,'idx',idx
-  return,n_elements(idx) ne 0 and ((n_elements(length) eq n_elements(bmed)) and (n_elements(length)eq n_elements(idx)))
+  return,n_elements(idx) ne 0 and ((n_elements(length) eq n_elements(bmed)) and (n_elements(length) eq n_elements(idx)))
 end
 
 function gxVolume::hasNT,n=n,t=t,idx=idx
   self->GetVertexAttributeData,'n',n
   self->GetVertexAttributeData,'T',t
   self->GetVertexAttributeData,'idx',idx
-  return,n_elements(idx) ne 0 and ((n_elements(n) eq n_elements(t)) and (n_elements(n)eq n_elements(idx)))
+  return,n_elements(idx) ne 0 and ((n_elements(n) eq n_elements(t)) and (n_elements(n) eq n_elements(idx)))
 end
 
 pro gxVolume::RequestVolumeUpdate,condition=condition,_extra=extra
@@ -987,6 +987,167 @@ pro gxVolume::ComputeNT,question=question,quiet=quiet,force=force
 end
 
 pro gxVolume::ComputeN0T0,tube_id=tube_id
+  r=self.parent->R(/volume)
+  sz=size(r)
+  cn=fltarr(sz[1],sz[2],sz[3])
+  cT0=cn
+  p=cn
+  chromo_count=0
+  corona=self.parent->Corona()
+  if obj_valid(corona) then begin
+    cn[*]=corona->GetDensity(r,h=h,n0=n0,T0=temp,chromo_n=chromo_n,chromo_T=chromo_T,chromo_h=chromo_h,chromo_view=chromo_view,blend=blend,ignore=ignore)
+    default,ignore, 0
+    if ~keyword_set(ignore) then begin
+      cT0[*]=temp
+      p=cT0*cn
+      chromo_owned=where(r lt (1+chromo_h),chromo_count)
+    endif else begin
+      cn[*]=0
+    endelse
+  end
+  if self->hasNT(n=n,t=t,idx=idx) then begin
+    if self.flags.newNT then begin
+      if self.flags.storedNTDEM and self.flags.NTSS then begin
+        case dialog_message('Currently stored n-T pairs were computed from EBTEL DEM. But EBTEL analytical computation option is currently selected! Do you want to recompute n-T now?',/question) of
+          'Yes':self->ComputeNT
+          else:
+        endcase
+      endif
+      if self.flags.storedNTSS and self.flags.NTDEM then begin
+        case dialog_message('Currently stored n-T pairs were computed from analytical EBTEL solution. But EBTEL DEM computation option is currently selected! Do you want to recompute n-T now?',/question) of
+          'Yes':self->ComputeNT
+          else:
+        endcase
+      endif
+      if (self.flags.storedNTDEM and self.flags.NTDEM) or (self.flags.storedNTSS and self.flags.NTSS) then begin
+        newNT=self->NewNT(newkey,oldkey)
+        if newNT then begin
+          case dialog_message(['Currently stored n-T pairs were using different settings!','Do you want to recompute n-T now?',$
+              'Old Settings: '+string(oldkey),'New Settings: '+string(newkey)],/question) of
+            'Yes':self->ComputeNT
+            else:
+          endcase
+        end
+      endif
+    end
+    if self->hasNT() then begin;because they might have been recomputed above
+      
+      T=self.parent->Box2Volume('T')*self.Tscale
+      n=self.parent->Box2Volume('n')*self.Tscale
+      if n_elements(blend) eq 0 then blend=0
+      if blend eq 1 then begin
+        ;This option has been hidden to the non-expert users
+        cn=cn+n
+        p=p+T*n
+        ct0=p/cn
+      endif else begin
+        idx=where((t ne 0) and (n ne 0),count)
+        if count gt 0 then begin
+          cT0[idx]=T[idx]
+          cn[idx]=n[idx]
+          p=cT0*cn
+        end
+      endelse
+    end
+  endif
+
+  ;FLOAT OR DOUBLE PRECISSION CHOICE FOR some of the following arrays
+  ;may affect the fluxtube ownership result as shown bellow
+  ;------------------------------
+  bsz=self.parent->Size()
+  ndata=fltarr(bsz[1],bsz[2],bsz[3])
+  nvol=ndata
+  tvol=ndata
+  p0=ndata
+ 
+  
+  void=self.parent->Box2Volume(box2vol=box2vol)
+  box_ct0=ct0[box2vol]
+  box_cn=cn[box2vol]
+  tdata=box_ct0
+  p=box_ct0*box_cn
+  
+  
+  tube_id=ulonarr(bsz[1],bsz[2],bsz[3])
+  
+  ;------------------------------
+
+  tubes=self.parent->Get(/all,ISA='gxFluxtube',count=tcount)
+
+  ;LOOP OVER FLUXTUBES TO PROGRESEVELY CLAIM FLUXTUBE OWNERSHIP
+  for j=0,tcount-1 do begin
+    p0[*]=0
+    tvol[*]=0
+    nvol[*]=0
+    tubes[j]->GetProperty,T0=T0,centerbase=base,hide=hide
+    if keyword_set(hide) then goto,skip_tube
+    base->GetVertexAttributeData,'n_th',n_th
+    base->GetVertexAttributeData,'N_IDX',n_idx
+    p0[n_idx]=(box_ct0*box_cn)[n_idx]+T0*n_th
+    ;------------------------------
+    owned=where(p0 gt p,ocount)
+    ; IF P0 and P are defined above as floating point arrays, GE and GT may assign different ownership
+    ;--------------------------------------
+
+    if ocount gt 0 then begin
+      p[owned]=p0[owned]
+      nvol[n_idx]=n_th
+      ndata[owned]=nvol[owned]
+      tvol[n_idx]=p0[n_idx]/(ndata+box_cn)[n_idx]
+      tdata[owned]=tvol[owned]
+      tube_id[owned]=ulong(j+1)
+    end
+    skip_tube:
+  end
+
+  ;LOOP AGAIN OVER FLUXTUBES TO DETERMINE UNIQ FLUXTUBE OWNERSHIP
+  for j=0,tcount-1 do begin
+    tubes[j]->GetProperty,centerbase=base,hide=hide
+    owned=where(tube_id eq ulong(j+1),ocount)
+    base->SetVertexAttributeData,'owned',owned
+  endfor
+
+  ;HERE WE QUESTIONABLY ADD FLUXETUBE DENSITY (IF ANY FLUXTUBE) TO LOCAL CORONA DENSITY
+  ndata=cn+ndata[box2vol]
+  tdata=cT0+tdata[box2vol]
+  ;COMMENT THE LINE ABOVE AND UNCOMMENT THE LINES BELOW TO REPLACE CORONAL DENSITY WITH FLUXTUBE DENSITIES
+  ;owned=where(tube_id ne 0,complement=corona_owned,ncomplement=count)
+  ;if count gt 0 then ndata[corona_owned]=cn[corona_owned]
+  ;--------------------
+
+  if ~self.parent->IsCombo() then begin
+    if chromo_count gt 0 then begin
+      ndata[chromo_owned]=chromo_n
+      tdata[chromo_owned]=chromo_t
+      tr=(array_indices(r,max(chromo_owned)))[2]+1
+      self->setvertexattributedata,'chromo_layers',tr
+    endif else begin
+      ;provision for becakward compatibility with old format combo models
+      chromo_idx=self->GetVertexData('chromo_idx')
+      if isa(chromo_idx,/number,/array) then begin
+        self->GetVertexAttributeData,'chromo_n',chromo_n
+        self->GetVertexAttributeData,'chromo_T',chromo_t
+        ndata[chromo_idx]=chromo_n
+        tdata[chromo_idx]=chromo_t
+      endif
+    endelse
+  endif else begin
+    void=self.parent->Box2Volume(box2vol=box2vol)
+    tube_id=tube_id[box2vol]
+    chromo_idx=self->GetVertexData('chromo_idx')
+    if isa(chromo_idx,/number,/array) then begin
+      self->GetVertexAttributeData,'chromo_n',chromo_n
+      self->GetVertexAttributeData,'chromo_T',chromo_t
+      ndata[chromo_idx]=chromo_n
+      tdata[chromo_idx]=chromo_t
+    endif
+  endelse
+
+  self->SetVertexAttributeData,'n0',ndata
+  self->SetVertexAttributeData,'T0',tdata
+end
+
+pro gxVolume::ComputeN0T0_back,tube_id=tube_id
   r=self.parent->R()
   sz=size(r)
   cn=fltarr(sz[1],sz[2],sz[3])
@@ -1030,19 +1191,21 @@ pro gxVolume::ComputeN0T0,tube_id=tube_id
        end
      endif
      end
-     T=T*self.Tscale
-     n=n*self.Tscale
-     if n_elements(blend) eq 0 then blend=0
-     if blend eq 1 then begin
-       ;This option has been hidden to the non-expert users
-       cn[idx]=cn[idx]+n
-       p[idx]=p[idx]+T*n
-       ct0=p/cn
-     endif else begin
-       cT0[idx]=T
-       cn[idx]=n
-       p=cT0*cn
-     endelse
+     if self->hasNT(n=n,t=t,idx=idx) then begin;because they might have been recomputed above
+       T=T*self.Tscale
+       n=n*self.Tscale
+       if n_elements(blend) eq 0 then blend=0
+       if blend eq 1 then begin
+         ;This option has been hidden to the non-expert users
+         cn[idx]=cn[idx]+n
+         p[idx]=p[idx]+T*n
+         ct0=p/cn
+       endif else begin
+         cT0[idx]=T
+         cn[idx]=n
+         p=cT0*cn
+       endelse
+     end
   endif
   
   ;FLOAT OR DOUBLE PRECISSION CHOICE FOR some of the following arrays
@@ -1105,7 +1268,16 @@ pro gxVolume::ComputeN0T0,tube_id=tube_id
       tdata[chromo_owned]=chromo_t
       tr=(array_indices(r,max(chromo_owned)))[2]+1
       self->setvertexattributedata,'chromo_layers',tr
-    end
+    endif else begin
+      ;provision for becakward compatibility with old format combo models
+      chromo_idx=self->GetVertexData('chromo_idx')
+      if isa(chromo_idx,/number,/array) then begin
+        self->GetVertexAttributeData,'chromo_n',chromo_n
+        self->GetVertexAttributeData,'chromo_T',chromo_t
+        ndata[chromo_idx]=chromo_n
+        tdata[chromo_idx]=chromo_t
+      endif
+    endelse
   endif else begin
     void=self.parent->Box2Volume(box2vol=box2vol)
     ndata=ndata[box2vol]

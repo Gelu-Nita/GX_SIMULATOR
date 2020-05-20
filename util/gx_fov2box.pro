@@ -21,6 +21,7 @@
 ; /cea: to use CEA projection
 ; /top: to use TOP_VIEW projection
 ; /sfq: to use SFQ disambiguation
+; /old_combo_format: to generate combo models using the format used before May 2020 (for testing purposes)
 ;_extra keywords that may be used when computing the coronal magnetic field lines properties
 ; Options available on LInux/Uix platforms, or if /use_idl is set:
 ;   /center_vox: use this keyword to compute lines that pass exactly through the center of each volume voxel (more computationaly intensive) 
@@ -36,7 +37,7 @@
 pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km, out_dir = out_dir, tmp_dir = tmp_dir,$
                         empty_box_only=empty_box_only,save_empty_box=save_empty_box,potential_only=potential_only,$
                         save_potential=save_potential,save_bounds=save_bounds,use_potential=use_potential, use_idl=use_idl,$
-                        nlfff_only=nlfff_only, generic_only=generic_only,centre=centre,euv=euv,uv=uv,hmifiles=hmifiles,_extra=_extra
+                        nlfff_only=nlfff_only, generic_only=generic_only,centre=centre,euv=euv,uv=uv,hmifiles=hmifiles,old_combo_format=old_combo_format,_extra=_extra
   setenv, 'WCS_RSUN=6.96d8'
   
   break_file, ROUTINE_FILEPATH(), dsk_log, dir, routine_name, ext
@@ -185,8 +186,9 @@ pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km
   t0=systime(/seconds)
   message,'Generating chromo model..',/cont
   chromo_mask=decompose(box.base.bz,box.base.ic)
-  box=combo_model(box,chromo_mask)
+  box=keyword_set(old_combo_format)?combo_model_deprecated(box,chromo_mask):combo_model(box,chromo_mask)
   message,strcompress(string(systime(/seconds)-t0,format="('Chromo model generated in ',g0,' seconds')")),/cont
+  box.id=box.id+'.CHR'
   save,box,file=out_dir+path_sep()+box.id+'.sav'
   message,'Box structure saved to '+out_dir+path_sep()+box.id+'.sav',/cont
 end

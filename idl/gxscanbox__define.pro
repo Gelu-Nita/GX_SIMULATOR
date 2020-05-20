@@ -588,7 +588,7 @@ PRO gxScanBox::Slice,row
       
      idx=self->name2idx('bmed')
      if (size(idx))[0] ne 0 then begin
-       vol=model->Box2Volume('bmed')
+       vol=model->Box2Volume('bmed',/corona)
        if isa(vol)then begin
          (*self.grid).parms[*,*,idx]=interpolate(vol,vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
           assigned[idx]=1 
@@ -598,7 +598,7 @@ PRO gxScanBox::Slice,row
 
      idx=self->name2idx('length')
      if (size(idx))[0] ne 0 then begin
-       vol=model->Box2Volume('length')
+       vol=model->Box2Volume('length',/corona)
        if isa(vol)then begin
          ;vol[*]=1e11
          vol=gx_rsun()*vol/2
@@ -609,7 +609,7 @@ PRO gxScanBox::Slice,row
 
     idx=self->name2idx('Q')
     if (size(idx))[0] ne 0 then begin
-      vol=model->Box2Volume('Q')
+      vol=model->Box2Volume('Q',/corona)
       if isa(vol)then begin
         (*self.grid).parms[*,*,idx]=interpolate(vol,vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
         assigned[idx]=1
@@ -1444,18 +1444,6 @@ pro gxScanBox::TV_SLICE
     if self.Grid2Update then $
       widget_control,self.wGrid2Update,set_value='WARNING: Grid needs to be updated! Please compute the grid to display valid data!'
   end
-;  catch, error_stat
-;  if error_stat ne 0 then begin
-;    catch, /cancel
-;    answ=dialog_message('You must compute the rendering grid to perform this operation. Do you want to proceed now?',/question)
-;    case strupcase(answ) of
-;      'YES': begin
-;              self->NewGrid,/compute
-;              goto,retry
-;             end
-;      else:return
-;    endcase
-;  end
   retry:
   widget_control,self.wTV_Slice,get_value=window,get_uvalue=size
   widget_control,self.wPlotLOS,get_value=loswin
