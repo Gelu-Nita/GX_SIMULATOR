@@ -925,8 +925,10 @@ function gxVolume::NewNT,newkey,oldkey
   self->GetVertexAttributeData,'q0_coeff',q0_coeff
   self->GetVertexAttributeData,'NTkey',oldkey
   self.parent->GetProperty,wparent=wparent
-  id=widget_info(wparent,find_by_uname='GXMODEL:DEMAVG')
-  if widget_valid(id) then widget_control,id,get_value=demavg 
+  if widget_valid(wparent) then begin
+    id=widget_info(wparent,find_by_uname='GXMODEL:DEMAVG')
+    if widget_valid(id) then widget_control,id,get_value=demavg 
+  endif
   default,oldkey,byte('')
   default,newkey,oldkey
   if self.flags.NTDEM then newkey=byte(strcompress('q=['+arr2str(q0_coeff)+'] & q0='+string(byte(q0_formula))+' & q='+string(byte(q_formula))+$
@@ -937,7 +939,7 @@ function gxVolume::NewNT,newkey,oldkey
   return,flags.newNT
 end
 
-pro gxVolume::ComputeNT,question=question,quiet=quiet,force=force
+pro gxVolume::ComputeNT,question=question,quiet=quiet,force=force,NTDEM=NTDEM,NTSS=NTSS
   if keyword_set(force) then goto, compute
   if ~self.flags.newNT and keyword_set(question) then begin
     answ=dialog_message('The N-T pairs have been already computed using current settings. Do you want to recompute them  anyway?',/question)
@@ -953,12 +955,14 @@ pro gxVolume::ComputeNT,question=question,quiet=quiet,force=force
   self->GetVertexAttributeData,'length',L
   L=gx_rsun()*L/2
   self->GetVertexAttributeData,'Q',Q
-  if self.flags.NTDEM then begin
+  if self.flags.NTDEM or keyword_set(NTDEM) then begin
     if n_elements(L) gt 0 and (n_elements(L) eq n_elements(Q))  then begin
       widget_control,/hourglass
       self.parent->GetProperty,wparent=wparent
-      id=widget_info(wparent,find_by_uname='GXMODEL:DEMAVG')
-      if widget_valid(id) then widget_control,id,get_value=avgdem
+      if widget_valid(wparent) then begin
+        id=widget_info(wparent,find_by_uname='GXMODEL:DEMAVG')
+        if widget_valid(id) then widget_control,id,get_value=avgdem
+      end
       dem_interpolate,n,t,Qarr=Q,Larr=L,ss=self.flags.NTSSDEM,avgdem=avgdem,duration=duration
       id=widget_info(wparent,find_by_uname='GXMODEL:DEMDT')
       if widget_valid(id) then widget_control,id,set_value=strcompress(string(duration,format="('DEM interpolation computed in',f7.2,' s')"))
@@ -968,7 +972,7 @@ pro gxVolume::ComputeNT,question=question,quiet=quiet,force=force
       else flags=self->setflags(/storedNTDEM)
     end
   end
-  if self.flags.NTSS then begin
+  if self.flags.NTSS or keyword_set(NTSS) then begin
     self->GetVertexAttributeData,'length',L
     Q1=1e4
     T = 74 * (Q/Q1)^(2./7.) * (L)^(4./7.)
@@ -1032,8 +1036,8 @@ pro gxVolume::ComputeN0T0,tube_id=tube_id
     end
     if self->hasNT() then begin;because they might have been recomputed above
       
-      T=self.parent->Box2Volume('T')*self.Tscale
-      n=self.parent->Box2Volume('n')*self.Tscale
+      T=self.parent->Box2Volume('T',/corona_only)*self.Tscale
+      n=self.parent->Box2Volume('n',/corona_only)*self.Tscale
       if n_elements(blend) eq 0 then blend=0
       if blend eq 1 then begin
         ;This option has been hidden to the non-expert users
@@ -1059,11 +1063,12 @@ pro gxVolume::ComputeN0T0,tube_id=tube_id
   nvol=ndata
   tvol=ndata
   p0=ndata
- 
+  box_ct0=ndata
+  box_cn=ndata
   
   void=self.parent->Box2Volume(box2vol=box2vol)
-  box_ct0=ct0[box2vol]
-  box_cn=cn[box2vol]
+  box_ct0[box2vol]=ct0
+  box_cn[box2vol]=cn
   tdata=box_ct0
   p=box_ct0*box_cn
   
