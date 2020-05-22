@@ -275,8 +275,10 @@ pro gx_simulator_event,event
                              endif
                            endfor
                          state.Sun->SetTime,model->GetTime()
-                         state.scanbox->SetDim,(model->getroi(/scanbox))->GetDim()
-                         state.scanbox->ComputeFOV,/upload
+                         if state.scanbox->AutoFov() then begin
+                           state.scanbox->SetDim,(model->getroi(/scanbox))->GetDim()
+                           state.scanbox->ComputeFOV,/upload
+                         endif else state.scanbox->ComputeFOV,/compute
                          state.scanbox->Slice
                        endif  
                      endif else answ=dialog_message('Invalid GX model!')

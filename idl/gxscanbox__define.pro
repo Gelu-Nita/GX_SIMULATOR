@@ -274,6 +274,9 @@ function gxScanbox::GetRefModel
  if obj_isa(model,'gxmodel') then return,model else return,obj_new()
 end 
 
+function gxScanbox::AutoFOV
+ return,widget_info(self.wAuto,/button)
+end
 
 pro gxScanbox::ComputeFOV,compute_grid=compute_grid,upload=upload
  if self.active then begin
