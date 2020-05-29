@@ -660,7 +660,7 @@ pro gxWidget::CreatePanel
     xtextsize=12
     ;xlabelsize=40
     self.subject->GetProperty,xcoord_conv=xcoord_conv,data0=data0,n0=n0,T0=T0,p=parm_p,n_th=n_th,dist_e=dist_e,kappa=kappa,$
-    emin=emin,emax=emax,chromo_n=chromo_n,chromo_T=chromo_T,chromo_h=chromo_h,chromo_view=chromo_view,blend=blend,ignore=ignore                     
+    emin=emin,emax=emax,chromo_n=chromo_n,chromo_T=chromo_T,chromo_h=chromo_h,chromo_view=chromo_view,blend=blend,ignore=ignore,parent=parent                     
     ;wDimensions=widget_base(self.wbase,/row)
     sz=size(data0) 
     wLabel=widget_label(font=font,  self.wbase,value='Corona',/align_left)                    
@@ -713,20 +713,22 @@ pro gxWidget::CreatePanel
               value=chromo_view?gx_bitmap(filepath('image.bmp', subdirectory=subdirectory)):$
               gx_bitmap(filepath('eye_closed.bmp', subdirectory=subdirectory)), $
               /bitmap,tooltip='Show chromosphere',uname=prefix+'chromo_view')   
-     wChromoParms=widget_base(wChromoBase,/row,/frame)  
+     not_combo=~(parent->IsCombo())  
+     if not_combo then begin      
+     wChromoParms=widget_base(wChromoBase,/row,/frame,map=not_combo)  
      wnc=cw_objfield(wChromoParms, UNAME=prefix+'chromo_n', LABEL='n0=',$
         INCREMENT=1, $
         UNITS='cm^-3', $
-        VALUE=chromo_n,map=1,/frame,XTEXTSIZE=XTEXTSIZE,xlabelsize=xlabelsize,lfont=lfont)
+        VALUE=chromo_n,map=not_combo,/frame,XTEXTSIZE=XTEXTSIZE,xlabelsize=xlabelsize,lfont=lfont)
      wTc=cw_objfield(wChromoParms, UNAME=prefix+'chromo_T', LABEL='T0=',$
         INCREMENT=1, $
         UNITS='K', $
-        VALUE=chromo_T,map=1,/frame,XTEXTSIZE=XTEXTSIZE,xlabelsize=xlabelsize,lfont=lfont)  
+        VALUE=chromo_T,map=not_combo,/frame,XTEXTSIZE=XTEXTSIZE,xlabelsize=xlabelsize,lfont=lfont)  
      wHc=cw_objfield(wChromoParms, UNAME=prefix+'chromo_h', LABEL='h=',$
         INCREMENT=1000, $
         UNITS='km', $
-        VALUE=chromo_h*gx_rsun(unit='km'),map=1,/frame,XTEXTSIZE=XTEXTSIZE,xlabelsize=xlabelsize,lfont=lfont) 
-                
+        VALUE=chromo_h*gx_rsun(unit='km'),map=not_combo,/frame,XTEXTSIZE=XTEXTSIZE,xlabelsize=xlabelsize,lfont=lfont) 
+     end           
    end 
 
  else:

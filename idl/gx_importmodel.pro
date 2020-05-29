@@ -27,7 +27,7 @@ function gx_ImportModel,source,box=box
         catch,/cancel
         restore,source,/relaxed
         result=box
-        i--
+        ;i--
         goto,skip
       endif
       osav->restore,names[i]
