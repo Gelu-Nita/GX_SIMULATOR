@@ -1183,9 +1183,19 @@ return, self->Rewrite(event,auto=auto)
 END
 
 pro gxScanBox::ReplaceEBTELtables,ss=ss
+ if self.active then begin
+  answ=dialog_message('There is an active scan in progress.'+string(10b)+$
+    'Any unsaved results will be lost!'+string(10b)+$
+    'Do you want to continue anyway?',/question)
+  if strupcase(answ) eq 'NO' then return
+ end
  path=dialog_pickfile(path=gx_findfile(filename,folder='userslib'+path_sep()+'aia'+path_sep()+'ebtel'),default='.sav')
  if gx_ebtel_valid_path(path) then begin
   widget_control,keyword_set(ss)?self.wEbtelSSTable:self.wEbtelTable,set_value=gx_ebtel_path(path,ss=ss)
+  bridges=self.bridges->Get(/all,count=count)
+  for i=0, count-1 do begin
+    self->BridgeResetEBTEL,bridges[i]
+  endfor
   self.ImgViewWid->GetProperty,model=MOI 
   if isa(MOI) then begin
     volume=moi->GetVolume()
@@ -1231,6 +1241,22 @@ pro gxScanBox::ResetAllBridges
     end
     self.active=0
     self.new_view=1
+end
+
+pro gxScanbox::BridgeResetEBTEL,bridge
+  ebtel=gx_ebtel_path()
+  bridge->Execute,'ebtel=GETENV("ebtel")'
+  if bridge->GetVar('ebtel') ne ebtel then begin
+    bridge->Execute,'setenv, "ebtel='+ebtel+'"'
+    bridge->Execute,'message,"ebtel enviroment variable set to '+ebtel+'",/cont'
+  endif
+
+  ebtel_ss=gx_ebtel_path(/ss)
+  bridge->Execute,'ebtel_ss=GETENV("ebtel_ss")'
+  if bridge->GetVar('ebtel_ss') ne ebtel_ss then begin
+    bridge->Execute,'setenv, "ebtel_ss='+ebtel+'"'
+    bridge->Execute,'message,"ebtel_ss enviroment variable set to '+ebtel_ss+'",/cont'
+  endif
 end
 
 function gxScanbox::ds
