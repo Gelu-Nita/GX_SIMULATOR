@@ -16,7 +16,7 @@ function gx_psf,sigmaIn,phi,widthIn,maxwidthIn=maxwidthIn
   width = LONG(width) > 1
   maxwidth=n_elements(maxwidthIn) gt 0? min([maxwidthIn,width]):max(width)
   maxwidth or=1 ;; ensure width is odd
-  width=width<maxwidth;;force PSF to be square and less than maxwidth
+  width=width<(maxwidth-2);;force PSF to be square and less than maxwidth while remaining odd
    
   x=(findgen(width[0])-(width[0]-1)/2d)
   y=(findgen(width[1])-(width[1]-1)/2d)

@@ -79,7 +79,7 @@ pro gx_defparms
                webdir:'', $  ; Directory for web-related output
                cmddir:'', $  ; Dir containing non-IDL .BAT and .EXE files
                  font:'', $  ; Standard font to use for fixed-width text
-               prfile:''}
+               prfile:'',ebtel:'',ebtel_ss:''}
 
    ; First check whether this file has already been run.  If so, it
    ; resets the !DEFAULTS system variable to its default values and
@@ -91,13 +91,13 @@ pro gx_defparms
    case !version.os_family of
    'unix':    defsysv,'!DEFAULTS',{defaults, $
                '/cdrom/', '/tmp/', './', '$IDL_DIR/help/', './ephem/',$
-               './web/','./std/','','None'},rw
+               './web/','./std/','','None','',''},rw
    'Windows': defsysv,'!DEFAULTS',{defaults, $
                'C:\working\','C:\parm\','C:\working\','C:\ssw\radio\ovsa\doc\',$
-               'C:\ephem\','c:\web\','C:\std\','lucida console*14','None'},rw
+               'C:\ephem\','c:\web\','C:\std\','lucida console*14','None','',''},rw
     else: defsysv,'!DEFAULTS',{defaults, $
                '/cdrom/', '/tmp/', './', '$IDL_DIR/help/', './ephem/',$
-               './web/','./std/','','None'},rw
+               './web/','./std/','','None','',''},rw
    endcase
 
    ; Overwrite defaults for any entries that have environment variable set
@@ -149,6 +149,8 @@ pro gx_defparms
          readf,lun,str     & webdir = str
          readf,lun,str     & cmddir = str
          readf,lun,str     & font = str
+         readf,lun,str     & ebtel = str
+         readf,lun,str     & ebtel_ss = str
 
 ;         ; Use OS_FAMILY() routine to determine whether this is a
 ;         ; UNIX machine.  This is used chiefly to determine when
@@ -178,7 +180,7 @@ pro gx_defparms
                                         helpdir, $
                                         ephemdir, $
                                         webdir, $
-                                        cmddir, font, prfile }
+                                        cmddir, font, prfile,ebtel,ebtel_ss }
          close,lun
          free_lun,lun
          CATCH,/CANCEL

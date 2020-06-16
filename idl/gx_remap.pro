@@ -2,7 +2,7 @@ function gx_remap,map,xrange,yrange,nxny,time=time
 map_xrange=get_map_xrange(map)
 map_yrange=get_map_yrange(map)
 if map_xrange[0] le xrange[0] and map_xrange[1] ge xrange[1] and map_yrange[0] le yrange[0] and map_yrange[1] ge yrange[1] then begin
- if n_elements(time) ne 0 then smap=drot_map(map,time=time)
+ if n_elements(time) ne 0 then smap=drot_map(map,time=time) else smap=map
  sub_map,smap,smap,xrange=xrange,yrange=yrange
  if n_elements(nxny) eq 2 then smap=rebin_map(smap,nxny[1],nxny[1])
 endif else begin

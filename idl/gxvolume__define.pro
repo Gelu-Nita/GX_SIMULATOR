@@ -306,12 +306,11 @@ pro gxVolume::PlotModelAttributes
         xrange=pxrange,yrange=pyrange,xlog=xlog,ylog=ylog ,xmargin=[15,2]
         if self.flags.NTDEM then begin
           if (xselect eq 6 or xselect eq 7) and (yselect eq 6 or yselect eq 7) then begin
-            filename=keyword_set(self.flags.NTSSDEM)?'ebtel_ss.sav':'ebtel.sav'
-            ebtel_file=gx_findfile(filename,folder='userslib'+path_sep()+'aia')
-            if ebtel_file ne '' then begin
+            ebtel_file=gx_ebtel_path(ss=self.flags.NTSSDEM)
+            if gx_ebtel_valid_path(ebtel_file) then begin
               restore,ebtel_file
-              if xselect eq 6 and widget_info(wRotateXY,/button_set) eq 0 then oplot,2*lrun,qrun,psym=3,color=250 else $
-              oplot,qrun,2*lrun,psym=3,color=250
+              if xselect eq 6 and widget_info(wRotateXY,/button_set) eq 0 then oplot,2*lrun,qrun,psym=1,color=250 else $
+              oplot,qrun,2*lrun,psym=1,color=250
             end
           end
         endif
@@ -932,9 +931,9 @@ function gxVolume::NewNT,newkey,oldkey
   default,oldkey,byte('')
   default,newkey,oldkey
   if self.flags.NTDEM then newkey=byte(strcompress('q=['+arr2str(q0_coeff)+'] & q0='+string(byte(q0_formula))+' & q='+string(byte(q_formula))+$
-    ' & NTDEM='+string(self.flags.NTDEM)+' & NTSSDEM='+string(self.flags.NTSSDEM))+(n_elements(demavg) gt 0? string(demavg,format="(' & DEMAVG=',i1)"):''))
+    ' & NTDEM='+string(self.flags.NTDEM)+' & NTSSDEM='+string(self.flags.NTSSDEM))+(n_elements(demavg) gt 0? string(demavg,format="(' & DEMAVG=',i1)"):'')+' & EBTEL='+file_basename(gx_ebtel_path()))
   if self.flags.NTSS then newkey=byte(strcompress('q=['+arr2str(q0_coeff)+'] & q0='+string(byte(q0_formula))+' & q='+string(byte(q_formula))+$
-    ' & NTSS='+string(self.flags.NTSS))+(n_elements(demavg) gt 0? string(demavg,format="(' & DEMAVG=',i1)"):''))
+    ' & NTSS='+string(self.flags.NTSS))+(n_elements(demavg) gt 0? string(demavg,format="(' & DEMAVG=',i1)"):'')+'& EBTEL='+file_basename(gx_ebtel_path(/ss)))
   flags=self->setflags(newNT=(string(newkey) ne string(oldkey)))
   return,flags.newNT
 end
@@ -1113,8 +1112,10 @@ pro gxVolume::ComputeN0T0,tube_id=tube_id
   endfor
 
   ;HERE WE QUESTIONABLY ADD FLUXETUBE DENSITY (IF ANY FLUXTUBE) TO LOCAL CORONA DENSITY
+  
   ndata=cn+ndata[box2vol]
-  tdata=cT0+tdata[box2vol]
+  tdata=tdata[box2vol]
+  
   ;COMMENT THE LINE ABOVE AND UNCOMMENT THE LINES BELOW TO REPLACE CORONAL DENSITY WITH FLUXTUBE DENSITIES
   ;owned=where(tube_id ne 0,complement=corona_owned,ncomplement=count)
   ;if count gt 0 then ndata[corona_owned]=cn[corona_owned]

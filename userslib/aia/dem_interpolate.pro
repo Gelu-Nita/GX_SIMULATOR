@@ -1,10 +1,7 @@
 pro dem_interpolate,n,t,dem,path=path,logtdem=logtdem,dem_run=dem_run,qrun=qrun,lrun=lrun,qarr=qarr,larr=larr,tr=tr,ss=ss,avgdem=avgdem,duration=duration,method=method,info=info,expert=expert
   if keyword_set(info) then goto,getinfo
   if n_elements(logtdem) eq 0 or n_elements(dem_run) eq 0 or n_elements(qrun) eq 0 or n_elements(lrun) eq 0 then begin
-    if n_elements(path) eq 0 then begin
-      dirpath=file_dirname((ROUTINE_INFO('dem_interpolate',/source)).path,/mark)
-      path=dirpath+ (keyword_set(ss)?'ebtel_ss.sav':'ebtel.sav')
-    end
+    if n_elements(path) eq 0 then path=gx_ebtel_path(ss=ss)
     restore,path,/verb
     if keyword_set(tr) then dem_run=dem_tr_run else dem_run=dem_cor_run
   end  

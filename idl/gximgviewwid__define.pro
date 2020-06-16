@@ -54,7 +54,6 @@ wPSFBase=widget_base(self.wBase,/frame,/row,/toolbar)
 self.wChannBase=widget_base(self.wBase,/row,/toolbar,/frame)
 self.wChannels[0]=cw_field(self.wChannBase,/int,value=0,xsize=4,title='')
 self.wChannels[1]=cw_field(self.wChannBase,/int,value=0,xsize=4,title='')
-;wPSFBase=self.wChannBase;widget_base(self.wChannBase,/frame,/row,/toolbar)
 self.wPSF[0]=cw_objfield(wPSFBase,value=7.0,xtextsize=3,label='a=',unit='"')
 self.wPSF[1]=cw_objfield(wPSFBase,value=7.0,xtextsize=3,label='b=',unit='"')
 self.wPSF[2]=cw_objfield(wPSFBase,value=0.0,xtextsize=3,label='phi=',unit=STRING(176b))
@@ -91,14 +90,12 @@ self.wMovie= widget_button( ExecBase, $
 self.wSave=widget_button( ExecBase, $
             value=gx_bitmap(filepath('save.bmp', subdirectory=subdirectory)), $
             /bitmap,tooltip='Save Maps to File')                      
-;if ~keyword_set(uploadbttn) then begin
 self.wExportImgCube=widget_button( ExecBase, $
             value=gx_bitmap(filepath('export.bmp', subdirectory=subdirectory)), $
             /bitmap,tooltip='Export image cube' ) 
 self.wImportImgCube=widget_button( ExecBase, $
             value=gx_bitmap(filepath('importf.bmp', subdirectory=subdirectory)), $
-            /bitmap,tooltip='Import image cube')
-;end                                   
+            /bitmap,tooltip='Import image cube')                                 
 if ~keyword_set(uploadbttn) then self.wMap2Plotman=widget_button( ExecBase, $
             value=gx_bitmap(filepath('contour.bmp', subdirectory=subdirectory)), $
             /bitmap,tooltip='Send Map to Plotman')   
@@ -160,8 +157,14 @@ erase,255
 self.wPixMap = !d.window
 prefix='PlotOptions:'
 PlotOptionBase = WIDGET_BASE(wExtraPlotBase,/Column,frame=1)
-self.wSDEV=widget_text(PlotOptionBase,uname='SDEV')
+self.wCharSize=cw_objfield(PlotOptionBase,value=2.0,label='Plots Char Size',increment=0.1,xtextsize=4)
 self.wSpectralPlotOptions=cw_objPlotOptions(PlotOptionBase,uname='Spectral Plot Options',/xlog,/ylog)
+g=widget_info(self.wSpectralPlotOptions,/geometry)
+self.wSpectralExtraOptions=cw_bgroup(PlotOptionBase,['Show Res. Xrange'],/column,/nonexclusive,xsize=g.scr_xsize,/frame)
+self.wSDEV=widget_text(PlotOptionBase,uname='SDEV',scr_ysize=g.ysize/3)
+self.wResidualsPlotOptions=cw_objPlotOptions(PlotOptionBase,uname='Residuals Plot Options',/xlog,/ylog)
+self.wResidualsExtraOptions=cw_bgroup(PlotOptionBase,['Show Spec. Xrange','Limit to Yrange'],/column,/nonexclusive,xsize=g.scr_xsize,/frame)
+self.wRDEV=widget_text(PlotOptionBase,uname='RDEV',scr_ysize=g.ysize/2.5)
 self.wXProfilePlotOptions=cw_objPlotOptions(PlotOptionBase,uname='X Profile Plot Options',/ylog)
 self.wYProfilePlotOptions=cw_objPlotOptions(PlotOptionBase,uname='Y Profile Plot Options',/ylog)
 
@@ -535,30 +538,77 @@ compile_opt hidden
     objxy= obj_new('xyplot',axis,spectrum)
     objxy->set, id='GX: '+ytitle, data_unit='Flux[sfu]', dim1_unit='Frequency[GHz]', dim1_ids=['GX:'+ytitle]  ;adds labeling information
    end
-   widget_control,self.wSpectralPlotOptions,get_value=objPlotOptions
-   objPlotOptions->GetProperty,range=range,xrange=pxrange,yrange=pyrange,xlog=xlog,ylog=ylog
+   widget_control,self.wSpectralPlotOptions,get_value=SpecPlotOptions
+   SpecPlotOptions->GetProperty,range=spec_range,xrange=spec_pxrange,yrange=spec_pyrange,xlog=spec_xlog,ylog=spec_ylog
+   widget_control,self.wResidualsPlotOptions,get_value=ResPlotOptions
+   ResPlotOptions->GetProperty,range=res_range,xrange=res_pxrange,yrange=res_pyrange,xlog=res_xlog,ylog=res_ylog
+   widget_control,self.wSpectralExtraOptions,get_value=SpecExtraOptions
+   widget_control,self.wResidualsExtraOptions,get_value=ResidualsExtraOptions
    catch, error_stat
    if error_stat ne 0 then begin
      catch, /cancel
      goto,skip_plot
    end
-   
+   widget_control,self.wCharSize,get_value=charsize
    if total(spectrum,/nan) eq 0 and hasref then pyrange=minmax(yref)
-   plot,axis,spectrum,charsize=2*!p.charsize,color=0,back=255,xlog=xlog,ylog=ylog,xrange=pxrange,yrange=pyrange,$
-                     xtitle=((*self.info).spectrum).x.unit,ytitle=ytitle  
-   if range eq 'Auto' then objPlotOptions->SetProperty,xrange=keyword_set(xlog)?10^!x.crange:!x.crange, yrange=keyword_set(ylog)?10^!y.crange:!y.crange
+   if SpecExtraOptions[0] eq 0 then begin 
+   plot,axis,spectrum,charsize=charsize,color=0,back=255,xlog=spec_xlog,ylog=spec_ylog,xrange=spec_pxrange,yrange=spec_pyrange,$
+                     xtitle=((*self.info).spectrum).x.unit,ytitle=ytitle,xsty=isa(spec_pxrange),ysty=isa(spec_pyrange)              
+   endif else begin
+   plot,axis,spectrum,charsize=charsize,color=0,back=255,xlog=spec_xlog,ylog=spec_ylog,xrange=res_pxrange,yrange=spec_pyrange,$
+                     xtitle=((*self.info).spectrum).x.unit,ytitle=ytitle,xsty=isa(res_pxrange),ysty=isa(spec_pyrange)
+   endelse
+                     
+   if spec_range eq 'Auto' then SpecPlotOptions->SetProperty,xrange=keyword_set(spec_xlog)?10^!x.crange:!x.crange, yrange=keyword_set(spec_ylog)?10^!y.crange:!y.crange
    if hasref then begin
     oplot,xref,yref,psym=2,color=0
     data = SPLINE( axis, spectrum, xref )
-    sdev=(data/yref-1)^2
+    res=(data/yref-1)
+    sdev=(res)^2
     good=where(finite(sdev),n)
     if n gt 0 then begin
-    sdev=100*sqrt(total(sdev,/nan,/double)/n)
+    sdev=100*sqrt(total(sdev[good],/nan,/double)/n)
     widget_control,self.wSDEV,set_value=string(sdev,format="('SDEV=',g0,'%')")
     endif else  widget_control,self.wSDEV,set_value=''
+    if ResidualsExtraOptions[0] eq 0 then begin 
+      plot,xref,100*res,charsize=charsize,color=0,back=255,xlog=res_xlog,ylog=res_ylog,xrange=res_pxrange,yrange=res_pyrange,psym=-2,$
+           xtitle=((*self.info).spectrum).x.unit,ytitle='Relative Residual (%)',xsty=isa(res_pxrange),ysty=isa(res_pyrange)
+    endif else begin
+      plot,xref,100*res,charsize=charsize,color=0,back=255,xlog=res_xlog,ylog=res_ylog,xrange=spec_pxrange,yrange=res_pyrange,psym=-2,$
+           xtitle=((*self.info).spectrum).x.unit,ytitle='Relative Residual (%)',xsty=isa(spec_pxrange),ysty=isa(res_pyrange)
+      if isa(res_pxrange) then begin
+        oplot,res_pxrange[[0,0]],keyword_set(res_ylog)?10^!y.crange:!y.crange,thick=2,linesty=2,color=0
+        oplot,res_pxrange[[1,1]],keyword_set(res_ylog)?10^!y.crange:!y.crange,thick=2,linesty=2,color=0
+      endif
+    endelse
+    if res_range eq 'Auto' then ResPlotOptions->SetProperty,xrange=keyword_set(res_xlog)?10^!x.crange:!x.crange, yrange=keyword_set(res_ylog)?10^!y.crange:!y.crange
+    ResPlotOptions->GetProperty,range=res_range,xrange=res_pxrange,yrange=res_pyrange,xlog=res_xlog,ylog=res_ylog
+    rdev=(res)^2
+    if isa(res_pxrange) and isa(res_pyrange) then begin
+      good=where(finite(rdev) and (xref ge min(res_pxrange)) and (xref le max(res_pxrange)),n)
+    endif else begin
+      good=where(finite(rdev),n)
+    endelse
+    
+    if n gt 0 then begin
+    rdev=rdev[good]
+    if (ResidualsExtraOptions[1] eq 1) and isa(res_pxrange) and isa(res_pyrange) then begin
+      good=where((rdev ge min(res_pyrange)/100) and (rdev le max(res_pyrange)/100),n)
+      rdev=rdev[good]
+    endif
+    if n gt 0 then begin
+      rdev=100*sqrt(total(rdev[good],/nan,/double)/n)
+      widget_control,self.wRDEV,set_value=string(rdev,format="('RDEV=',g0,'%')")
+    endif
+    end
+    
+    
+    !p.multi=[2,2,3]
+
    endif
    skip_plot:
   end
+  
   npoints=n_elements(yprofile)
   xaxis=xrange[0]+findgen(npoints)*(max(xrange,min=min)-min)/(npoints-1)
   good=where(finite(yprofile) eq 1,count)
@@ -567,7 +617,7 @@ compile_opt hidden
    objPlotOptions->GetProperty,range=range,xrange=pxrange,yrange=pyrange,xlog=xlog,ylog=ylog
    if min(xaxis,max=m) eq m then xlog=0
    if min(yprofile,max=m) eq m then ylog=0 
-   plot,xaxis,yprofile,charsize=2*!p.charsize,color=0,back=255,xtitle='X(Mm)',/xsty,ytitle=ytitle,ylog=ylog,xlog=xlog,xrange=pxrange,yrange=pyrange
+   plot,xaxis,yprofile,charsize=charsize,color=0,back=255,xtitle='X(Mm)',/xsty,ytitle=ytitle,ylog=ylog,xlog=xlog,xrange=pxrange,yrange=pyrange
    if range eq 'Auto' then objPlotOptions->SetProperty,xrange=keyword_set(xlog)?10^!x.crange:!x.crange, yrange=keyword_set(ylog)?10^!y.crange:!y.crange
   end
 
@@ -577,7 +627,7 @@ compile_opt hidden
   if count gt 1 then begin
    widget_control,self.wYProfilePlotOptions,get_value=objPlotOptions
    objPlotOptions->GetProperty,range=range,xrange=pxrange,yrange=pyrange,xlog=xlog,ylog=ylog
-   plot,yaxis,xprofile,charsize=2*!p.charsize,color=0,back=255,xtitle='Y(Mm)',/xsty,ytitle=ytitle,ylog=ylog,xlog=xlog,xrange=pxrange,yrange=pyrange
+   plot,yaxis,xprofile,charsize=charsize,color=0,back=255,xtitle='Y(Mm)',/xsty,ytitle=ytitle,ylog=ylog,xlog=xlog,xrange=pxrange,yrange=pyrange
    if range eq 'Auto' then objPlotOptions->SetProperty,xrange=keyword_set(xlog)?10^!x.crange:!x.crange, yrange=keyword_set(ylog)?10^!y.crange:!y.crange
   end 
   wset,window
@@ -710,17 +760,17 @@ pro gxImgViewWid::Convolve,compute=compute
   if width[0] mod 2 eq 0 then width[0]+=1
   if width[1] mod 2 eq 0 then width[1]+=1
   ;;;
-  ConvolvedData=(*self.pConvolvedData)
-  if self.newPSF eq 1 then begin
-    kernel=dblarr(width[0],width[1],n_elements(a))
-    ConvolvedData[*]=0
-  endif
-  
+  ConvolvedData=(*self.pConvolvedData) 
   for k=0,n_elements(a)-1 do begin
      if self.newPSF eq 1 then begin
 ;      PSF=gaussian_function([a[k],b[k]]/[dx,dy],/normalize,width=width,/double)
 ;      if phi ne 0 then PSF=rot(PSF,phi)
       psf=gx_psf([a[k],b[k]]/[dx,dy],phi,width)
+      if k eq 0 then begin
+       dim=size(psf,/dim)
+       kernel=dblarr(dim[0],dim[1],n_elements(a)) 
+       ConvolvedData[*]=0
+      endif
       kernel[*,*,k]=psf
      endif else psf=(*self.PSF )[*,*,k]
       img=self->getImg(k,/raw,psf=psf)
@@ -777,11 +827,11 @@ function gxImgViewWid::GetImg,k,idx,raw=raw,psf=psf
   if n_elements(psf) ne 0 then begin
     case size(img,/n_dim) of
       2: begin
-          img=convol_fft(img,PSF)
+          img=convol_fft(img,PSF);convol(img,PSF,edge_truncate);
          end
       else: begin 
              sz=size(img)
-             for i=0,sz[3]-1 do img[*,*,i]=convol_fft(img[*,*,i],PSF,kernel_fft=Kernel)
+             for i=0,sz[3]-1 do img[*,*,i]=convol_fft(img[*,*,i],PSF);convol(img[*,*,i],PSF,edge_truncate);
             end
     endcase
     return,img
@@ -1325,7 +1375,11 @@ case event.id of
   self.wSpec2File:self->Spec2File,event.top
   self.wContrast:self->SelectImg
   self.wImportGXlog:return,event
+  self.wCharSize:self->PlotProfile
   self.wSpectralPlotOptions:self->PlotProfile
+  self.wResidualsPlotOptions:self->PlotProfile
+  self.wSpectralExtraOptions:self->PlotProfile
+  self.wResidualsExtraOptions:self->PlotProfile
   self.wXProfilePlotOptions:self->PlotProfile
   self.wYProfilePlotOptions:self->PlotProfile
  else:
@@ -1394,7 +1448,12 @@ pro gxImgViewWid__define
     wDeleteReference:0l,$
     wTimeReference:0l,$
     wSDEV:0L,$
+    wRDEV:0L,$
+    wCharSize:0L,$
     wSpectralPlotOptions:0L,$
+    wResidualsPlotOptions:0L,$
+    wResidualsExtraOptions:0L,$
+    wSpectralExtraOptions:0L,$
     wXProfilePlotOptions:0L,$
     wYProfilePlotOptions:0L,$
     wPSF:lonarr(5),$

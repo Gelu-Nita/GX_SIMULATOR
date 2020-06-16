@@ -86,7 +86,19 @@ xrange=xrange,yrange=yrange,zrange=zrange,Nx=Nx,Ny=Ny,Nz=Nz,nthreads=nthreads,_e
     self.bridges->Add,bridge
   end  
  end 
-
+wEBTELToolbarBase = widget_base(base, /row, /frame,/TOOLBAR,map=0)
+self.wSelectEBTEL= widget_button( wEBTELToolbarBase, $
+  value=gx_bitmap(filepath('open.bmp', subdirectory=['resource', 'bitmaps'])), $
+  /bitmap,tooltip='Select Impulsive heating EBTEL Table')
+self.wEBTELTable=widget_text(font=!defaults.font,wEBTELToolbarBase,value=gx_ebtel_path(),SCR_XSIZE=geometry1.SCR_XSIZE-3*geometry2.SCR_XSIZE,/wrap)
+  
+wEBTELSSToolbarBase = widget_base(base, /row, /frame,/TOOLBAR,map=0)  
+self.wSelectEBTELSS= widget_button( wEbtelSSToolbarBase, $
+    value=gx_bitmap(filepath('open.bmp', subdirectory=['resource', 'bitmaps'])), $
+    /bitmap,tooltip='Select Steady-State heating EBTEL Table')  
+self.wEBTELSSTable=widget_text(font=!defaults.font,wEBTELSSToolbarBase,value=gx_ebtel_path(/ss),SCR_XSIZE=geometry1.SCR_XSIZE-3*geometry2.SCR_XSIZE,/wrap)
+  
+  
   main_base=get_tlb(wExecBase)
   self.wScan=widget_info(main_base,find_by_uname='SCAN_START')
   ;self.wPause=widget_info(main_base,find_by_uname='SCAN_PAUSE')
@@ -263,6 +275,9 @@ pro gxScanbox::SetRefModel,model
  if obj_isa(model,'gxmodel') then begin
   model_info='SELECTED MODEL: '+model->GetName()+'['+model->GetTime()+']'
   widget_control,widget_info(widget_info(self.wScan,/parent),/parent),map=1
+  hasBL=((model->GetVolume())->getflags()).hasBL
+  widget_control,widget_info(self.wEbtelTable,/parent),map=hasBL
+  widget_control,widget_info(self.wEbtelSSTable,/parent),map=hasBL
  endif else begin model_info='NO GX MODEL SELECTED!'
   widget_control,widget_info(widget_info(self.wScan,/parent),/parent),map=0
  end
@@ -1041,7 +1056,13 @@ case event.id of
             END             
   self.wSelectRenderer: begin
                          self->ReplaceRenderer,self->SelectRenderer()
-                        end                       
+                        end 
+  self.wSelectEBTEL: begin
+                          self->ReplaceEBTELtables
+                        end                      
+  self.wSelectEBTELss: begin
+                          self->ReplaceEBTELtables,/ss
+                        end                                            
   self.wSlice: Begin
                  if ptr_valid(self.grid) then begin
                    self->Slice,event.value
@@ -1161,6 +1182,18 @@ case event.id of
 return, self->Rewrite(event,auto=auto)
 END
 
+pro gxScanBox::ReplaceEBTELtables,ss=ss
+ path=dialog_pickfile(path=gx_findfile(filename,folder='userslib'+path_sep()+'aia'+path_sep()+'ebtel'),default='.sav')
+ if gx_ebtel_valid_path(path) then begin
+  widget_control,keyword_set(ss)?self.wEbtelSSTable:self.wEbtelTable,set_value=gx_ebtel_path(path,ss=ss)
+  self.ImgViewWid->GetProperty,model=MOI 
+  if isa(MOI) then begin
+    volume=moi->GetVolume()
+    flags=(volume->setflags(newNT=volume->NewNT()))
+    volume->Update
+  endif
+ endif else answ=dialog_message('This is not a valid EBTEL file, operation aborted!',/info)
+end
 
 pro gxScanBox::DrawPixel,x,y
   data=dblarr(3,4)
@@ -1310,6 +1343,9 @@ pro gxScanBox::OnStartScan,event,debug=debug
     if to_execute[id] then bridges[id]->Execute,(*self.info).execute,/nowait
   endfor
  endif else begin
+  t_start=systime(/s)
+  bridges[0]->SetVar,'t_start',t_start
+  bridges[0]->SetVar,'t_end',t_start
   bridge_state[0].task='On Debug'
   bridge_state[0].status='Active'
   bridges[0]->SetVar,'row',-1
@@ -1727,5 +1763,7 @@ wX:0l,wY:0l,wL:0l,wXrange:0L,wyrange:0L,wNx:0l,wNy:0l,wNz:0l,wTV_Slice:0l,wInfo:
 wHideScanbox:0l,wHideSun:0l,wSlice:0l,wSliceSelect:0l,wSaveLOS:0l,wSquareFOV:0L,wdx:0l,wdy:0l,wAuto:0L,$
 ROI:obj_new(),slicer:obj_new(),wParmsTable:0l,wScan:0L,wPause:0L,wAbort:0L,wDebug:0L,wTaskTable:0L,wBridges:0l,wStatusBar:0l,$
 renderer:'',wRenderer:0l,wSelectRenderer:0l,pData:ptr_new(),grid:ptr_new(),info:ptr_new(),parms:ptr_new(),bridges:obj_new(),$
-pause:0b,active:0b,new_view:0b,log:0l,t_start:0d,wPlotLOSOptions:0L,wLOS:0L,wPlotLOS:0L,wModelInfo:0l,profiler:obj_new(),Grid2Update:0L,wGrid2Update:0L,wMinVolume:0l,wMaxVolume:0l,wPowerIndexVolume:0l,wResetVolumeScale:0l}
+pause:0b,active:0b,new_view:0b,log:0l,t_start:0d,wPlotLOSOptions:0L,wLOS:0L,wPlotLOS:0L,wModelInfo:0l,profiler:obj_new(),$
+Grid2Update:0L,wGrid2Update:0L,wMinVolume:0l,wMaxVolume:0l,wPowerIndexVolume:0l,wResetVolumeScale:0l,$
+wSelectEbtel:0l,wEbtelTable:0l,wSelectEbtelSS:0l,wEbtelSSTable:0l}
 end
