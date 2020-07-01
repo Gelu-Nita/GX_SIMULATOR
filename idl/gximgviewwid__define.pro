@@ -162,7 +162,7 @@ self.wSpectralPlotOptions=cw_objPlotOptions(PlotOptionBase,uname='Spectral Plot 
 g=widget_info(self.wSpectralPlotOptions,/geometry)
 self.wSpectralExtraOptions=cw_bgroup(PlotOptionBase,['Show Res. Xrange'],/column,/nonexclusive,xsize=g.scr_xsize,/frame)
 self.wSDEV=widget_text(PlotOptionBase,uname='SDEV',scr_ysize=g.ysize/3)
-self.wResidualsPlotOptions=cw_objPlotOptions(PlotOptionBase,uname='Residuals Plot Options',/xlog,/ylog)
+self.wResidualsPlotOptions=cw_objPlotOptions(PlotOptionBase,uname='Residuals Plot Options',/xlog)
 self.wResidualsExtraOptions=cw_bgroup(PlotOptionBase,['Show Spec. Xrange','Limit to Yrange'],/column,/nonexclusive,xsize=g.scr_xsize,/frame)
 self.wRDEV=widget_text(PlotOptionBase,uname='RDEV',scr_ysize=g.ysize/2.5)
 self.wXProfilePlotOptions=cw_objPlotOptions(PlotOptionBase,uname='X Profile Plot Options',/ylog)
@@ -400,12 +400,14 @@ end
 function gxImgViewWid::SFU2TB
    self.xaxis[0]->getproperty,xrange=xrange
    self.yaxis[0]->getproperty,yrange=yrange
-  ; R=obj_valid(self.fovmap)?self.fovmap->get(/rsun):(pb0r()*60)[2]
-   R=959.62720658243131
-   arcsec2cm=gx_rsun(unit='cm')/R
-   ds=(arcsec2cm)^2*delta(xrange)*delta(yrange)/self.nx/self.ny
-   coeff=1.4568525e026/ds;conversion sfu to K, assuming ds is in arcsec^2 and frequency squared being taken care of below
-   ;1.4673913043478260d+026
+  ;R=obj_valid(self.fovmap)?self.fovmap->get(/rsun):(pb0r()*60)[2]
+  ;R=959.62720658243131
+  ;arcsec2cm=gx_rsun(unit='cm')/R
+  ;ds=(arcsec2cm)^2*delta(xrange)*delta(yrange)/self.nx/self.ny
+  ;coeff=1.4568525e026/ds;conversion sfu to K, assuming ds is in arcsec^2 and frequency squared being taken care of below
+  ;1.4673913043478260d+026
+  ds=delta(xrange)*delta(yrange)/(self.nx-1)/(self.ny-1)
+  coeff=gx_sfu2tb(ds)
   return,coeff
 end
 
@@ -425,9 +427,12 @@ compile_opt hidden
   if ptr_valid(self.refspectrum) then hasref=1 else hasref=0
   widget_control,self.wPSF[3],get_value=cv
   pData=(cv[0] eq 0)?self.pData:self.pConvolvedData
+  sz=size(*pData)
+  if sz[0] ge 3 then if sz[3] eq 1 then goto,one_image
    case n_elements(idx) of
    2:begin
       ;provision for one image only
+      one_image:
       xprofile=reform((*pData)[idx[0],*])
       yprofile=reform((*pData)[*,idx[1]])
       spectrum=reform((*pData)[*,*])
@@ -473,7 +478,7 @@ compile_opt hidden
    ;Handle Polarization and Tb
    
    coeff=self->SFU2TB()
-   
+   coeff=coeff/2;NORH CONVENTION
    axis=(((*self.info).spectrum).x.axis)
    f2=axis^2
    fidx=idx[2]
@@ -502,7 +507,7 @@ compile_opt hidden
      (sz[3]+3):begin
              xprofile=coeff*xprofile[*,0]/f2[fidx]
              yprofile=coeff*yprofile[*,0]/f2[fidx]
-             spectrum=coeff*spectrum[*,0]/f2
+             spectrum=coeff*spectrum[*,0]/f2/2
             end
      (sz[3]+4):begin
              xprofile=coeff*xprofile[*,1]/f2[fidx]
@@ -510,9 +515,9 @@ compile_opt hidden
              spectrum=coeff*spectrum[*,1]/f2
             end
      (sz[3]+5):begin
-                xprofile=coeff*(xprofile[*,0]+xprofile[*,1])/2/f2[fidx]
-                yprofile=coeff*(yprofile[*,0]+yprofile[*,1])/2/f2[fidx]
-                spectrum=coeff*(spectrum[*,0]+spectrum[*,1])/2/f2
+                xprofile=coeff*(xprofile[*,0]+xprofile[*,1])/f2[fidx]
+                yprofile=coeff*(yprofile[*,0]+yprofile[*,1])/f2[fidx]
+                spectrum=coeff*(spectrum[*,0]+spectrum[*,1])/f2
               end  
      (sz[3]+6):begin
                xprofile=coeff*(xprofile[*,1]-xprofile[*,0])/f2[fidx]
@@ -581,9 +586,11 @@ compile_opt hidden
         oplot,res_pxrange[[1,1]],keyword_set(res_ylog)?10^!y.crange:!y.crange,thick=2,linesty=2,color=0
       endif
     endelse
+    oplot,keyword_set(res_xlog)?10^!x.crange:!x.crange,[0,0],color=0
     if res_range eq 'Auto' then ResPlotOptions->SetProperty,xrange=keyword_set(res_xlog)?10^!x.crange:!x.crange, yrange=keyword_set(res_ylog)?10^!y.crange:!y.crange
     ResPlotOptions->GetProperty,range=res_range,xrange=res_pxrange,yrange=res_pyrange,xlog=res_xlog,ylog=res_ylog
     rdev=(res)^2
+    
     if isa(res_pxrange) and isa(res_pyrange) then begin
       good=where(finite(rdev) and (xref ge min(res_pxrange)) and (xref le max(res_pxrange)),n)
     endif else begin
@@ -591,23 +598,20 @@ compile_opt hidden
     endelse
     
     if n gt 0 then begin
-    rdev=rdev[good]
-    if (ResidualsExtraOptions[1] eq 1) and isa(res_pxrange) and isa(res_pyrange) then begin
-      good=where((rdev ge min(res_pyrange)/100) and (rdev le max(res_pyrange)/100),n)
-      rdev=rdev[good]
-    endif
-    if n gt 0 then begin
-      rdev=100*sqrt(total(rdev[good],/nan,/double)/n)
+      if (ResidualsExtraOptions[1] eq 1) and isa(res_pxrange) and isa(res_pyrange) then begin
+        good=where((res ge min(res_pyrange)/100) and (res le max(res_pyrange)/100),n)
+      endif
+      if n gt 0 then begin
+        rdev=100*sqrt(total(rdev[good],/nan,/double)/n)
+      endif else rdev=0
       widget_control,self.wRDEV,set_value=string(rdev,format="('RDEV=',g0,'%')")
-    endif
     end
-    
-    
     !p.multi=[2,2,3]
-
    endif
-   skip_plot:
-  end
+  endif else begin
+    skip_plot:
+    !p.multi=[0,1,2]
+  endelse
   
   npoints=n_elements(yprofile)
   xaxis=xrange[0]+findgen(npoints)*(max(xrange,min=min)-min)/(npoints-1)
@@ -839,6 +843,7 @@ function gxImgViewWid::GetImg,k,idx,raw=raw,psf=psf
   
   ;Handle Polarization and Tb
   coeff=self->SFU2TB()
+  coeff=coeff/2;NORH Convention
   axis=(((*self.info).spectrum).x.axis)
   f2=axis^2
   if size(img,/n_dim) eq 3 then begin
@@ -860,7 +865,7 @@ function gxImgViewWid::GetImg,k,idx,raw=raw,psf=psf
                     img=coeff*img[*,*,1]/f2[k]
                   end
         (sz[3]+5):begin
-                    img=coeff*((img[*,*,1]+img[*,*,0]))/f2[k]/2
+                    img=coeff*((img[*,*,1]+img[*,*,0]))/f2[k]
                   end
         (sz[3]+6):begin
                     img=coeff*((img[*,*,1]-img[*,*,0]))/f2[k]
@@ -998,8 +1003,25 @@ end
      for k=0,sz[3]-1 do begin
       map=self.fovmap->get(/map)
       map.data=self->GetImg(k)
+      if n_elements(idx) ge 4 then begin
+        add_prop,map,dataunit=((*self.info).spectrum).y.unit[idx[3]]
+        case map.dataunit of
+          'sfu':datatype='Flux'
+          'K':datatype='Brightness Temperature'
+          '%':datatype='Polarization Degree'
+          else:
+        endcase
+        if isa(datatype) then begin
+          add_prop,map,datatype=datatype
+          add_prop,map,freq=((*self.info).spectrum).x.axis[k]
+          add_prop,map,frequnit=((*self.info).spectrum).x.unit
+          add_prop,map,STOKES=strcompress(chanid,/rem)
+        endif
+      endif
+      
       id=string(((*self.info).spectrum).x.axis[k],((*self.info).spectrum).x.unit,format="(g0,' ',a)")
       map.id='GX '+id+chanid
+
       omap->setmap,k,map
       tvlct,red,green,blue,/get  
       if ptr_valid(self.info) then begin
@@ -1134,8 +1156,6 @@ pro gxImgViewWid::MapArray2ImgCubeFile,tlb
         fovmap->setmap,0,map
         xrange=fovmap->Get(/xrange)/rsun
         yrange=fovmap->Get(/yrange)/rsun
-;        info={execute:'',parms:replicate({NAME:'dS',VALUE:2.0,UNIT:'',hint:''},1),pixdim:[sz[3]],$
-;              spectrum:{x:{axis:eomap.freq,label:'Frequency',unit:'GHz'},y:{label:'I',unit:'sfu'}}}
         info={parms:replicate({NAME:'dS',VALUE:2.0,UNIT:'',hint:''},1),$
               pixdim:[sz[3],2,3],$
               spectrum:{x:{axis:freqs,label:'Frequency',unit:'GHz'},$

@@ -791,6 +791,11 @@ function gxModel::GetVertexData,var
   return,self.volume->GetVertexData(var)
 end
 
+pro gxModel::SetVertexData,key,var
+  self.volume->SetVertexAttributeData,key,var
+end
+
+
 function gxModel::Box2Volume,data,idx,box2vol=box2vol,bsize=bsize,csize=csize,corona_only=corona_only,recompute=recompute
   isa_combo=(self->IsCombo(bsize=bsize,csize=csize))
   box_idx=lindgen(bsize[1],bsize[2],bsize[3])
@@ -906,6 +911,406 @@ end
 pro gxModel::SetGrid,grid
   scanbox=self->GetROI(/scanbox)
   if obj_valid(scanbox) then scanbox->SetGrid,grid
+end
+
+function gxModel::MakeScanboxGrid,parms
+ if ~isa(parms) then return,ptr_new()
+ grid=self->GetGrid()
+ if ~ptr_valid(grid) then begin
+  scanbox=self->getroi(/scanbox)
+  newgrid=scanbox->ComputeGrid()
+  grid=self->GetGrid()
+ endif
+ if ~ptr_valid(grid) then return,ptr_new()
+ dim=size(*grid,/dim)
+ nx=dim[1]
+ ny=dim[2]
+ nz=dim[3]
+ empty_slice=fltarr(nx,nz)
+ grid=ptr_new({grid:grid,B:dblarr(nx*nz,3),$
+   parms:dblarr(nx,nz,n_elements(parms)),slice:empty_slice})
+ return,grid
+end
+
+pro gxModel::Slice,parms,row,scanner=scanner
+  if ~ptr_valid(scanner) then scanner=self->MakeScanboxGrid(parms)
+  void=self->Box2Volume(box2vol=box2vol)
+  grid=self->GetGrid()
+  if ptr_valid(grid) then (*scanner).grid=grid
+  assigned=lonarr(n_elements((*scanner).parms))
+  if ~ptr_valid(grid) then goto, unassigned
+  dim=size(*grid,/dim)
+  nx=dim[1]
+  ny=dim[2]
+  nz=dim[3]
+  sz=self->Size(/volume)
+  dr=reform((*grid)[0,*,row,*])
+  g=reform((*grid)[1:3,*,row,*])
+  vol_ind=transpose(reform(g,3,nx*nz))
+  missing=0
+  (self->GetVolume())->GetVertexAttributeData,'voxel_id',id
+  if n_elements(id) gt 0 then begin
+    var=interpolate(id,fix(vol_ind[*,0]),fix(vol_ind[*,1]),fix(vol_ind[*,2]),missing=missing)
+    idx=gx_name2idx(parms,'VoxelID')
+    if (size(idx))[0] ne 0 then begin
+      (*scanner).parms[*,*,idx]=ulong(var)
+      assigned[idx]=1
+    end
+  endif
+
+  r=self->R(/volume)
+  radius=interpolate(temporary(r),vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
+
+  ;ASSIGN dz
+  idx=gx_name2idx(parms,'dR')
+  if (size(idx))[0] ne 0 then begin
+    (*scanner).parms[*,*,idx]=dr*gx_rsun()
+    assigned[idx]=1
+  end
+
+  corona=self->Corona()
+  corona->GetProperty,n0=n0,T0=temp,dist_e=dist_e,kappa=kappa,emin=emin,emax=emax,chromo_n=chromo_n,chromo_T=chromo_T,chromo_h=chromo_h,ignore=ignore_corona
+
+  tmp=(*scanner).slice
+
+  (*scanner).slice=corona->GetDensity(radius)
+  tmp[*]=radius
+
+  if ~ignore_corona then begin
+    ;corona Dist_E
+    idx=gx_name2idx(parms,'Dist_E')
+    if (size(idx))[0] ne 0 then begin
+      (*scanner).parms[*,*,idx]=dist_e
+      assigned[idx]=1
+    end
+
+
+    ;corona kappa
+    idx=gx_name2idx(parms,'kappa')
+    if (size(idx))[0] ne 0 then begin
+      (*scanner).parms[*,*,idx]=kappa
+      assigned[idx]=1
+    end
+
+    ;corona Emin
+    idx=gx_name2idx(parms,'Emin')
+    if (size(idx))[0] ne 0 then begin
+      (*scanner).parms[*,*,idx]=emin
+      assigned[idx]=1
+    end
+
+    ;corona Emax
+    idx=gx_name2idx(parms,'Emax')
+    if (size(idx))[0] ne 0 then begin
+      (*scanner).parms[*,*,idx]=emax
+      assigned[idx]=1
+    end
+  end
+
+
+  sz=self->Size()
+  vol=fltarr(sz[1],sz[2],sz[3])
+  volume=self->GetVolume()
+  ;n_0
+  idx=gx_name2idx(parms,'n_0')
+  if (size(idx))[0] ne 0 then begin
+    vol=self->Box2Volume('n0')
+    if isa(vol)then begin
+      (*scanner).parms[*,*,idx]=interpolate(vol,vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
+      assigned[idx]=1
+    end
+  end
+
+  ;T_0
+  idx=gx_name2idx(parms,'T_0')
+  if (size(idx))[0] ne 0 then begin
+    vol=self->Box2Volume('T0')
+    (*scanner).parms[*,*,idx]=interpolate(vol,vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
+    assigned[idx]=1
+  end
+
+  idx=gx_name2idx(parms,'bmed')
+  if (size(idx))[0] ne 0 then begin
+    vol=self->Box2Volume('bmed',/corona)
+    if isa(vol)then begin
+      (*scanner).parms[*,*,idx]=interpolate(vol,vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
+      assigned[idx]=1
+    end
+  end
+
+
+  idx=gx_name2idx(parms,'length')
+  if (size(idx))[0] ne 0 then begin
+    vol=self->Box2Volume('length',/corona)
+    if isa(vol)then begin
+      ;vol[*]=1e11
+      vol=gx_rsun()*vol/2
+      (*scanner).parms[*,*,idx]=interpolate(vol,vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
+      assigned[idx]=1
+    end
+  end
+
+  idx=gx_name2idx(parms,'Q')
+  if (size(idx))[0] ne 0 then begin
+    vol=self->Box2Volume('Q',/corona)
+    if isa(vol)then begin
+      (*scanner).parms[*,*,idx]=interpolate(vol,vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
+      assigned[idx]=1
+    end
+  end
+
+  idx=gx_name2idx(parms,'UseDEM')
+  if (size(idx))[0] ne 0 then begin
+    (*scanner).parms[*,*,idx]=(volume->getflags()).NTDEM
+    assigned[idx]=1
+  end
+
+  idx=gx_name2idx(parms,'SS')
+  if (size(idx))[0] ne 0 then begin
+    (*scanner).parms[*,*,idx]=(volume->getflags()).NTSSDEM
+    assigned[idx]=1
+  end
+
+  idx=gx_name2idx(parms,'AddTR')
+  if (size(idx))[0] ne 0 then begin
+    (*scanner).parms[*,*,idx]=(volume->getflags()).TRADD
+    assigned[idx]=1
+  end
+
+  idx=gx_name2idx(parms,'ApplyTRfactor')
+  if (size(idx))[0] ne 0 then begin
+    (*scanner).parms[*,*,idx]=(volume->getflags()).TRFACTOR
+    assigned[idx]=1
+  end
+
+  idx=gx_name2idx(parms,'DEMAVG')
+  if (size(idx))[0] ne 0 then begin
+    self->GetProperty,wparent=wparent
+    id=widget_info(wparent,find_by_uname='GXMODEL:DEMAVG')
+    if widget_valid(id) then begin
+      widget_control,id,get_value=demavg
+      (*scanner).parms[*,*,idx]=demavg
+      assigned[idx]=1
+    endif
+  end
+
+  idx=gx_name2idx(parms,'hc_angle')
+  if (size(idx))[0] ne 0 then begin
+    self->GetProperty,ns=ns,ew=ew
+    (*scanner).parms[*,*,idx]=asin(sqrt(total((hel2arcmin(ns,ew,radius=rsun,date=(*(self->Refmaps()))->Get(/time)))^2))/rsun)/!dtor
+    assigned[idx]=1
+  end
+
+
+  chromo_idx=self->GetVertexData('chromo_idx')
+  ; start for backward compatibility Dec 18 2014!!!!
+  if n_elements(chromo_idx) eq 0 then chromo_idx=self->GetVertexData('idx')
+  ; end for backward compatibility Dec 18 2014!!!!
+  if isa(chromo_idx,/number,/array) then begin
+    n_htot=self->GetVertexData('n_htot')
+    if n_elements(n_htot) eq n_elements(chromo_idx) then begin
+      var=temporary(n_htot)
+      vol[*]=0
+      vol[chromo_idx]=var
+      var =interpolate(vol,vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
+      idx=gx_name2idx(parms,'n_Htot')
+      if (size(idx))[0] ne 0 then begin
+        (*scanner).parms[*,*,idx]=var
+        assigned[idx]=1
+      end
+    endif
+
+    n_hi=self->GetVertexData('n_hi')
+    if n_elements(n_hi) eq n_elements(chromo_idx)  then begin
+      var=temporary(n_hi)
+      vol[*]=0
+      vol[chromo_idx]=var
+      var =interpolate(vol,vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
+      idx=gx_name2idx(parms,'n_HI')
+      if (size(idx))[0] ne 0 then begin
+        (*scanner).parms[*,*,idx]=var
+        assigned[idx]=1
+      end
+    endif
+
+    n_p=self->GetVertexData('n_p')
+    if n_elements(n_p) eq n_elements(chromo_idx) then begin
+      var=temporary(n_p)
+      vol[*]=0
+      vol[chromo_idx]=var
+      var =interpolate(vol,vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
+      idx=gx_name2idx(parms,'n_p')
+      if (size(idx))[0] ne 0 then begin
+        (*scanner).parms[*,*,idx]=var
+        assigned[idx]=1
+      end
+    endif
+  end
+
+
+  ;LOOP OVER FLUXTUBES
+  tubes=self->Get(/all,ISA='gxFluxtube',count=tcount)
+  bsize=self->Size()
+  vol=(tmp=dblarr(bsize[1],bsize[2],bsize[3]))
+  for j=0,tcount-1 do begin
+    vol[*]=0
+    tubes[j]->GetProperty,T0=T0,eps=eps,kappa=kappa,emin=emin,emax=emax,$
+      Ebreak=e_break,delta1=delta1,delta2=delta2,dist_e=dist_e,dist_ang=dist_ang,centerbase=base
+    base->GetVertexAttributeData,'owned',owned
+    base->GetVertexAttributeData,'N_IDX',n_idx
+    ocount=n_elements(owned)
+    if ocount gt 1 then begin
+      vol[*]=0
+      vol[owned]=1
+      (*scanner).slice=interpolate(vol[box2vol],vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
+      slice_owned=where((*scanner).slice eq 1,comp=cowned,nowned)
+      if nowned gt 0 then begin
+        owned2d=array_indices((*scanner).slice,slice_owned)
+        x=reform(owned2d[0,*])
+        y=reform(owned2d[1,*])
+      end
+
+      tube_parms=['kappa','eps','Emin','Emax','E_break','delta1','delta2','Dist_E','Dist_Ang']
+      for k=0,n_elements(tube_parms)-1 do begin
+        idx=gx_name2idx(parms,tube_parms[k])
+        if idx ge 0 then assigned[idx]=1
+        if (size(idx))[0] ne 0 then begin
+          if nowned gt 0 then begin
+            result=execute('data='+tube_parms[k])
+            if result eq 1 then begin
+              (*scanner).parms[x,y,replicate(idx,n_elements(x))]=data
+            end
+          end
+        end
+      end
+    end
+  end
+  ;______________________________________________________
+
+
+  vertex_parms=['n_nth','THETA_C','THETA_B','dMu','a4']
+  idx_parms=['n_b','THETA_C','THETA_B','dMu','a_4']
+  bsize=self->Size()
+  vol=(tmp=dblarr(bsize[1],bsize[2],bsize[3]))
+  for k=0,n_elements(idx_parms)-1 do begin
+    idx=gx_name2idx(parms,idx_parms[k])
+    if idx ge 0 then assigned[idx]=1
+    if (size(idx))[0] ne 0 then begin
+      ;LOOP OVER FLUXTUBES
+      tubes=self->Get(/all,ISA='gxFluxtube',count=tcount)
+      vol[*]=0
+      for j=0,tcount-1 do begin
+        tmp[*]=0
+        tubes[j]->GetProperty,centerbase=base
+        base->GetVertexAttributeData,vertex_parms[k],data
+        if n_elements(data) gt 0 then begin
+          base->GetVertexAttributeData,'owned',owned
+          base->GetVertexAttributeData,'N_IDX',n_idx
+          if n_elements(owned) gt 1 then begin
+            tmp[n_idx]=data
+            vol[owned]=tmp[owned]
+          end
+        end
+      end
+      (*scanner).parms[*,*,idx]+=interpolate(vol[box2vol],vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
+    endif
+  end
+
+
+
+  vol=volume->GetBx(/volume)
+  (*scanner).B[*,0]=Interpolate(vol, vol_ind[*, 0], vol_ind[*, 1], vol_ind[*, 2], missing=missing)
+  vol=volume->GetBy(/volume)
+  (*scanner).B[*,1]=Interpolate(vol, vol_ind[*, 0], vol_ind[*, 1], vol_ind[*, 2], missing=missing)
+  vol=volume->GetBz(/volume)
+  (*scanner).B[*,2]=Interpolate(vol, vol_ind[*, 0], vol_ind[*, 1], vol_ind[*, 2], missing=missing)
+
+
+  btm=self->GetBTM()
+  (*scanner).B=btm##(*scanner).B
+
+  ;SCALE B
+  volume->GetProperty,bscale=bscale
+  if n_elements(bscale) ne 0 then begin
+    (*scanner).B=Bscale*(*scanner).B
+  end
+
+  ;COMPUTE B
+  B=sqrt(total((*scanner).B^2,2))
+
+  idx=gx_name2idx(parms,'B')
+  if (size(idx))[0] ne 0 then begin
+    (*scanner).parms[*,*,idx]=B
+    assigned[idx]=1
+  end
+
+  idx=gx_name2idx(parms,'Bx')
+  if (size(idx))[0] ne 0 then begin
+    (*scanner).parms[*,*,idx]=(*scanner).B[*,0]
+    assigned[idx]=1
+  end
+
+  idx=gx_name2idx(parms,'By')
+  if (size(idx))[0] ne 0 then begin
+    (*scanner).parms[*,*,idx]=(*scanner).B[*,1]
+    assigned[idx]=1
+  end
+
+  idx=gx_name2idx(parms,'Bz')
+  if (size(idx))[0] ne 0 then begin
+    (*scanner).parms[*,*,idx]=(*scanner).B[*,2]
+    assigned[idx]=1
+  end
+
+  ;COMPUTE PHI
+  idx=gx_name2idx(parms,'phi')
+  if (size(idx))[0] ne 0 then begin
+    if (size(idx))[0] ne 0 then begin
+      (*scanner).parms[*,*,idx]=atan((*scanner).B[*,1],(*scanner).B[*,0])/!dtor;atan(By,Bx)/!dtor
+      assigned[idx]=1
+    end
+  end
+
+  ;COMPUTE THETA
+  idx=gx_name2idx(parms,'theta')
+  if (size(idx))[0] ne 0 then begin
+    temp=acos((*scanner).B[*,2]/B);acos(Bz/B)
+    good=where(finite(temp) eq 1,comp=comp,ncomp=ncomp)
+    if ncomp gt 0 then  temp[comp]=0
+    (*scanner).parms[*,*,idx]=temp/!dtor
+    assigned[idx]=1
+  end
+
+  ;COMPUTE ETA
+  idx=gx_name2idx(parms,'TRfactor')
+  if (size(idx))[0] ne 0 then begin
+    (*scanner).B=(invert(btm)##(*scanner).B)
+    ;theta is the angle between B and Bz (between the field and normal to TR)
+    costheta=abs((*scanner).B[*,2])/B
+    ;ez is the box z-axis versor (normal to TR) in the observer coordinate system, where LOS is the z axis
+    ;So, phi is the angle betwen the TR normal and LOS, so cosphi is the z component of the ez versor
+    ez=btm[*,2]
+    dz=sqrt((*self.parms)[gx_name2idx(parms,'dS')].value);pixel area
+    r=gx_rsun(unit='cm')
+    mincosphi=sin(0.5*acos(1-dz/R))
+    cosphi=(abs(ez[2])>mincosphi)
+    tr_factor=(costheta/cosphi)
+    good=where(finite(tr_factor) eq 1,comp=comp,ncomp=ncomp)
+    if ncomp gt 0 then  tr_factor[comp]=0
+    (*scanner).parms[*,*,idx]=tr_factor
+    assigned[idx]=1
+  end
+
+  unassigned:
+  ;ASSIGN UNASSIGNED
+  for j=0,n_elements(parms)-1 do begin
+    if ptr_valid(scanner) then begin
+      if ~assigned[j] then begin
+        (*scanner).parms[*,*,j]=(parms)[j].value
+      endif
+    end
+  end
+
 end
 
 pro gxModel::CreateBline,xyz,any=any
@@ -1236,6 +1641,10 @@ end
 
 function gxModel::Scanbox
  return,self->GetByName('ScanBox')
+end
+
+function gxModel::GetFovPixSize,_extra=_extra
+  return,(self->GetByName('ScanBox'))->GetFovPixSize(_extra=_extra)
 end
 
 function gxModel::GetSTM,mscale=mscale,tm=tm

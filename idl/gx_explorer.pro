@@ -38,7 +38,8 @@ Widget_Control, DEFAULT_FONT=!defaults.font
   if ~file_exist(file) then begin
     file=dialog_pickfile(Title='Please choose a GX Simulator log file to upload',filter='*.gxl')
     if ~file_exist(file) then return
-  end
+  endif
+  
   rec=MULTI_RESTORE(lun,file=file, header=header,/new,/verb)
   stat=fstat(lun)
   ny=(stat.size-stat.cur_ptr)/n_tags(rec,/data)

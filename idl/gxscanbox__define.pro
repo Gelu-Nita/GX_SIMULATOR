@@ -22,8 +22,8 @@ xrange=xrange,yrange=yrange,zrange=zrange,Nx=Nx,Ny=Ny,Nz=Nz,nthreads=nthreads,_e
  self.Nx=Nx
  self.Ny=Ny
  self.Nz=Nz
- self.dx=delta(self.xrange)/self.nx
- self.dy=delta(self.yrange)/self.ny
+ self.dx=delta(self.xrange)/(self.nx-1)
+ self.dy=delta(self.yrange)/(self.ny-1)
  self.dz=delta(self.zrange)/self.nz
  
  p=dblarr(3,8)
@@ -401,8 +401,8 @@ pro gxScanBox::NewGrid,xrange=xrange,yrange=yrange,zrange=zrange,nx=nx,ny=ny,com
   self.nx=nx
   self.ny=ny
   self.nz=nz
-  self.dx=delta(self.xrange)/self.nx
-  self.dy=delta(self.yrange)/self.ny
+  self.dx=delta(self.xrange)/(self.nx-1)
+  self.dy=delta(self.yrange)/(self.ny-1)
   self->UpdateFields
   widget_control,self.wslice,get_value=index
   index=(index<(self.ny-1)>0)
@@ -508,389 +508,17 @@ PRO gxScanBox::Slice,row
   if ~obj_valid(model) then begin
     goto, unassigned
   endif
- void=model->Box2Volume(box2vol=box2vol) 
- grid=model->GetGrid()
- if ptr_valid(grid) then (*self.grid).grid=grid
-  if ~ptr_valid(grid) then goto, unassigned
-
-  sz=model->Size(/volume)
-  dr=reform((*grid)[0,*,row,*])
-  g=reform((*grid)[1:3,*,row,*])
-  vol_ind=transpose(reform(g,3,self.nx*self.nz))
-  missing=0
-  (model->GetVolume())->GetVertexAttributeData,'voxel_id',id
-  if n_elements(id) gt 0 then begin
-    var=interpolate(id,fix(vol_ind[*,0]),fix(vol_ind[*,1]),fix(vol_ind[*,2]),missing=missing)
-    idx=self->name2idx('VoxelID')
-    if (size(idx))[0] ne 0 then begin
-      (*self.grid).parms[*,*,idx]=ulong(var)
-      assigned[idx]=1
-    end
-  endif
-  
-  r=model->R(/volume)
-  radius=interpolate(temporary(r),vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
-  
-  ;ASSIGN dz
-  idx=self->name2idx('dR')
-  if (size(idx))[0] ne 0 then begin
-    (*self.grid).parms[*,*,idx]=dr*gx_rsun()
-    assigned[idx]=1
-  end
-  
-  n_oculted=0
-  ;oculted=where((slice_grid[*,0]^2+slice_grid[*,1]^2 lt 1 and slice_grid[*,2] lt 0) or (slice_grid[*,0]^2+slice_grid[*,1]^2 +slice_grid[*,2]^2 lt 1),n_oculted)
-  ;ondisk=where((slice_grid[*,0]^2+slice_grid[*,1]^2 lt 1 and slice_grid[*,2] ge 0) and (slice_grid[*,0]^2+slice_grid[*,1]^2 +slice_grid[*,2]^2 lt 1),n_ondisk)
-  
-
-   corona=model->Corona()
-   corona->GetProperty,n0=n0,T0=temp,dist_e=dist_e,kappa=kappa,emin=emin,emax=emax,chromo_n=chromo_n,chromo_T=chromo_T,chromo_h=chromo_h,ignore=ignore_corona
-   
-   tmp=(*self.grid).slice
-   
-   (*self.grid).slice=corona->GetDensity(radius)
-   tmp[*]=radius
-
-    if ~ignore_corona then begin
-       ;corona Dist_E
-        idx=self->name2idx('Dist_E')
-        if (size(idx))[0] ne 0 then begin
-          (*self.grid).parms[*,*,idx]=dist_e
-          assigned[idx]=1
-        end
-        
-        
-       ;corona kappa
-        idx=self->name2idx('kappa')
-        if (size(idx))[0] ne 0 then begin
-          (*self.grid).parms[*,*,idx]=kappa 
-          assigned[idx]=1
-        end
-       
-       ;corona Emin
-        idx=self->name2idx('Emin')
-        if (size(idx))[0] ne 0 then begin
-          (*self.grid).parms[*,*,idx]=emin
-          assigned[idx]=1
-        end  
-       
-       ;corona Emax
-        idx=self->name2idx('Emax')
-        if (size(idx))[0] ne 0 then begin
-          (*self.grid).parms[*,*,idx]=emax
-          assigned[idx]=1 
-        end  
-    end    
-
-    
-    sz=model->Size()
-    vol=fltarr(sz[1],sz[2],sz[3])   
-    volume=model->GetVolume()   
-    ;n_0
-    idx=self->name2idx('n_0')
-    if (size(idx))[0] ne 0 then begin
-      vol=model->Box2Volume('n0')
-      if isa(vol)then begin
-        (*self.grid).parms[*,*,idx]=interpolate(vol,vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
-        assigned[idx]=1
-      end
-    end
-
-    ;T_0
-    idx=self->name2idx('T_0')
-    if (size(idx))[0] ne 0 then begin
-      vol=model->Box2Volume('T0')
-      (*self.grid).parms[*,*,idx]=interpolate(vol,vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
-      assigned[idx]=1
-    end
-      
-     idx=self->name2idx('bmed')
-     if (size(idx))[0] ne 0 then begin
-       vol=model->Box2Volume('bmed',/corona)
-       if isa(vol)then begin
-         (*self.grid).parms[*,*,idx]=interpolate(vol,vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
-          assigned[idx]=1 
-        end
-     end 
-     
-
-     idx=self->name2idx('length')
-     if (size(idx))[0] ne 0 then begin
-       vol=model->Box2Volume('length',/corona)
-       if isa(vol)then begin
-         ;vol[*]=1e11
-         vol=gx_rsun()*vol/2
-         (*self.grid).parms[*,*,idx]=interpolate(vol,vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
-          assigned[idx]=1 
-       end 
-     end 
-
-    idx=self->name2idx('Q')
-    if (size(idx))[0] ne 0 then begin
-      vol=model->Box2Volume('Q',/corona)
-      if isa(vol)then begin
-        (*self.grid).parms[*,*,idx]=interpolate(vol,vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
-        assigned[idx]=1
-      end  
-    end
-    
-    idx=self->name2idx('UseDEM')
-    if (size(idx))[0] ne 0 then begin
-      (*self.grid).parms[*,*,idx]=(volume->getflags()).NTDEM
-      assigned[idx]=1
-    end
-    
-    idx=self->name2idx('SS')
-    if (size(idx))[0] ne 0 then begin
-      (*self.grid).parms[*,*,idx]=(volume->getflags()).NTSSDEM
-      assigned[idx]=1
-    end
-    
-    idx=self->name2idx('AddTR')
-    if (size(idx))[0] ne 0 then begin
-        (*self.grid).parms[*,*,idx]=(volume->getflags()).TRADD
-        assigned[idx]=1
-    end
-    
-    idx=self->name2idx('ApplyTRfactor')
-    if (size(idx))[0] ne 0 then begin
-      (*self.grid).parms[*,*,idx]=(volume->getflags()).TRFACTOR
-      assigned[idx]=1
-    end
-    
-    idx=self->name2idx('DEMAVG')
-    if (size(idx))[0] ne 0 then begin
-       model->GetProperty,wparent=wparent
-       id=widget_info(wparent,find_by_uname='GXMODEL:DEMAVG')
-       if widget_valid(id) then begin
-        widget_control,id,get_value=demavg
-        (*self.grid).parms[*,*,idx]=demavg
-        assigned[idx]=1
-       endif
-    end
-       
-    idx=self->name2idx('hc_angle')
-    if (size(idx))[0] ne 0 then begin
-      model->GetProperty,ns=ns,ew=ew
-      (*self.grid).parms[*,*,idx]=asin(sqrt(total((hel2arcmin(ns,ew,radius=rsun,date=(*(model->Refmaps()))->Get(/time)))^2))/rsun)/!dtor
-      assigned[idx]=1
-    end
-   
-
-    chromo_idx=model->GetVertexData('chromo_idx')
-    ; start for backward compatibility Dec 18 2014!!!!
-    if n_elements(chromo_idx) eq 0 then chromo_idx=model->GetVertexData('idx')
-    ; end for backward compatibility Dec 18 2014!!!!
-    if isa(chromo_idx,/number,/array) then begin
-     n_htot=model->GetVertexData('n_htot')
-     if n_elements(n_htot) eq n_elements(chromo_idx) then begin
-      var=temporary(n_htot)
-      vol[*]=0
-      vol[chromo_idx]=var
-      var =interpolate(vol,vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
-      idx=self->name2idx('n_Htot')
-      if (size(idx))[0] ne 0 then begin
-        (*self.grid).parms[*,*,idx]=var
-        assigned[idx]=1
-      end
-     endif
-
-     n_hi=model->GetVertexData('n_hi')
-     if n_elements(n_hi) eq n_elements(chromo_idx)  then begin
-       var=temporary(n_hi)
-       vol[*]=0
-       vol[chromo_idx]=var
-       var =interpolate(vol,vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
-       idx=self->name2idx('n_HI')
-       if (size(idx))[0] ne 0 then begin
-         (*self.grid).parms[*,*,idx]=var
-         assigned[idx]=1
-       end
-     endif
-
-     n_p=model->GetVertexData('n_p')
-     if n_elements(n_p) eq n_elements(chromo_idx) then begin
-       var=temporary(n_p)
-       vol[*]=0
-       vol[chromo_idx]=var
-       var =interpolate(vol,vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
-       idx=self->name2idx('n_p')
-       if (size(idx))[0] ne 0 then begin
-         (*self.grid).parms[*,*,idx]=var
-         assigned[idx]=1
-       end
-     endif
-   end 
-   
-    
-    ;LOOP OVER FLUXTUBES
-    tubes=model->Get(/all,ISA='gxFluxtube',count=tcount)
-    bsize=model->Size()
-    vol=(tmp=dblarr(bsize[1],bsize[2],bsize[3]))  
-      for j=0,tcount-1 do begin
-        vol[*]=0
-        tubes[j]->GetProperty,T0=T0,eps=eps,kappa=kappa,emin=emin,emax=emax,$
-                  Ebreak=e_break,delta1=delta1,delta2=delta2,dist_e=dist_e,dist_ang=dist_ang,centerbase=base
-        base->GetVertexAttributeData,'owned',owned  
-        base->GetVertexAttributeData,'N_IDX',n_idx      
-        ocount=n_elements(owned)      
-        if ocount gt 1 then begin
-          vol[*]=0
-          vol[owned]=1
-          (*self.grid).slice=interpolate(vol[box2vol],vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
-           slice_owned=where((*self.grid).slice eq 1,comp=cowned,nowned)  
-           if nowned gt 0 then begin
-            owned2d=array_indices((*self.grid).slice,slice_owned)
-            x=reform(owned2d[0,*])
-            y=reform(owned2d[1,*])
-           end 
-           
-          parms=['kappa','eps','Emin','Emax','E_break','delta1','delta2','Dist_E','Dist_Ang']
-          for k=0,n_elements(parms)-1 do begin
-            idx=self->name2idx(parms[k])
-            if idx ge 0 then assigned[idx]=1
-            if (size(idx))[0] ne 0 then begin
-              if nowned gt 0 then begin
-               result=execute('data='+parms[k])
-               if result eq 1 then begin
-                (*self.grid).parms[x,y,replicate(idx,n_elements(x))]=data
-               end 
-              end
-            end 
-          end 
-      end
-    end
-    ;______________________________________________________
-   
-   
-   vertex_parms=['n_nth','THETA_C','THETA_B','dMu','a4']
-   idx_parms=['n_b','THETA_C','THETA_B','dMu','a_4']
-   bsize=model->Size()
-   vol=(tmp=dblarr(bsize[1],bsize[2],bsize[3]))
-   for k=0,n_elements(idx_parms)-1 do begin
-     idx=self->name2idx(idx_parms[k])
-     if idx ge 0 then assigned[idx]=1
-     if (size(idx))[0] ne 0 then begin    
-      ;LOOP OVER FLUXTUBES
-      tubes=model->Get(/all,ISA='gxFluxtube',count=tcount)
-      vol[*]=0
-      for j=0,tcount-1 do begin
-        tmp[*]=0
-        tubes[j]->GetProperty,centerbase=base
-        base->GetVertexAttributeData,vertex_parms[k],data  
-        if n_elements(data) gt 0 then begin
-          base->GetVertexAttributeData,'owned',owned
-          base->GetVertexAttributeData,'N_IDX',n_idx
-          if n_elements(owned) gt 1 then begin
-            tmp[n_idx]=data
-            vol[owned]=tmp[owned]
-          end
-        end
-      end
-      (*self.grid).parms[*,*,idx]+=interpolate(vol[box2vol],vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
-     endif
-   end  
-   
- 
-  
-  vol=volume->GetBx(/volume)  
-  (*self.grid).B[*,0]=Interpolate(vol, vol_ind[*, 0], vol_ind[*, 1], vol_ind[*, 2], missing=missing)
-  vol=volume->GetBy(/volume) 
-  (*self.grid).B[*,1]=Interpolate(vol, vol_ind[*, 0], vol_ind[*, 1], vol_ind[*, 2], missing=missing)
-  vol=volume->GetBz(/volume) 
-  (*self.grid).B[*,2]=Interpolate(vol, vol_ind[*, 0], vol_ind[*, 1], vol_ind[*, 2], missing=missing)
-  
-  
-  btm=model->GetBTM()
-  (*self.grid).B=btm##(*self.grid).B
-
-  ;SCALE B
-  volume->GetProperty,bscale=bscale
-  if n_elements(bscale) ne 0 then begin
-    (*self.grid).B=Bscale*(*self.grid).B
-  end
-
-   ;COMPUTE B
-   B=sqrt(total((*self.grid).B^2,2))
-   
-   idx=self->name2idx('B')
-   if (size(idx))[0] ne 0 then begin
-     (*self.grid).parms[*,*,idx]=B
-     assigned[idx]=1
-   end
-   
-   idx=self->name2idx('Bx')
-   if (size(idx))[0] ne 0 then begin
-     (*self.grid).parms[*,*,idx]=(*self.grid).B[*,0]
-     assigned[idx]=1
-   end
-   
-   idx=self->name2idx('By')
-   if (size(idx))[0] ne 0 then begin
-     (*self.grid).parms[*,*,idx]=(*self.grid).B[*,1]
-     assigned[idx]=1
-   end
-   
-   idx=self->name2idx('Bz')
-   if (size(idx))[0] ne 0 then begin
-     (*self.grid).parms[*,*,idx]=(*self.grid).B[*,2]
-     assigned[idx]=1
-   end
-   
-   ;COMPUTE PHI
-   idx=self->name2idx('phi')
-   if (size(idx))[0] ne 0 then begin
-     if (size(idx))[0] ne 0 then begin
-      (*self.grid).parms[*,*,idx]=atan((*self.grid).B[*,1],(*self.grid).B[*,0])/!dtor;atan(By,Bx)/!dtor
-      assigned[idx]=1
-     end
-   end  
- 
-   ;COMPUTE THETA
-   idx=self->name2idx('theta')
-   if (size(idx))[0] ne 0 then begin
-     temp=acos((*self.grid).B[*,2]/B);acos(Bz/B)
-     good=where(finite(temp) eq 1,comp=comp,ncomp=ncomp)
-     if ncomp gt 0 then  temp[comp]=0
-     (*self.grid).parms[*,*,idx]=temp/!dtor
-     assigned[idx]=1    
-   end
-   
-   ;COMPUTE ETA
-   idx=self->name2idx('TRfactor')
-   if (size(idx))[0] ne 0 then begin
-     (*self.grid).B=(invert(btm)##(*self.grid).B)
-     ;theta is the angle between B and Bz (between the field and normal to TR)
-     costheta=abs((*self.grid).B[*,2])/B
-     ;ez is the box z-axis versor (normal to TR) in the observer coordinate system, where LOS is the z axis
-     ;So, phi is the angle betwen the TR normal and LOS, so cosphi is the z component of the ez versor
-     ez=btm[*,2]
-     dz=sqrt((*self.parms)[self->name2idx('dS')].value);pixel area
-     r=gx_rsun(unit='cm')
-     mincosphi=sin(0.5*acos(1-dz/R))
-     cosphi=(abs(ez[2])>mincosphi)
-     tr_factor=(costheta/cosphi)
-     good=where(finite(tr_factor) eq 1,comp=comp,ncomp=ncomp)
-     if ncomp gt 0 then  tr_factor[comp]=0
-;     no_tr=where((ulong((*self.grid).parms[*,*,self->name2idx('VoxelID')]) and 2ul) eq 0,no_tr_count)
-;     if no_tr_count gt 0 then tr_factor[no_tr]=0
-      (*self.grid).parms[*,*,idx]=tr_factor
-     assigned[idx]=1
-   end  
-
-
-if n_oculted gt 0 then self->CleanGrid,oculted=oculted
-   
+ scanner=self.grid
+ parms=*self.parms
+ model->Slice,parms,row,scanner=scanner
+ self.grid=scanner
+;  n_oculted=0
+;  ;oculted=where((slice_grid[*,0]^2+slice_grid[*,1]^2 lt 1 and slice_grid[*,2] lt 0) or (slice_grid[*,0]^2+slice_grid[*,1]^2 +slice_grid[*,2]^2 lt 1),n_oculted)
+;  ;ondisk=where((slice_grid[*,0]^2+slice_grid[*,1]^2 lt 1 and slice_grid[*,2] ge 0) and (slice_grid[*,0]^2+slice_grid[*,1]^2 +slice_grid[*,2]^2 lt 1),n_ondisk)
+;  if n_oculted gt 0 then self->CleanGrid,oculted=oculted
+;   
 unassigned:   
-   ;ASSIGN UNASSIGNED
-   for j=0,n_elements(*self.parms)-1 do begin
-    if ptr_valid(self.grid) then begin
-     if ~assigned[j] then begin
-       (*self.grid).parms[*,*,j]=(*self.parms)[j].value
-     endif 
-    end
-   end  
-   
+  
 if ptr_valid(self.grid) then self->TV_Slice    
 END
 
@@ -1539,7 +1167,7 @@ pro gxScanBox::TV_SLICE
   plot,xaxis,los,psym=10,color=0,back=255,xtitle='LOS (voxels)',/xsty,ytitle=name,ylog=max(los)gt min(los)?ylog:0,xlog=xlog,xrange=pxrange,yrange=pyrange
 end     
 
-pro gxScanBox::CreatePanel
+pro gxScanBox::CreatePanel,_extra=_extra
  subdirectory=['resource', 'bitmaps']                                                           
  ;xlabelsize=36
  xtextsize=10

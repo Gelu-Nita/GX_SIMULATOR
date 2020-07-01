@@ -22,7 +22,7 @@ function gxWidget::INIT,wParent,subject,frame=frame,name=name,_extra=_extra
     uvalue=self, $
     notify_realize='IDLexWidget__OnRealize', $
     uname=name,_extra=_extra)
-  self->CreatePanel
+  self->CreatePanel,_extra=_extra
  return,1
 end
 ;------------------------------------------------------------
@@ -33,7 +33,7 @@ if obj_isa(self.subject,'gxvolume') then (self.subject)->Update
 return, {GXDRAW,id: self.wIDBase, top: event.top, handler:0L} 
 end
 ;------------------------------------------------------------
-pro gxWidget::CreatePanel
+pro gxWidget::CreatePanel,_extra=_extra
   main_base=get_tlb(self.wBase)
   state_base=widget_info(main_base,find_by_uname='STATEBASE')
   if widget_info(state_base,/valid) then begin
@@ -48,7 +48,7 @@ pro gxWidget::CreatePanel
  case 1 of
    obj_isa(self.subject,'gxMapContainer'):begin
    prefix='GXMAPCONTAINER:'
-   wMenu=widget_button(font=font,self.wbase, VALUE='Map_Container',uname=prefix+'MENU', /MENU,sensitive=0)
+   wMenu=widget_button(self.wbase, VALUE='Map_Container',uname=prefix+'MENU', /MENU,sensitive=0);,font=font)
   end
   obj_isa(self.subject,'gxmodel'):begin
    prefix='GXMODEL:'
@@ -760,7 +760,10 @@ end
                               widget_control,event.id,get_uvalue=uvalue,get_value=value
                               uvalue.omap->plotman,uvalue.k,plotman_obj=uvalue.plotman,/use_colors,nodup=0,desc=value
                               widget_control,get_tlb(event.id),get_uvalue=state
-                              widget_control,state.widgets.w_message,set_value=value
+                              if isa(state,'STRUCT') then begin
+                               if tag_exist(state,'widgets') then if tag_exist(state.widgets,'w_message') then $
+                                  widget_control,state.widgets.w_message,set_value=value
+                              endif
                              end
      'GXMAPCONTAINER:REMOVE':begin
                               widget_control,event.id,get_uvalue=uvalue
@@ -805,7 +808,62 @@ end
                              map=group.omap
                              save,map,file=file
                             end       
-                           end                                                                     
+                           end     
+                           
+    'GXMAPCONTAINER:IMPORTFITS':begin
+                                 file=dialog_pickfile(title='Please select a fits file',filter=['*.f*'],path=gx_findfile(folder='demo'),/must_exist)
+                                 if file eq '' then return,self->Rewrite(event)
+                                 widget_control,event.id,get_uvalue=proc
+                                 gx_fits2map,file,map
+                                 if n_elements(map) eq 0 then begin
+                                   answ=dialog_message('Invalid file content!',/error)
+                                   return,self->Rewrite(event)
+                                 end
+                                 map=map[0]
+                                 if map.id eq '' then begin
+                                   break_file, file, dsk_log, dir, filename, ext
+                                   map.id=filename
+                                 end
+                                 map=make_map(map.data,xc=map.xc,yc=map.yc,dx=map.dx,dy=map.dy,time=map.time,id=map.id)
+                                 goto,getmap
+                               end
+    
+     'GXMAPCONTAINER:IMPORTMAP':begin
+                                 file=dialog_pickfile(title='Please select a file containing an IDL map structure',filter=['*.sav','*.map'],path=gx_findfile(folder='demo'),/must_exist)
+                                 if file eq '' then return,self->Rewrite(event)
+                                 osav=obj_new('idl_savefile',file)
+                                 names=osav->names()
+                                 valid=0
+                                 for i=0,n_elements(names)-1 do begin
+                                   osav->restore,names[i]
+                                   e=execute('result=size('+names[i]+',/tname)')
+                                   if (result eq 'STRUCT') or (result eq 'OBJREF') then begin
+                                     e=execute('m=temporary('+names[i]+')')
+                                     if valid_map(m) then map=temporary(m)
+                                   endif
+                                 endfor
+                                 ;restore,file,/RELAXED_STRUCTURE_ASSIGNMENT
+                                 getmap:
+                                 break_file, file, dsk_log, dir, filename, ext
+                                 widget_control,/hourglass
+                                 if ~(size(map,/tname) eq 'STRUCT' or size(map,/tname) eq 'OBJREF') then begin
+                                   answ=dialog_message('Unexpected file content!',/error)
+                                   return,self->Rewrite(event)
+                                 endif else begin
+                                   if size(map,/tname) eq 'STRUCT' then begin
+                                     omap=obj_new('map')
+                                     for k=0,n_elements(map)-1 do begin
+                                       omap->setmap,k,map[k]
+                                     endfor
+                                   endif else omap=map
+                                   if omap->get(/count) gt 1 then begin
+                                     self.subject->Add,omap,filename
+                                   endif else begin
+                                     omap->plotman,0,plotman_obj=self->GetPlotmanObj(),nodup=0
+                                     obj_destroy,omap
+                                   end
+                                 endelse
+                           end                                                                                     
      ;----------------gxCorona-------------------------------------------------------------
      
      'GXCORONA:N0':Begin
@@ -1165,7 +1223,7 @@ end
   
      'GXMODEL:Q_RESET':Begin 
                         volume=(self.subject->GetVolume())
-                        q=[1e-3,1e2,1e9,0,0]
+                        q=[0.000415,1e2,1e9,0,0]
                         volume->SetVertexAttributeData,'q0_coeff',q
                         self.subject->GetProperty,wParent=wParent
                         widget_control,widget_info(wparent,find_by_uname='GXMODEL:q'),set_value=q

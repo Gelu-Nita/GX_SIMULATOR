@@ -56,7 +56,7 @@ function gxMapViewWid::Init,wParent,mbar,frame=frame,wMapBase=wMapBase,wxsize=wx
 font=!defaults.font
 tbar= widget_base(wMapBase, /row,/toolbar)  
 w_file=widget_button(font=font,widget_base(tbar,/row), VALUE='File', /MENU)
-wModel =widget_button(font=font,w_file,event_func='IDLexWidget__HandleEvent',uvalue=self,value='Use magnetic field model to initiate project',uname='MODEL',sensitive=1)
+wModel =widget_button(font=font,w_file,event_func='IDLexWidget__HandleEvent',uvalue=self,value='Use magnetic field model to initiate extrapolation project',uname='MODEL',sensitive=1)
 wNewFitsMenu= widget_button(font=font,w_file,/sep,/menu,value='Import FITS map from file',uname='NewFitsMenu',event_func='IDLexWidget__HandleEvent',uvalue=self) 
 wNewGxFits2Map=widget_button(font=font,wNewFitsMenu,uname='FITS',value='gx_fits2map',uvalue='gx_fits2map,file,map')
 wNewFits2Map=widget_button(font=font,wNewFitsMenu,uname='FITS',value='fits2map',uvalue='fits2map,file,map')
@@ -1135,7 +1135,9 @@ pro gxMapViewWid::OnCallback,Status, Error,bridge
                      end                  
 end
 
-
+function gxMapViewWid::GetPlotmanObj
+return,self.plotman_obj
+end
 
 pro gxMapViewWid::Cleanup
  if ptr_valid(self.REFMAPS) then begin

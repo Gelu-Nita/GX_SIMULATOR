@@ -7,11 +7,15 @@ function gxMapContainer::INIT,wBase,uname=uname,frame=frame,plotman_obj=plotman_
       return, 0
   end
  void=self->IDL_Container::Init()
- void=self->gxWidget::Init(wBase,self,frame=frame,KILL_NOTIFY='objMapContainerKill')
+ void=self->gxWidget::Init(wBase,self,frame=frame,KILL_NOTIFY='objMapContainerKill',_extra=_extra)
  self.plotman=obj_valid(plotman_obj)?plotman_obj:obj_new('plotman')
  return,1
 end
 
+function gxMapContainer::GetPlotmanObj
+ return,self.plotman
+end
+ 
 pro gxMapContainer::ADD,obj,name,k
   default,k,0
   self->IDL_Container::Add,obj
@@ -85,15 +89,40 @@ pro cw_objMapContainer_test_event,event
 end
 
 pro cw_objMapContainer_test
- tlb=widget_base(title='cw_objMapContainer_test',/row,$
+ gx_defparms
+ device, get_screen_size=scr
+ if !version.os_family eq 'Windows' then begin
+   if scr[0] lt 3200 then !defaults.font='lucida console*12' else !defaults.font='lucida console*24'
+ endif else begin
+   if scr[0] lt 3200 then !defaults.font='' else !defaults.font=''
+ endelse
+ tlb=widget_base(title='cw_objMapContainer_test',/column,$
                   mbar=mbar, /tlb_size_events, $
                   /tlb_kill)
  tbar= widget_base(tlb, /row,/toolbar)   
- wMapContainer=cw_objMapContainer(tlb,name='MAP_CONTAINER')
- w_file=WIDGET_BUTTON(tbar, VALUE='File', /MENU)  
+ w_file=WIDGET_BUTTON(tbar, VALUE='File', /MENU)
  wNewFits=widget_button(w_file,value='Import FITS map from file',uvalue=wMapContainer,uname='FITS')
- wNewMap=widget_button(w_file,value='Import MAP structure from file',uvalue=wMapContainer,uname='MAP') 
-                  
+ wNewMap=widget_button(w_file,value='Import MAP structure from file',uvalue=wMapContainer,uname='MAP')
+
+ wPlotmanBase=widget_base(tlb,/column,uvalue={mbar:widget_base(tbar,/row),w_file:w_file})
+ plotman_obj = obj_new ('plotman', mainbase=wPlotmanBase, /multi_panel, $
+   wxsize=wxsize, wysize=wysize, $
+   colortable=colortable, $
+   widgets=widgets, error=error) 
+   geom = widget_info (widgets.w_maindrawbase, /geom)
+   scale=0.65
+   w_splashdraw = widget_draw ( widgets.w_maindrawbase, xsize=geom.scr_xsize, ysize=geom.scr_ysize)
+   state = { $
+     w_file: w_file, $
+     w_splashdraw: w_splashdraw, $
+     widgets: widgets, $
+     plotman_obj: plotman_obj}
+  
+   widget_control,tlb,set_uvalue=state   
+   
+ wMapContainer=cw_objMapContainer(tbar,name='MAP_CONTAINER',plotman_obj=plotman_obj)
+ widget_control, wNewFits,set_uvalue= wMapContainer   
+ widget_control, wNewMap,set_uvalue= wMapContainer               
  widget_control,tlb,/realize
  XMANAGER, 'cw_objMapContainer_test',tlb ,/no_block
 end

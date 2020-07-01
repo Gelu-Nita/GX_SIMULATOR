@@ -112,6 +112,19 @@ pro gxROI::ReplaceFovMap
   self.fovscreen->SetProperty, data=fovdata
 end
 
+function gxROI::GetFovPixSize,unit=unit,arcseconds=arcseconds
+  if keyword_set(arcseconds) then return,[self.fovmap->get(/dx),self.fovmap->get(/dy)]
+  self.scanbox->GetProperty,data=data
+  sdata=gx_transform(data,self.parent->GetSTM(),/inv)
+  xrange=minmax(sdata[0,*])
+  yrange=minmax(sdata[1,*])
+  dx=abs(xrange[1]-xrange[0])/(self.nx-1)
+  dy=abs(yrange[1]-yrange[0])/(self.ny-1)
+  ds=[dx,dy]
+  if keyword_set(unit) then ds=ds*gx_rsun(unit=unit)
+  return,ds
+end
+
 function gxROI::GetScanboxData,sun=sun
   self.scanbox->GetProperty,data=data
   if keyword_set(sun) then  data=gx_transform(data,self.parent->GetSTM(),/inv)
@@ -371,6 +384,10 @@ end
 
 function gxROI::GetBaseScreen
 return, self.parent->GetByName('Reference Map')
+end
+
+function gxROI::GetScanbox
+  return, self.scanbox
 end
 
 pro gxROI__define

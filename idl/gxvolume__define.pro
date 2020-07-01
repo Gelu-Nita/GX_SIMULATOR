@@ -442,7 +442,10 @@ pro gxVolume::UpdateVoxelId,force=force
  ;Bit 3 (ID and 8UL eq 8 UL)= EUV active TR voxel (not masked by the TR mask) 
  
  start_time=systime(/s)
-  if ~keyword_set(force) then if ~self.flags.NewID then return
+  if ~keyword_set(force) then if ~self.flags.NewID then begin
+    message,'Same voxel ID, nothing to compute',/cont
+    return
+  endif
   prog_id = gx_progmeter(/INIT,label='VoxelID Update Progress')
   self->GetVertexAttributeData,'voxel_id',id
   old_id=id
@@ -579,7 +582,7 @@ function gxVolume::GetVertexData,var
 end
 
 pro gxVolume::Update,select,data=data,plot_model_attributes=plot_model_attributes,getdata=getdata,$
-              force=force,update=update,chromo_view=chromo_view,range=range,pwr_idx=pwr_idx
+              force=force,update=update,chromo_view=chromo_view,range=range,pwr_idx=pwr_idx,nt_update=nt_update
   compile_opt hidden
   catch, error_stat
  if error_stat ne 0 then begin
@@ -588,6 +591,11 @@ pro gxVolume::Update,select,data=data,plot_model_attributes=plot_model_attribute
     return
  end
   if ~obj_valid(self.parent) then return
+  if keyword_set(nt_update) then  begin
+    self->ComputeNT,/force
+    self->UpdateVoxelId
+    return
+  endif
   if self.flags.newNT then begin
     if dialog_message(['Volume n-T configuration needs to be updated!','Do you want to recompute n-T now?',$
       'If you need to do more volume changes before this potentially time consuming action, you can later do it manualy by pressing the "Store/Compute n-T from EBTEL" button located in the Model tab'],$ 
@@ -807,28 +815,7 @@ pro gxVolume::Update,select,data=data,plot_model_attributes=plot_model_attribute
              data=self.parent->box2volume('length')
              if self->undefined(data) then goto,undefined 
             end          
-   else: begin 
-;          self->SetColor,0
-;          sz=self.parent->Size()
-;          result=execute('corona->GetProperty,'+self.select+'=value',1,1)
-;          data=fltarr(sz[1],sz[2],sz[3])
-;          vol=data
-;          if n_elements(value) eq 1 then data[*]=value
-;          tubes=self.parent->Get(/all,ISA='gxFluxtube',count=tcount)
-;          ;LOOP OVER FLUXTUBES
-;            for j=0,tcount-1 do begin
-;             vol[*]=0
-;              tubes[j]->GetProperty,T0=T0,centerbase=base
-;              base->GetVertexAttributeData,'owned',owned
-;              if n_elements(owned) gt 1 then begin
-;               base->GetVertexAttributeData,'N_IDX',n_idx
-;               result=execute('tubes[j]->GetProperty,'+self.select+'=value',1,1)
-;               if n_elements(value) eq 0 then goto,undefined
-;               vol[n_idx]=value
-;               data[owned]=vol[owned]
-;              end    
-;            end 
-;         goto,defined      
+   else: begin      
          undefined:
          void=self.parent->box2volume(box2vol=data)
          data=data*0
@@ -836,8 +823,6 @@ pro gxVolume::Update,select,data=data,plot_model_attributes=plot_model_attribute
    endcase
    defined:
    if keyword_set(getdata) then return
-  
-
    
    message,strcompress(self.select+' range: ['+arr2str(minmax(data)))+']',/cont
    IsCombo=self.parent->IsCombo(csize=csize,bsize=bsize,chromo_layers=chromo_layers, corona_base=corona_base)
@@ -868,7 +853,7 @@ pro gxVolume::Update,select,data=data,plot_model_attributes=plot_model_attribute
       end
      endif
    end
-  flags=self->setflags(newData=0)
+   flags=self->setflags(newData=0)
 end
 
 
@@ -963,8 +948,10 @@ pro gxVolume::ComputeNT,question=question,quiet=quiet,force=force,NTDEM=NTDEM,NT
         if widget_valid(id) then widget_control,id,get_value=avgdem
       end
       dem_interpolate,n,t,Qarr=Q,Larr=L,ss=self.flags.NTSSDEM,avgdem=avgdem,duration=duration
-      id=widget_info(wparent,find_by_uname='GXMODEL:DEMDT')
-      if widget_valid(id) then widget_control,id,set_value=strcompress(string(duration,format="('DEM interpolation computed in',f7.2,' s')"))
+      if widget_valid(wparent) then begin
+        id=widget_info(wparent,find_by_uname='GXMODEL:DEMDT')
+        if widget_valid(id) then widget_control,id,set_value=strcompress(string(duration,format="('DEM interpolation computed in',f7.2,' s')"))
+      end
       self->SetVertexAttributeData,'n',n
       self->SetVertexAttributeData,'T',t
       if self.flags.NTSSDEM then flags=self->setflags(/storedNTSSDEM) $

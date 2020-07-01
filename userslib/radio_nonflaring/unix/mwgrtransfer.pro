@@ -2,6 +2,13 @@ pro MWGRTransfer,parms,rowdata,path,parmin,datain,info=info
  if n_elements(path) eq 0 then begin
   dirpath=file_dirname((ROUTINE_INFO('MWGRTransfer',/source)).path,/mark)
   path=dirpath+'MWGRTransfer.so'
+  if ~ file_test(path) then begin
+    cdr=curdir()
+    cd,dirpath
+    spawn, 'rm *.o',exit_status=exit_status
+    spawn, 'make',exit_status=exit_status
+    cd,cdr
+  endif
  end
  if arg_present(info) then begin
     if n_elements(parms) gt 0 then dummy=temporary(parms)
