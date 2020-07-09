@@ -589,23 +589,20 @@ compile_opt hidden
     oplot,keyword_set(res_xlog)?10^!x.crange:!x.crange,[0,0],color=0
     if res_range eq 'Auto' then ResPlotOptions->SetProperty,xrange=keyword_set(res_xlog)?10^!x.crange:!x.crange, yrange=keyword_set(res_ylog)?10^!y.crange:!y.crange
     ResPlotOptions->GetProperty,range=res_range,xrange=res_pxrange,yrange=res_pyrange,xlog=res_xlog,ylog=res_ylog
-    rdev=(res)^2
     
-    if isa(res_pxrange) and isa(res_pyrange) then begin
-      good=where(finite(rdev) and (xref ge min(res_pxrange)) and (xref le max(res_pxrange)),n)
-    endif else begin
-      good=where(finite(rdev),n)
-    endelse
-    
-    if n gt 0 then begin
-      if (ResidualsExtraOptions[1] eq 1) and isa(res_pxrange) and isa(res_pyrange) then begin
-        good=where((res ge min(res_pyrange)/100) and (res le max(res_pyrange)/100),n)
-      endif
-      if n gt 0 then begin
-        rdev=100*sqrt(total(rdev[good],/nan,/double)/n)
-      endif else rdev=0
-      widget_control,self.wRDEV,set_value=string(rdev,format="('RDEV=',g0,'%')")
-    end
+    res=(data/yref-1)
+    if isa(res_pxrange) then begin
+     good=where((xref ge min(res_pxrange)) and (xref le max(res_pxrange)),n) 
+     if n gt 0 then res=res[good]
+    endif
+    if (ResidualsExtraOptions[1] eq 1) and isa(res_pyrange) then begin
+     good=where((res ge min(res_pyrange)/100) and (res le max(res_pyrange)/100),n) 
+     if n gt 0 then res=res[good]
+    endif
+    rdev=res^2
+    rdev=100*sqrt(mean(rdev,/nan))   
+
+    widget_control,self.wRDEV,set_value=string(rdev,format="('RDEV=',g0,'%')")
     !p.multi=[2,2,3]
    endif
   endif else begin
