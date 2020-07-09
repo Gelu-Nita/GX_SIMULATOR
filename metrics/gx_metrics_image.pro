@@ -26,7 +26,7 @@
   ;       
   ; :Return value:
   ;     The routine returns a structure with the following fields:
-  ;       cor - Pearson correlation coefficient
+  ;       R - Pearson correlation coefficient
   ;       res_img= data_model - data_obs
   ;       res= total(res_img[mask_pix])
   ;       res_img_norm=res_img/data_obs
@@ -40,7 +40,7 @@
   ;       chi_img=res_img/data_sdev
   ;       chi=total(chi_img[mask_pix])/n_mask_pix       
   ;       chi2_img=chi_img^2
-  ;       chi2=total(chi2_img[mask_pix])/(n_mask_pix-n_free)        
+  ;       chi2=total(chi2_img[mask_pix])/(n_mask_pix-n_free)-chi^2        
   ;
   ; :Author: Sergey Anfinopgentov (anfinogentov@iszf.irk.ru)
   ;  Modification history:
@@ -99,7 +99,7 @@ function gx_metrics_image, data_model, data_obs, data_sdev,mask=mask,n_free=n_fr
   mask_pix = where(img_mask,complement=bad,ncomp=nbad)
   n_mask_pix = total(img_mask)
 
-  cor = correlate(data_model_d, data_obs_d)     
+  R = correlate(data_model_d, data_obs_d)     
          res_img= data_model_d - data_obs_d
          if nbad gt 0 then res_img[bad]=0
          res= total(res_img[mask_pix])
@@ -112,7 +112,8 @@ function gx_metrics_image, data_model, data_obs, data_sdev,mask=mask,n_free=n_fr
          res2_img_norm=res_img_norm^2
          if nbad gt 0 then res2_img_norm[bad]=1
          res2_norm=total(res2_img_norm[mask_pix])-res_norm^2
- metrics={mask_img:img_mask,$
+ metrics={R:R,$
+          mask_img:img_mask,$
           res_img:res_img,$
           res:res,$
           res_img_norm:res_img_norm,$

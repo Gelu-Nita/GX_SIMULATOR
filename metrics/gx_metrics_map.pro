@@ -66,22 +66,27 @@ function gx_metrics_map, map, reference, sdev,_extra=_extra
   amap=map
   k=0
   
-  amap.id=string(map.xc-map.orig_xc,map.yc-map.orig_yc,format="('ALLIGNED [',f5.2,',',f5.2,'] ')")+map.id
-  amap.data=map.data
-  omap->setmap,k++,amap
+  map.id=string(map.xc-map.orig_xc,map.yc-map.orig_yc,metrics.r,format="('ALLIGNED [',f5.2,',',f5.2,'] (R=',f5.2,')')")+map.id
+  add_prop,map,roi_metrics=metrics.r
+  add_prop,map,uname='MAP:R',/replace
+  omap->setmap,k++,map
   
   amap.id='REMAPPED '+map_ref.id
   amap.data=map_ref.data
+  add_prop,amap,uname='REF',/replace
   omap->setmap,k++,amap
   
   if valid_map(map_sdev) then begin
     amap.id='REMAPPED '+map_sdev.id
+    add_prop,amap,uname='SDEV',/replace
     amap.data=map_sdev.data
     omap->setmap,k++,amap 
   endif
   
   if tag_exist(metrics,'mask_img') then begin
     amap.id=string(total(metrics.mask_img),n_elements(metrics.mask_img),format="('ROI MASK (',g0,'/',g0,' pixels)')")
+    add_prop,amap,uname='ROI:NPIX',/replace
+    add_prop,amap,roi_metrics=total(metrics.mask_img),/replace
     amap.data=metrics.mask_img
     omap->setmap,k++,amap
   endif
@@ -89,6 +94,7 @@ function gx_metrics_map, map, reference, sdev,_extra=_extra
   if tag_exist(metrics,'res_img') then begin
     amap.data=metrics.res_img
     add_prop,amap,roi_metrics=metrics.res,/replace
+    add_prop,amap,uname='ROI:RES',/replace
     amap.id=string(total(amap.roi_metrics),format="('RESIDUAL (',g0,')')")
     omap->setmap,k++,amap
   endif
@@ -96,30 +102,35 @@ function gx_metrics_map, map, reference, sdev,_extra=_extra
   if tag_exist(metrics,'res_img_norm') then begin
     amap.data=metrics.res_img_norm
     add_prop,amap,roi_metrics=metrics.res_norm,/replace
+    add_prop,amap,uname='ROI:RES_NORM',/replace
     amap.id=string(total(amap.roi_metrics),format="('NORMALIZED RESIDUAL (',g0,')')")
     omap->setmap,k++,amap
   endif
   if tag_exist(metrics,'res2_img') then begin
     amap.data=metrics.res2_img
     add_prop,amap,roi_metrics=metrics.res2,/replace
+    add_prop,amap,uname='ROI:RES2',/replace
     amap.id=string(total(amap.roi_metrics),format="('SQUARED RESIDUAL (',g0,')')")
     omap->setmap,k++,amap
   endif
   if tag_exist(metrics,'res2_img_norm') then begin
     amap.data=metrics.res2_img_norm
     add_prop,amap,roi_metrics=metrics.res2_norm,/replace
+    add_prop,amap,uname='ROI:RES2_NORM',/replace
     amap.id=string(total(amap.roi_metrics),format="('NORMALIZED SQUARED RESIDUAL (',g0,')')")
     omap->setmap,k++,amap
   endif
   if tag_exist(metrics,'chi_img') then begin
     amap.data=metrics.chi_img
     add_prop,amap,roi_metrics=metrics.chi,/replace
+    add_prop,amap,uname='ROI:CHI',/replace
     amap.id=string(total(amap.roi_metrics),format="('CHI (',g0,')')")
     omap->setmap,k++,amap
   endif
   if tag_exist(metrics,'chi2_img') then begin
     amap.data=metrics.chi2_img
     add_prop,amap,roi_metrics=metrics.chi2,/replace
+    add_prop,amap,uname='ROI:CHI2',/replace
     amap.id=string(total(amap.roi_metrics),format="('CHI2 (',g0,')')")
     omap->setmap,k++,amap
   endif
