@@ -128,7 +128,7 @@ function gx_metrics_image, data_model, data_obs, data_sdev,mask=mask,n_free=n_fr
          if nbad gt 0 then chi_img[bad]=0
          chi=total(chi_img[mask_pix])/n_mask_pix
          chi2_img=chi_img^2
-         if nbad gt 0 then chi2_img[bad]=0
+         if nbad gt 0 then chi2_img[bad]=1
          chi2=total(chi2_img[mask_pix])/(n_mask_pix-n_free)-chi^2
  chi_metrics={$
          chi_img:chi_img,$

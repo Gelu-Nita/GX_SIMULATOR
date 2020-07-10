@@ -4,18 +4,15 @@
 ; Calculations follow the TT formula from
 ; http://adsabs.harvard.edu/abs/2003ApJ...595L.115B
 ; TT calculations are only for specific voxels
-;Parms[19].Name='VoxelID' & Parms[19].Value=0 & Parms[19].Unit='0/1/2' & Parms[19].Hint='chromo/TR/corona'
-; Modification history:
-; 
-; gnita@njit 07-Dec-2017 change explicit TR index from 2L to gx_voxelid(/tr) to allow future redefinition if needed
-; Eduard@Glasgow & Gelu@njit 28-Feb-2018 added albedo component
-; Eduard@Glasgow & Gelu@njit 19-June-2018 changed albedo matrix interpolation
+; Parms[19].Name='VoxelID' & Parms[19].Value=0 & Parms[19].Unit='0/1/2' & Parms[19].Hint='chromo/TR/corona'
+;
+; Gelu@njit 07-Dec-2017 changed explicit TR index from 2L to gx_voxelid(/tr) to allow future redefinition if needed
+; Gelu@njit 15-June-2020 changed voxelid handling and foreced fast computation of thermal emission outside fluxtubes diregarding coronal temperature
 
-
-pro xray_tt_albedo,parms,rowdata,xray_cs=xray_cs,albedo=albedo,info=info
+pro xray_tt,parms,rowdata,xray_cs=xray_cs,info=info
   if arg_present(info) then begin
     if n_elements(info) eq 0 then begin
-      Parms=Replicate({Name:'unused',Value:0d,Unit:'',Hint:''},28)
+      Parms=Replicate({Name:'unused',Value:0d,Unit:'',Hint:''},20)
       Parms[0].Name='dS'           & Parms[0].Value=0.180E+19    & Parms[0].Unit='cm^2'    & Parms[0].Hint='Source/pixel Area'
       Parms[1].Name='dR'           & Parms[1].Value=0.600E+09    & Parms[1].Unit='cm'      & Parms[1].Hint='Source/voxel Depth'
       Parms[2].Name='T_0'          & Parms[2].Value=0.200E+08    & Parms[2].Unit='K'       & Parms[2].Hint='Plasma Temperature'
@@ -35,15 +32,7 @@ pro xray_tt_albedo,parms,rowdata,xray_cs=xray_cs,albedo=albedo,info=info
       Parms[16].Name='dEph'        & Parms[16].Value=0.02         & Parms[16].Unit='Log(keV)' & Parms[16].Hint='Logarithmic step in photon energy'
       Parms[17].Name='Dist_E'      & Parms[17].Value=3            & Parms[17].Unit='none'    & Parms[17].Hint='Type of distribution over energy'
       Parms[18].Name='N_E'         & Parms[18].Value=101          & Parms[18].Unit='none'    & Parms[18].Hint='Number of energy channels'
-      Parms[19].Name='VoxelID'     & Parms[19].Value=0            & Parms[19].Unit='1/2/4'   & Parms[19].Hint='chromo/TR/corona'
-      Parms[20].Name='Dist_Ang'    & Parms[20].Value=1            & Parms[20].Unit='none'    & Parms[20].Hint='Type of angular distribution'
-      Parms[21].Name='theta_C'     & Parms[21].Value=60           & Parms[21].Unit='degrees' & Parms[21].Hint='Loss-cone boundary'
-      Parms[22].Name='theta_b'     & Parms[22].Value=90           & Parms[22].Unit='degrees' & Parms[22].Hint='Angle of beam direction'
-      Parms[23].Name='dMu'         & Parms[23].Value=0.1          & Parms[23].Unit='none'    & Parms[23].Hint='dMu for gau/exp/SuGau loss-cone'
-      Parms[24].Name='a_4'         & Parms[24].Value=10           & Parms[24].Unit='none'    & Parms[24].Hint='Coeff for a*(Mu-xMu0)^4 for SuGau'
-      Parms[25].Name='Bz'          & Parms[25].Value=100          & Parms[25].Unit='Gauss'   & Parms[25].Hint='Signed vertical magnetic field component'
-      Parms[26].Name='a'           & Parms[26].Value=1            & Parms[26].Unit='none'    & Parms[26].Hint='chromo anisotropy ratio'
-      Parms[27].Name='hc_angle'    & Parms[27].Value=45           & Parms[27].Unit='degrees' & Parms[27].Hint='Heliocentric angle (0-90 deg)'
+      Parms[19].Name='VoxelID'    & Parms[19].Value=0            & Parms[19].Unit='1/2/4' & Parms[19].Hint='chromo/TR/corona'
       ; corrected by Eduard@glasgow after converstation with Gelu Nita about Parms.unit
 
     endif else parms=info.parms
@@ -57,95 +46,43 @@ pro xray_tt_albedo,parms,rowdata,xray_cs=xray_cs,albedo=albedo,info=info
     EE=EE + min(dEph)*0.5
     ;electron energies so that max(ee) =10 x max(eph)
     info={parms:parms,$
-      pixdim:[parms[18].value,2],$
+      pixdim:[parms[18].value],$
       spectrum:{x:{axis:Eph,label:'Energy',unit:'keV'},$
-      y:{label:['Direct Flux','Albedo Flux','Flux'],unit:replicate('1/(s cm^2 keV)',3)}}}
+      y:{label:'Flux',unit:'1/(s cm^2 keV)'}}}
     return
   end
   sz=size(rowdata,/dim)
   nrows=sz[0]
   rowdata[*]=0
-
-  parmin=transpose(parms[0,*,*])
-  E1=parmin[15,0]
-  logdE=parmin[16,0]
-  Eph =10^(Alog10(E1)+findgen(parmin[18,0])*logdE)
-  DEph= 10^(Alog10(E1)+(findgen(parmin[18,0])+1)*logdE)-eph
-  ; output photon energy array
-  eph_2n=transpose([[Eph],[Eph+deph]])
-  ; 2xn photon array
-
-  EE =10^(Alog10(E1)+findgen(parmin[18,0]+round(1./logDe))*logdE)
-  DE =10^(Alog10(E1)+(findgen(parmin[18,0]+round(1./logDe))+1)*logdE)-EE
-  Nee=N_elements(EE)
-  EE=EE + min(dEph)*0.5
-  ;electron energies so that max(ee) =10 x max(eph)
-
-
-  if n_elements(xray_cs) eq 0 then xray_cross_section, ee, Eph, Xray_CS
-
-  e_dataout  =fltarr(N_elements(ee))
-  e_data_tt  =fltarr(N_elements(ee))
-  eph_dataout=fltarr(N_elements(eph))
-
-
-  ;chromo_anis defined below is not used yet anywhere
-  chromo_anis=Parmin[26,0]
-  anisotropy=chromo_anis
-
-  angle=Parmin[27,0]
-  mu=cos(angle*!PI/180.)
-  Print,'Correction for an source at ',acos(mu)*180./!PI,' degrees', '  cos(theta) =',mu
-
-  ; the following lines upload albedo correction files
-  ; The description of the method is given in
-  ;http://adsabs.harvard.edu/abs/2006A%26A...446.1157K
-  ; and
-  ; http://www.astro.gla.ac.uk/users/eduard/rhessi/albedo/
-  if n_elements(albedo) eq 0 then begin
-    IF ((mu GT 0.05) AND (mu LT 0.95)) THEN BEGIN
-      print,'reading data from files ..............................................'
-      file1=getenv('SSW')+'/packages/xray/dbase/albedo/'+'green_compton_mu'+string(format='(I3.3)',5*FLOOR(mu*20.),/print)+'.dat'
-      file2=getenv('SSW')+'/packages/xray/dbase/albedo/'+'green_compton_mu'+string(format='(I3.3)',5*CEIL(mu*20.),/print)+'.dat'
-      restore,file1
-      p1=p
-      restore,file2
-      p2=p
-      a=p1.albedo+(p2.albedo-p1.albedo)*(mu - float(floor(mu*20))/20.)
-    END ELSE BEGIN
-
-      IF (mu LT 0.05) THEN BEGIN
-        print,'Warning! Assuming heliocentric angle  =',acos(0.05)*180./!PI
-        file=getenv('SSW')+'/packages/xray/dbase/albedo/'+'green_compton_mu'+string(format='(I3.3)',5*FLOOR(0.05*20.),/print)+'.dat'
-        restore,file
-        a=p.albedo
-      ENDIF
-
-      IF (mu GT 0.95) THEN BEGIN
-        print,'Warning! Assuming heliocentric angle  =',acos(0.95)*180./!PI
-        file=getenv('SSW')+'/packages/xray/dbase/albedo/'+'green_compton_mu'+string(format='(I3.3)',5*FLOOR(0.95*20.),/print)+'.dat'
-        restore,file
-        a=p.albedo
-      ENDIF
-
-    ENDELSE
-    e_given=total(p.edges,1)/2
-    eph_points=(eph-min(eph))>0
-    albedo=interpolate(a,eph_points,eph_points,/grid)
-  end
-  ;End albedo computation
   for r=0, nrows-1 do begin
     rparms=transpose(parms[r,*,*])
     point_in=where(rparms[2,*] gt 0, Nvox);added
     if Nvox gt 0 then begin
       parmin=rparms[*,point_in];added
 
+      E1=parmin[15,0]
+      logdE=parmin[16,0]
+      Eph =10^(Alog10(E1)+findgen(parmin[18,0])*logdE)
+      DEph= 10^(Alog10(E1)+(findgen(parmin[18,0])+1)*logdE)-eph
+      ; output photon energy array
+      eph_2n=transpose([[Eph],[Eph+deph]])
+      ; 2xn photon array
 
-      e_dataout[*]  =0
-      e_data_tt[*]  =0
-      eph_dataout[*]=0
+      EE =10^(Alog10(E1)+findgen(parmin[18,0]+round(1./logDe))*logdE)
+      DE =10^(Alog10(E1)+(findgen(parmin[18,0]+round(1./logDe))+1)*logdE)-EE
+      Nee=N_elements(EE)
+      EE=EE + min(dEph)*0.5
+      ;electron energies so that max(ee) =10 x max(eph)
+
+
+      if n_elements(xray_cs) eq 0 then xray_cross_section, ee, Eph, Xray_CS
+
 
       Ve= sqrt(2.*EE*1.6e-9/9.8d-28)
+      e_dataout  =fltarr(N_elements(ee))
+      e_data_tt  =fltarr(N_elements(ee))
+      eph_dataout=fltarr(N_elements(eph))
+
       Te_thr=0.09 ; keV
       ; lowest temperature that can be calculated for thermal plasma SXR emission
       abun =1.0
@@ -156,6 +93,7 @@ pro xray_tt_albedo,parms,rowdata,xray_cs=xray_cs,albedo=albedo,info=info
       KK =2.6d-18
       ; see for details:
       ; http://adsabs.harvard.edu/abs/2011SSRv..159..301K
+
 
       ; normalisation
       ;****************************************************************
@@ -172,19 +110,9 @@ pro xray_tt_albedo,parms,rowdata,xray_cs=xray_cs,albedo=albedo,info=info
       EM49=reform(V_vox*Np_vox^2*1d-49)
       npV =V_vox*Np_vox
       ;
-
-
       ;main loop over all voxels
       FOR i=0,Nvox-1 DO BEGIN
-        ;compute TR anisotropy
-        IF ((ulong(Parmin[19,i]) and gx_voxelid(/tr)) EQ gx_voxelid(/tr))  THEN BEGIN
-          ;anis defined below is used to multiply below e_data_tt when needed
-          anis=anis_factor(Parmin[20,i], Parmin[21,i], Parmin[22,i], Parmin[23,i], Parmin[24,i],Parmin[25,i])
 
-          print,anis
-
-          ; the value that mimics anisotropy of the source
-        ENDIF
         ;**********************************************************
         ; If electron distribution is a power-law
         IF (ROUND(Parmin[17,i]) EQ 3 OR ROUND(Parmin[17,i]) EQ 11 ) THEN BEGIN
@@ -197,16 +125,18 @@ pro xray_tt_albedo,parms,rowdata,xray_cs=xray_cs,albedo=albedo,info=info
             e_dataout=Parmin[12, i]*ve*E_dist*norm[i]/e_dist_norm
 
             ; the block below calculates TT emission
-            IF ((ulong(Parmin[19,i]) and gx_voxelid(/tr)) NE gx_voxelid(/tr)) THEN     eph_dataout+=xray_cs#(e_dataout*DE)
+            ; IF ((ulong(Parmin[19,i]) and 2l) NE 2) THEN     eph_dataout+=xray_cs#(e_dataout*DE)
             ; calculates coronal X-ray emission using thin target
 
             ;IF (((ulong(Parmin[19,i]) and 2l) EQ 2) and (Parmin[19,i] gt 8e2)) THEN BEGIN
-            IF ((ulong(Parmin[19,i]) and gx_voxelid(/tr)) EQ gx_voxelid(/tr)) THEN BEGIN
+            ;IF ((ulong(Parmin[19,i]) and 2l) EQ 2) THEN BEGIN
+            IF gx_voxelid(Parmin[19,i],/tr) eq 1 THEN BEGIN
+              ;IF ((Parms[19,i] and 2) EQ 2) THEN BEGIN
               ; checks if it is the transition region
               ; calculates chromospheric X-ray emission using thick target
               FOR j=0, N_elements(e_data_tt)-2 DO e_data_tt[j]=total(E_dataout[j:Nee-1]*DE[j:Nee-1])*EE[j]*A_vox[i]/KK/npV[i]
-              eph_dataout+=xray_cs#(e_data_tt*DE*anis)
-            ENDIF
+              eph_dataout+=xray_cs#(e_data_tt*DE)
+            ENDIF ELSE  eph_dataout+=xray_cs#(e_dataout*DE)
             ; ******************* TT emission ************************************
 
           ENDIF
@@ -226,17 +156,17 @@ pro xray_tt_albedo,parms,rowdata,xray_cs=xray_cs,albedo=albedo,info=info
             e_dataout=Parmin[12, i]*ve*E_dist*norm[i]/E_dist_norm
 
             ; the block below calculates TT emission
-            IF ((ulong(Parmin[19,i]) and gx_voxelid(/tr)) NE gx_voxelid(/tr)) THEN     eph_dataout+=xray_cs#(e_dataout*DE)
+            ; IF ((ulong(Parmin[19,i]) and 2l) NE 2) THEN     eph_dataout+=xray_cs#(e_dataout*DE)
             ; calculates coronal X-ray emission using thin target
 
             ;IF (((ulong(Parmin[19,i]) and 2l) EQ 2) and (Parmin[19,i] gt 8e2)) THEN BEGIN
-            IF ((ulong(Parmin[19,i]) and gx_voxelid(/tr)) EQ gx_voxelid(/tr)) THEN BEGIN
+            IF gx_voxelid(Parmin[19,i],/tr) eq 1  THEN BEGIN
               ;IF ((Parms[19,i] and 2) EQ 2) THEN BEGIN
               ; checks if it is the transition region
               ; calculates chromospheric X-ray emission using thick target
               FOR j=0, N_elements(e_data_tt)-2 DO e_data_tt[j]=total(E_dataout[j:Nee-1]*DE[j:Nee-1])*EE[j]*A_vox[i]/KK/npV[i]
-              eph_dataout+=xray_cs#(e_data_tt*DE*anis)
-            ENDIF
+              eph_dataout+=xray_cs#(e_data_tt*DE)
+            ENDIF ELSE eph_dataout+=xray_cs#(e_dataout*DE)
             ; ******************* TT emission ************************************
 
           ENDIF
@@ -265,8 +195,9 @@ pro xray_tt_albedo,parms,rowdata,xray_cs=xray_cs,albedo=albedo,info=info
             ;eph_dataout+=xray_cs#(e_dataout*DE)
             ;EM49=E_dist_norm*1d-49
             ;f_vth Valid range is 1.01 - 998.0 MegaKelvin or 0.0870317 - 85.9977 keV
-            IF (Te GT Te_thr) THEN eph_dataout+=f_vth(eph_2n, [EM49[i],Te,abun])
-            IF (Te LE Te_thr) THEN eph_dataout+=xray_cs#(e_dataout*DE)
+;            IF (Te GT Te_thr) THEN eph_dataout+=f_vth(eph_2n, [EM49[i],Te,abun])
+;            IF (Te LE Te_thr) THEN eph_dataout+=xray_cs#(e_dataout*DE)
+            IF ((Te GT Te_thr) and (gx_voxelid(Parmin[19,i],/tube) EQ 1)) THEN eph_dataout+=f_vth(eph_2n, [EM49[i],Te,abun]) else eph_dataout+=xray_cs#(e_dataout*DE)
 
             ;f_vth(e, [EM49,Te,1.])
             ; EM49 is Emission measure
@@ -299,17 +230,18 @@ pro xray_tt_albedo,parms,rowdata,xray_cs=xray_cs,albedo=albedo,info=info
             e_dataout=dens_e*ve*E_dist*norm[i]/E_dist_norm
 
             ; the block below calculates TT emission
-            IF ((ulong(Parmin[19,i]) and gx_voxelid(/tr)) NE gx_voxelid(/tr)) THEN     eph_dataout+=xray_cs#(e_dataout*DE)
+            ; IF ((ulong(Parmin[19,i]) and gx_voxelid(/tr)) NE gx_voxelid(/tr)) THEN     eph_dataout+=xray_cs#(e_dataout*DE)
             ; calculates coronal X-ray emission using thin target
 
             ;IF (((ulong(Parmin[19,i]) and 2l) EQ 2) and (Parmin[19,i] gt 8e2)) THEN BEGIN
-            IF ((ulong(Parmin[19,i]) and gx_voxelid(/tr)) EQ gx_voxelid(/tr)) THEN BEGIN
+            ; IF ((ulong(Parmin[19,i]) and gx_voxelid(/tr)) EQ gx_voxelid(/tr)) THEN BEGIN
+            IF  gx_voxelid(Parmin[19,i],/tr) eq 1 THEN BEGIN
               ;IF ((Parms[19,i] and 2) EQ 2) THEN BEGIN
               ; checks if it is the transition region
               ; calculates chromospheric X-ray emission using thick target
               FOR j=0, N_elements(e_data_tt)-2 DO e_data_tt[j]=total(E_dataout[j:Nee-1]*DE[j:Nee-1])*EE[j]*A_vox[i]/KK/npV[i]
-              eph_dataout+=xray_cs#(e_data_tt*DE*anis)
-            ENDIF
+              eph_dataout+=xray_cs#(e_data_tt*DE)
+            ENDIF ELSE eph_dataout+=xray_cs#(e_dataout*DE)
             ; ******************* TT emission ************************************
 
 
@@ -334,17 +266,17 @@ pro xray_tt_albedo,parms,rowdata,xray_cs=xray_cs,albedo=albedo,info=info
             e_dataout=Parmin[12, i]*ve*E_dist*norm[i]/e_dist_norm
 
             ; the block below calculates TT emission
-            IF ((ulong(Parmin[19,i]) and gx_voxelid(/tr)) NE gx_voxelid(/tr)) THEN     eph_dataout+=xray_cs#(e_dataout*DE)
+            ; IF ((ulong(Parmin[19,i]) and gx_voxelid(/tr)) NE gx_voxelid(/tr)) THEN     eph_dataout+=xray_cs#(e_dataout*DE)
             ; calculates coronal X-ray emission using thin target
 
             ;IF (((ulong(Parmin[19,i]) and 2l) EQ 2) and (Parmin[19,i] gt 8e2)) THEN BEGIN
-            IF ((ulong(Parmin[19,i]) and gx_voxelid(/tr)) EQ gx_voxelid(/tr)) THEN BEGIN
+            IF gx_voxelid(Parmin[19,i],/tr) eq 1 THEN BEGIN
               ;IF ((Parms[19,i] and 2) EQ 2) THEN BEGIN
               ; checks if it is the transition region
               ; calculates chromospheric X-ray emission using thick target
               FOR j=0, N_elements(e_data_tt)-2 DO e_data_tt[j]=total(E_dataout[j:Nee-1]*DE[j:Nee-1])*EE[j]*A_vox[i]/KK/npV[i]
-              eph_dataout+=xray_cs#(e_data_tt*DE*anis)
-            ENDIF
+              eph_dataout+=xray_cs#(e_data_tt*DE)
+            ENDIF ELSE eph_dataout+=xray_cs#(e_dataout*DE)
             ; ******************* TT emission ************************************
 
           ENDIF
@@ -366,17 +298,17 @@ pro xray_tt_albedo,parms,rowdata,xray_cs=xray_cs,albedo=albedo,info=info
             e_dataout=Parmin[12, i]*ve*E_dist*norm[i]/e_dist_norm
 
             ; the block below calculates TT emission
-            IF ((ulong(Parmin[19,i]) and gx_voxelid(/tr)) NE gx_voxelid(/tr)) THEN     eph_dataout+=xray_cs#(e_dataout*DE)
+            ; IF ((ulong(Parmin[19,i]) and gx_voxelid(/tr)) NE gx_voxelid(/tr)) THEN     eph_dataout+=xray_cs#(e_dataout*DE)
             ; calculates coronal X-ray emission using thin target
 
             ;IF (((ulong(Parmin[19,i]) and 2l) EQ 2) and (Parmin[19,i] gt 8e2)) THEN BEGIN
-            IF ((ulong(Parmin[19,i]) and gx_voxelid(/tr)) EQ gx_voxelid(/tr)) THEN BEGIN
+            IF gx_voxelid(Parmin[19,i],/tr) eq 1 THEN BEGIN
               ;IF ((Parms[19,i] and 2) EQ 2) THEN BEGIN
               ; checks if it is the transition region
               ; calculates chromospheric X-ray emission using thick target
               FOR j=0, N_elements(e_data_tt)-2 DO e_data_tt[j]=total(E_dataout[j:Nee-1]*DE[j:Nee-1])*EE[j]*A_vox[i]/KK/npV[i]
-              eph_dataout+=xray_cs#(e_data_tt*DE*anis)
-            ENDIF
+              eph_dataout+=xray_cs#(e_data_tt*DE)
+            ENDIF ELSE eph_dataout+=xray_cs#(e_dataout*DE)
             ; ******************* TT emission ************************************
 
           ENDIF
@@ -400,8 +332,9 @@ pro xray_tt_albedo,parms,rowdata,xray_cs=xray_cs,albedo=albedo,info=info
 
         ;f_vth Valid range is 1.01 - 998.0 MegaKelvin or 0.0870317 - 85.9977 keV
 
-        IF (Te GT Te_thr) THEN eph_dataout+=f_vth(eph_2n, [EM49[i],Te,abun])
-        IF (Te LE Te_thr) THEN eph_dataout+=xray_cs#(e_dist*DE)
+;           IF (Te GT Te_thr) THEN eph_dataout+=f_vth(eph_2n, [EM49[i],Te,abun])
+;           IF (Te LE Te_thr) THEN eph_dataout+=xray_cs#(e_dist*DE)
+        IF ((Te GT Te_thr) and (gx_voxelid(Parmin[19,i],/tube) EQ 1)) THEN eph_dataout+=f_vth(eph_2n, [EM49[i],Te,abun]) ELSE eph_dataout+=xray_cs#(e_dist*DE)
 
         ; electron flux for 3D maxwellian
         ; ENDIF
@@ -409,8 +342,10 @@ pro xray_tt_albedo,parms,rowdata,xray_cs=xray_cs,albedo=albedo,info=info
         ; background thermal electron distribution
       ENDFOR
       ;ends FOR loop over voxels
-      rowdata[r,*,0]=eph_dataout
-      rowdata[r,*,1]=(n_elements(albedo) gt 0?anisotropy*(transpose(albedo)#(eph_dataout*deph)):0)
+      ;rowdata[r,*]=(xray_cs#(e_dataout*DE))
+      rowdata[r,*]=eph_dataout
+      ;turning mean LOS electron flux into photon flux
+
     end
   end
   ;ends FOR over row
