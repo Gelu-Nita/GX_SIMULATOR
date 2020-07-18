@@ -58,12 +58,16 @@ function gx_box2model,box
  ; "-1" is needed because in FITS standard left bottom pixel is [1,1], while in IDL it is [0,0]
  delta_xy=[dx,dy]*size[1:2]*(wcs.crpix-1)/osize[1:2]
  
- xr=[-sx/2.,sx/2.]*dx
- yr=[-sy/2.,sy/2.]*dy
+; xr=[-sx/2.,sx/2.]*dx
+; yr=[-sy/2.,sy/2.]*dy
+; 
+; xrange=[-delta_xy[0],-delta_xy[0]+(sx-1)*dx]
+; yrange=[-delta_xy[1],-delta_xy[1]+(sx-1)*dy]
+; zrange=[0,sz-1]*dz
  
- xrange=[-delta_xy[0],-delta_xy[0]+(sx-1)*dx]
- yrange=[-delta_xy[1],-delta_xy[1]+(sx-1)*dy]
- zrange=[0,sz-1]*dz
+ xrange=[-delta_xy[0],-delta_xy[0]+sz*dx]
+ yrange=[-delta_xy[1],-delta_xy[1]+sy*dy]
+ zrange=[0,sz]*dz
  
  data=bytarr(sx,sy,sz)
  volume=obj_new('gxVolume',data,name='Volume',XCOORD_CONV=XCOORD_CONV,YCOORD_CONV=YCOORD_CONV,ZCOORD_CONV=ZCOORD_CONV,/interpolate,hints=2)

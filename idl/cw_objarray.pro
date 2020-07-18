@@ -86,8 +86,7 @@ function objArray::INIT,wParent,value=value,units=units,uname=uname,label=label,
                 /ALIGN_Left, $
                 column=keyword_set(vertical)?1:0, $
                 row=keyword_set(vertical)?0:1, $
-                XPAD=0, YPAD=0, SPACE=0,/frame)          
-            
+                XPAD=0, YPAD=0, SPACE=0,/frame)             
     for i=0,n_elements(value)-1 do begin
      item=cw_objField(self.wItemBase,value=value[i],units=iunits[i],label=ilabels[i],flat=self.flat,sensitive=isensitive[i],map=idisplay[i],_extra=_extra)
     end

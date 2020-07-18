@@ -78,16 +78,7 @@ pro gx_RenderIrregular, dx, dy, dz, xx, yy, zz, $
  dirpath=file_dirname((routine_info('gx_renderirregular', /source)).path, /mark)
  if !version.os_family eq 'Windows' then $
   lib=dirpath+'RenderIrregular'+((!version.arch eq 'x86_64') ? '64' : '32')+'.dll' $
- else begin 
-  lib=dirpath+'RenderIrregular.so' 
-  if ~ file_test(lib) then begin
-    cdr=curdir()
-    cd,dirpath
-    spawn, 'rm *.o',exit_status=exit_status
-    spawn, 'make',exit_status=exit_status
-    cd,cdr
-  endif
- end
+ else lib=dirpath+'RenderIrregular.so' 
  
  res=call_external(lib, 'RENDER', $
                    Nx, Ny, Nz, dx, dy, dz, $

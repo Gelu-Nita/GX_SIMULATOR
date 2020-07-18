@@ -292,9 +292,9 @@ extern "C" int RENDER(int argc, void **argv)
      double xmid=x1+tmidarr[*Nvoxels]*bx;
      double ymid=y1+tmidarr[*Nvoxels]*by;
      double zmid=z1+tmidarr[*Nvoxels]*bz;
-     x_ind[*Nvoxels]=xmid/dx;
-     y_ind[*Nvoxels]=ymid/dy;
-     z_ind[*Nvoxels]=r+(zmid-zbarr[r])/(zbarr[r+1]-zbarr[r]);
+     x_ind[*Nvoxels]=min(max(xmid/dx-0.5, 0.0), double(Nx-1));
+     y_ind[*Nvoxels]=min(max(ymid/dy-0.5, 0.0), double(Ny-1));
+     z_ind[*Nvoxels]=min(max(r+(zmid-zbarr[r])/(zbarr[r+1]-zbarr[r])-0.5, 0.0), double(Nz-1));
      
      if (VoxOn && !OnedOn) if (VoxelId[i+(j+r*Ny)*Nx] & 1)
 	 {
@@ -337,9 +337,9 @@ extern "C" int RENDER(int argc, void **argv)
   
   if (VoxOn && OnedOn) for (int i=0; i<(*Nvoxels); i++) if (VoxelId[VoxList[i]] & 1)
   {
-   x_ind[i]=floor(x_ind[i]);
-   y_ind[i]=floor(y_ind[i]);
-   z_ind[i]=floor(z_ind[i]);
+   x_ind[i]=round(x_ind[i]);
+   y_ind[i]=round(y_ind[i]);
+   z_ind[i]=round(z_ind[i]);
   } 
   else 
   {
@@ -347,9 +347,9 @@ extern "C" int RENDER(int argc, void **argv)
    for (int i1=max(i-1, 0); i1<=min(i+1, *Nvoxels-1); i1++) if (VoxelId[VoxList[i1]]!=VoxelId[VoxList[i]]) ke++;
    if (ke!=0) 
    {
-    x_ind[i]=floor(x_ind[i]);
-    y_ind[i]=floor(y_ind[i]);
-    z_ind[i]=floor(z_ind[i]);
+    x_ind[i]=round(x_ind[i]);
+    y_ind[i]=round(y_ind[i]);
+    z_ind[i]=round(z_ind[i]);
    }
   }
   

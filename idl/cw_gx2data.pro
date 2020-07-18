@@ -23,6 +23,7 @@ end
 
 pro gx2data::CreatePanel,xsize=xsize,ysize=ysize
   device, get_screen_size=scr
+  xlabelsize=27
   if not exist(xsize) then xsize = fix (scr[0] * .4)
   if not exist(ysize) then ysize = xsize * 1.1
   if ~obj_valid(self.plotman) then begin
@@ -68,7 +69,7 @@ pro gx2data::CreatePanel,xsize=xsize,ysize=ysize
   endelse
    ;font=!defaults.font
    wControlPanel=widget_base(wGX2DataControl,/column)
-   wControlBase=widget_base(wControlPanel,/column,xsize=xsize,ysize=ysize)
+   wControlBase=widget_base(wControlPanel,/column,xsize=xsize,ysize=ysize*1.1)
    toolbar= widget_base(wControlBase, /row,/toolbar)
    geom = widget_info (wControlPanel, /geom)
    wConvolve=WIDGET_BUTTON(toolbar, VALUE='Convolve Selected', uname='CONVOLVE',font=font)
@@ -94,54 +95,61 @@ pro gx2data::CreatePanel,xsize=xsize,ysize=ysize
    wlabel=widget_label(wbase,value='no reference map selected',font=font,scr_xsize=scr_xsize,scr_ysize=scr_ysize,uname='REF:ID',/dynamic,/frame)
    wlabel=widget_label(wbase,value='no sdev map selected',font=font,scr_xsize=scr_xsize,scr_ysize=scr_ysize,uname='SDEV:ID',/dynamic,/frame)
    wlabel=widget_label(wbase,value='no beam map selected',font=font,scr_xsize=scr_xsize,scr_ysize=scr_ysize,uname='BEAM:ID',/dynamic,/frame)
-   wMask=cw_objfield(wControlBase,value=12.00,unit='%',font=font,/frame,label='ROI MASK THRESHOLD:',inc=1,xtextsize=6,xlabelsize=32,uname='MASK:LEVEL')
-   wlabel=widget_label(wControlBase,value=' ',font=font,/align_left)
-   wlabel=widget_label(wControlBase,value=' ',font=font,/align_left)
-   info=[ '',$
-          'METRICS DEFINITIONS:',$
-          '',$
-          'R=Pearson correlation coefficient',$
-          '',$
-          'res_img= data_model - data_obs',$
-          '',$
-          'res= total(res_img[mask_pix])',$
-          '',$
-          'res_img_norm=res_img/data_obs',$
-          '',$
-          'res_norm=total(res_img_norm[mask_pix])/n_mask_pix',$
-          '',$
-          'res2_img=res_img^2',$
-          '',$
-          'res2=total(res2_img[mask_pix])-res^2/n_mask_pix',$
-          '',$
-          'res2_img_norm=res_img_norm^2',$
-          '',$
-          'res2_norm=total(res2_img_norm[mask_pix])-res_norm^2',$
-          '',$
-          'chi_img=res_img/data_sdev',$
-          '',$
-          'chi=total(chi_img[mask_pix])/n_mask_pix',$
-          '',$
-          'chi2_img=chi_img^2',$
-          '',$
-          'chi2=total(chi2_img[mask_pix])/(n_mask_pix-n_free)-chi^2']
-  
-   wbase=widget_base(wControlBase,/frame,/row)
-   wMetrics=cw_objfield(wBase,value=0.0,font=font,label='MODEL2DATA ALLIGNMENT SHIFT:',xtextsize=6,xlabelsize=32,uname='MAP:XSHIFT',/indicator,unit='"',format='(f5.2)')
-   wMetrics=cw_objfield(wBase,value=0.0,font=font,label='',xtextsize=6,xlabelsize=2,uname='MAP:YSHIFT',/indicator,unit='"',format='(f5.2)')
+   wBeamBase=widget_base(wControlBase,/row)
+   button=widget_button(wBeamBase,VALUE='GENERATE BEAM',uname='BEAM:GENERATE',font=font,/align_left,xsize=geom_button.scr_xsize,/frame)
+   wBeamParmsBase=widget_base(wBeamBase,/column)
+   wBeamCorr=cw_objArray(wBeamParmsBase,value=[6.79,7.92,-55.21,2,2],units=['"','"',STRING(176b),'"','"'],names=['a','b','phi','dx','dy'],font=font,/frame,label='Shythetic Beam',inc=0.1,xtextsize=4,xlabelsize=4,uname='BEAM:PARMS',/static)
+   wBeamCorr=cw_objArray(wBeamParmsBase,value=[100,1.1849999],units=['pix',''],names=['beam width','magnification factor'],font=font,/frame,label='Shythetic Beam Corr',inc=0.1,xtextsize=4,xlabelsize=24,uname='BEAM:CORR',/static)
 
+   wMask=cw_objfield(wControlBase,value=12.00,unit='%',font=font,/frame,label='ROI MASK THRESHOLD:',inc=1,xtextsize=6,xlabelsize=xlabelsize,uname='MASK:LEVEL')
+   
+ 
+   wbase=widget_base(wControlBase,/frame,/row)
+   label=widget_label(wBase,value='Model to Data Shift ',font=font,xsize=geom_button.scr_xsize)  
+   wShift=cw_objArray(wBase,value=[0,0],units=['"','"'],names=['X:','Y:'],font=font,/frame,label='Model to Data Shift',inc=0.1,xtextsize=8,xlabelsize=4,uname='MAP:SHIFT',/static)
+   widget_control,wshift,sensitive=0
+   wCheck=cw_bgroup(wBase,['auto','manual'],/exclusive,font=font,uname='MAP:USESHIFT',/frame,/row)
+   widget_control,wCHECK,set_value=0
    wlabel=widget_label(wControlBase,value=' ',font=font,/align_left)
    wlabel=widget_label(wControlBase,value='COMPUTED METRICS:',font=font,/align_left)
    wlabel=widget_label(wControlBase,value=' ',font=font,/align_left)
-   wMetrics=cw_objfield(wControlBase,value=0.0,font=font,/frame,label='ROI NPIX:',xtextsize=16,xlabelsize=32,uname='ROI:NPIX',/indicator)
-   wMetrics=cw_objfield(wControlBase,value=0.0,font=font,/frame,label='R:',xtextsize=16,xlabelsize=32,uname='MAP:R',/indicator)
-   wMetrics=cw_objfield(wControlBase,value=0.0,font=font,/frame,label='RES:',xtextsize=16,xlabelsize=32,uname='ROI:RES',/indicator)
-   wMetrics=cw_objfield(wControlBase,value=0.0,font=font,/frame,label='RES_NORM:',xtextsize=16,xlabelsize=32,uname='ROI:RES_NORM',/indicator)
-   wMetrics=cw_objfield(wControlBase,value=0.0,font=font,/frame,label='RES2',xtextsize=16,xlabelsize=32,uname='ROI:RES2',/indicator)
-   wMetrics=cw_objfield(wControlBase,value=0.0,font=font,/frame,label='RES2_NORM:',xtextsize=16,xlabelsize=32,uname='ROI:RES2_NORM',/indicator)
-   wMetrics=cw_objfield(wControlBase,value=0.0,font=font,/frame,label='CHI:',xtextsize=16,xlabelsize=32,uname='ROI:CHI',/indicator)
-   wMetrics=cw_objfield(wControlBase,value=0.0,font=font,/frame,label='CHI2:',xtextsize=16,xlabelsize=32,uname='ROI:CHI2',/indicator)
-   wMetrics=widget_text(wControlBase,scr_xsize=scr_xsize,ysize=30,value=info)
+   wMetrics=cw_objfield(wControlBase,value=0.0,font=font,/frame,label='ROI NPIX:',xtextsize=16,xlabelsize=xlabelsize,uname='ROI:NPIX',/indicator)
+   wMetrics=cw_objfield(wControlBase,value=0.0,font=font,/frame,label='R:',xtextsize=16,xlabelsize=xlabelsize,uname='MAP:R',/indicator)
+   wMetrics=cw_objfield(wControlBase,value=0.0,font=font,/frame,label='RES:',xtextsize=16,xlabelsize=xlabelsize,uname='ROI:RES',/indicator)
+   wMetrics=cw_objfield(wControlBase,value=0.0,font=font,/frame,label='RES_NORM:',xtextsize=16,xlabelsize=xlabelsize,uname='ROI:RES_NORM',/indicator)
+   wMetrics=cw_objfield(wControlBase,value=0.0,font=font,/frame,label='RES2',xtextsize=16,xlabelsize=xlabelsize,uname='ROI:RES2',/indicator)
+   wMetrics=cw_objfield(wControlBase,value=0.0,font=font,/frame,label='RES2_NORM:',xtextsize=16,xlabelsize=xlabelsize,uname='ROI:RES2_NORM',/indicator)
+   wMetrics=cw_objfield(wControlBase,value=0.0,font=font,/frame,label='CHI:',xtextsize=16,xlabelsize=xlabelsize,uname='ROI:CHI',/indicator)
+   wMetrics=cw_objfield(wControlBase,value=0.0,font=font,/frame,label='CHI2:',xtextsize=16,xlabelsize=xlabelsize,uname='ROI:CHI2',/indicator)
+   info=[ '',$
+     'METRICS DEFINITIONS:',$
+     '',$
+     'R=Pearson correlation coefficient',$
+     '',$
+     'res_img= data_model - data_obs',$
+     ;'',$
+     'res= total(res_img[mask_pix])',$
+     ;'',$
+     'res_img_norm=res_img/data_obs',$
+     ;'',$
+     'res_norm=total(res_img_norm[mask_pix])/n_mask_pix',$
+     ;'',$
+     'res2_img=res_img^2',$
+     '',$
+     'res2=total(res2_img[mask_pix])-res^2/n_mask_pix',$
+     ;'',$
+     'res2_img_norm=res_img_norm^2',$
+     ;'',$
+     'res2_norm=total(res2_img_norm[mask_pix])-res_norm^2',$
+     '',$
+     'chi_img=res_img/data_sdev',$
+     ;'',$
+     'chi=total(chi_img[mask_pix])/n_mask_pix',$
+     ;'',$
+     'chi2_img=chi_img^2',$
+     ;'',$
+     'chi2=total(chi2_img[mask_pix])/(n_mask_pix-n_free)-chi^2']
+   wMetrics=widget_text(wControlBase,scr_xsize=scr_xsize,ysize=40,value=info)
 end
 
 function gx2data::select_map
@@ -183,12 +191,29 @@ function gx2data::HandleEvent, event
                       self.beam=obj_clone(self.select_map())
                       if valid_map(self.beam) then widget_control,widget_info(event.handler,find_by_uname='BEAM:ID'),set_value=self.beam->get(/id)
                     end   
+    'BEAM:GENERATE': begin
+                      widget_control,widget_info(event.handler,find_by_uname='BEAM:PARMS'),get_value=parms
+                      widget_control,widget_info(event.handler,find_by_uname='BEAM:CORR'),get_value=corr
+                      a=parms[0]
+                      b=parms[1]
+                      phi=parms[2]
+                      dx=parms[3]
+                      dy=parms[4]
+                      width=corr[0]
+                      beam_corr=corr[1] 
+                      beam=gx_psf(beam_corr*[a,b]/[dx,dy],phi,width)
+                      omap=obj_new('map')
+                      omap->setmap,0,make_map(beam,dx=dx,dy=dy)
+                      omap->set,0,id='Synthetic Beam'
+                      omap->plotman,0,plotman_obj=self.plotman,nodup=0
+                     end
     'CONVOLVE': begin
                       if valid_map(self.beam) then begin
                         map=self.select_map()
                         if valid_map(map) then begin
                           cmap=map->get(/map)
-                          cmap.data=convol(cmap.data, self.beam->get(/data), /edge_zero)
+                          beam=self.beam->get(/data)
+                          cmap.data=convol(cmap.data, beam, /edge_zero)
                           cmap.id='Convolved '+cmap.id
                           omap=obj_new('map')
                           omap->setmap,0,cmap
@@ -197,11 +222,20 @@ function gx2data::HandleEvent, event
                         endif
                       end
                     end   
+     'MAP:USESHIFT':begin 
+                     if event.select eq 1 then begin
+                      widget_control,widget_info(event.handler,find_by_uname='MAP:SHIFT'),sensitive=event.value
+                     endif
+                    end
      'COMPUTE': begin
+                      widget_control,widget_info(event.handler,find_by_uname='MAP:USESHIFT'),get_value=value
+                      if value eq 1 then begin
+                       widget_control,widget_info(event.handler,find_by_uname='MAP:SHIFT'),get_value=shift 
+                      endif
                       if valid_map(self.refmap) and valid_map(self.gxmap) then begin
                        if valid_map(self.sdevmap) then sdev=self.sdevmap->get(/map)
-                       widget_control,widget_info(event.handler,find_by_uname='MASK:LEVEL'),get_value=mask
-                       self.metrics=gx_metrics_map(self.gxmap->get(/map),self.refmap->get(/map),sdev,mask=mask)
+                       widget_control,widget_info(event.handler,find_by_uname='MASK:LEVEL'),get_value=mask                      
+                       self.metrics=gx_metrics_map(self.gxmap->get(/map),self.refmap->get(/map),sdev,mask=mask,shift=shift)
                        widget_control,widget_info(widget_info(event.top,find_by_uname='GXMAPCONTAINER:MENU'),/parent),get_uvalue=oMapContainer
                        for k=0,self.metrics->get(/count)-1 do begin
                         wid=widget_info(event.handler,find_by_uname=self.metrics->get(k,/uname))
@@ -211,8 +245,7 @@ function gx2data::HandleEvent, event
                             'MAP:R': begin
                                       dx=self.metrics->get(k,/xc)-self.metrics->get(k,/orig_xc)
                                       dy=self.metrics->get(k,/yc)-self.metrics->get(k,/orig_yc)
-                                      widget_control,widget_info(event.handler,find_by_uname='MAP:XSHIFT'),set_value=dx
-                                      widget_control,widget_info(event.handler,find_by_uname='MAP:YSHIFT'),set_value=dy
+                                      widget_control,widget_info(event.handler,find_by_uname='MAP:SHIFT'),set_value=[dx,dy]
                                      end
                             else:
                           endcase  

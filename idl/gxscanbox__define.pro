@@ -22,8 +22,8 @@ xrange=xrange,yrange=yrange,zrange=zrange,Nx=Nx,Ny=Ny,Nz=Nz,nthreads=nthreads,_e
  self.Nx=Nx
  self.Ny=Ny
  self.Nz=Nz
- self.dx=delta(self.xrange)/(self.nx-1)
- self.dy=delta(self.yrange)/(self.ny-1)
+ self.dx=delta(self.xrange)/self.nx
+ self.dy=delta(self.yrange)/self.ny
  self.dz=delta(self.zrange)/self.nz
  
  p=dblarr(3,8)
@@ -380,10 +380,7 @@ pro gxScanBox::NewGrid,xrange=xrange,yrange=yrange,zrange=zrange,nx=nx,ny=ny,com
         zrange=minmax(sdata[2,*])
         self.Grid2Update=((moi->GetVolume())->getflags()).newGrid
     endif else begin
-      p=dblarr(3,8)
-      for i=0,7 do p[*,i] = [xrange[(i AND 1)], yrange[((i/2) AND 1)], zrange[((i/4) AND 1)]]
-      index=[0,1,3,1,5,7,5,4,6,4,0,2,3,7,6,2]
-      sdata=p[*,index]
+        sdata=gx_getboxedges(xrange=xrange,yrange=yrange,zrange=zrange)
         if isa(moi,'gxmodel') then begin
          flags=(moi->GetVolume())->setflags(/newGrid)
          if keyword_set(compute_grid) then begin
@@ -401,8 +398,8 @@ pro gxScanBox::NewGrid,xrange=xrange,yrange=yrange,zrange=zrange,nx=nx,ny=ny,com
   self.nx=nx
   self.ny=ny
   self.nz=nz
-  self.dx=delta(self.xrange)/(self.nx-1)
-  self.dy=delta(self.yrange)/(self.ny-1)
+  self.dx=delta(self.xrange)/self.nx
+  self.dy=delta(self.yrange)/self.ny
   self->UpdateFields
   widget_control,self.wslice,get_value=index
   index=(index<(self.ny-1)>0)
@@ -1150,7 +1147,7 @@ pro gxScanBox::TV_SLICE
   widget_control,self.wLOS,get_value=x
   los=reform(slice[x,*])
   if self.nz eq 0 then return
-  xaxis=findgen(self.nz);(reform((*self.grid).grid[*,2],self.nx,self.nz))[x,*]
+  xaxis=findgen(self.nz)
   sz=size(slice)
   x=(x+0.5)*size[0]/self.nx
   cursor=[x,x]

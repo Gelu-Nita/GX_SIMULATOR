@@ -49,9 +49,11 @@
   ;  Modification history:
   ;  07/08/20-Gelu Nita (gnita@njit.edu) Redefined metrics and addded the option of using SDEV maps
 
-function gx_metrics_map, map, reference, sdev,_extra=_extra
+function gx_metrics_map, map, reference, sdev,no_align=no_align,metrics=metrics,_extra=_extra
   ;align map
-  gx_align_map, map, reference
+  if not keyword_set(no_align) then begin
+    gx_align_map, map, reference,_extra=_extra
+  endif
   
   ;Interpolate reference map (which is assumed to have broader FOV than the synthetic image)
   map_ref = inter_map(reference, map)

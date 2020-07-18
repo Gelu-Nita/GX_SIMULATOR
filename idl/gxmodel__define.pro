@@ -440,6 +440,31 @@ pro gxModel::UpdateRoi,roi=roi,replace=replace
  self->add,self.volume
 end
 
+function gxModel::Rsun
+  pbr=pb0r(self->GetTime())
+  return,pbr[2]*60
+end
+
+function gxModel::SetFOV,xc=xc,yc=yc,xfov=xfov, yfov=yfov,_extra=_extra
+ self->ResetPosition
+ rsun=self->Rsun()
+ fovmap=self->GetFovMap()
+ default,xc,fovmap->get(/xc)
+ default,yc,fovmap->get(/yc)
+ default, xfov,delta(get_map_xrange(fovmap->get(/map),/edge))
+ default, yfov,delta(get_map_yrange(fovmap->get(/map),/edge))
+ xrange=(xc+[-0.5d,0.5d]*xfov)/rsun
+ yrange=(yc+[-0.5d,0.5d]*yfov)/rsun
+ box=self->GetRoiBox()
+ stm=self->GetSTM()
+ data=gx_transform(box,stm,/inv)
+ zrange=minmax(data[2,*])
+ boxdata=gx_getboxedges(xrange=xrange,yrange=yrange,zrange=zrange)
+ sdata=gx_transform(boxdata,stm)
+ return,self->ReplaceScanboxData(sdata,_extra=_extra)
+end
+
+
 function gxModel::ReplaceScanboxData,sdata,nx=nx,ny=ny,compute_grid=compute_grid
  return,(self->scanbox())->ReplaceData(sdata,nx=nx,ny=ny,compute_grid=compute_grid)
 end
@@ -896,11 +921,7 @@ end
 function gxModel::GetROIBox,xrange=xrange,yrange=yrange,zrange=zrange
   if n_elements(xrange) eq 0 or n_elements(yrange) eq 0 or n_elements(zrange) eq 0 then $
     self.volume->GetProperty,xrange=xrange,yrange=yrange,zrange=zrange
-  p=dblarr(3,8)
-  for i=0,7 do p[*,i] = [xrange[(i AND 1)], yrange[((i/2) AND 1)], zrange[((i/4) AND 1)]]
-  index=[0,1,3,1,5,7,5,4,6,4,0,2,3,7,6,2]
-  p=p[*,index]
-  return,p
+  return,gx_getboxedges(xrange=xrange,yrange=yrange,zrange=zrange)
 end
 
 function gxModel::GetGrid

@@ -57,14 +57,14 @@ function gx_metrics_image, data_model, data_obs, data_sdev,mask=mask,n_free=n_fr
     return,!null
   endif
   
-  if ~array_equal(size(data_model),size(data_obs)) then begin
+  if ~array_equal((size(data_model))[0:2],(size(data_obs))[0:2]) then begin
     message, 'Model and Observational Data must be arrays of equal size!',/cont
     return,!null
   endif
   
   if isa(mask) then begin
     if n_elements(mask) eq 1 then begin
-      ;this is assumed to be a brightness threshold, so the image mask must be computed
+      ;this is assumed to be a brightness threshold provided as a pecentage, so the image mask must be computed
       img_mask = data_obs gt (mask * max(data_obs)/100)
     endif else begin
       if array_equal(size(img_mask),size(data_obs)) then begin
@@ -98,8 +98,8 @@ function gx_metrics_image, data_model, data_obs, data_sdev,mask=mask,n_free=n_fr
   
   mask_pix = where(img_mask,complement=bad,ncomp=nbad)
   n_mask_pix = total(img_mask)
-
-  R = correlate(data_model_d, data_obs_d)     
+   
+  R = correlate(data_model_d*img_mask, data_obs_d*img_mask)     
          res_img= data_model_d - data_obs_d
          if nbad gt 0 then res_img[bad]=0
          res= total(res_img[mask_pix])
@@ -108,10 +108,10 @@ function gx_metrics_image, data_model, data_obs, data_sdev,mask=mask,n_free=n_fr
          res_norm=total(res_img_norm[mask_pix])/n_mask_pix
          res2_img=res_img^2
          if nbad gt 0 then res2_img[bad]=0
-         res2=total(res2_img[mask_pix])-res^2/n_mask_pix
+         res2=total(res2_img[mask_pix])/n_mask_pix-res^2/n_mask_pix
          res2_img_norm=res_img_norm^2
          if nbad gt 0 then res2_img_norm[bad]=1
-         res2_norm=total(res2_img_norm[mask_pix])-res_norm^2
+         res2_norm=total(res2_img_norm[mask_pix])/n_mask_pix-res_norm^2
  metrics={R:R,$
           mask_img:img_mask,$
           res_img:res_img,$
