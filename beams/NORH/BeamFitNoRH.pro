@@ -1,9 +1,9 @@
-function BeamFitNoRH,file, x, y, beam,gx=gx, quiet=quiet
+function BeamFitNoRH,file, x, y, beam,gx=gx, marx=marx,quiet=quiet
 norh_rd_img,file, index, data
-beam=norh_beam(index)
+beam=norh_beam(index,marx=marx)
 spp=index.norh.sec_per_pix
-x=(dindgen(21)-10)*spp
-y=(dindgen(21)-10)*spp
+x=(dindgen(marx)-long(marx)/2)*spp
+y=(dindgen(marx)-long(marx)/2)*spp
 FitBeam, x, y, beam, sx, sy, theta
 parms=[sx, sy, theta]
 obs_freq=double(index.norh.obs_freq)

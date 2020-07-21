@@ -10,10 +10,15 @@
   ;    data_sdev - dblarr(nx, ny), in,  reference observed image standard deviation
   ;
   ; :Keywords:
-  ;    mask - double, default:0d, in, set this keyword to analize
+  ;   mask - double, default:0d, in, set this keyword to analize
   ;       only pixels with the brightness above some threshold.
-  ;       Setting "mask=0.1d" will result in processing only pixels
+  ;       Setting "mask=10d" will result in processing only pixels
   ;       with the brightness above 10% of the maximum brigntness values in the reference image
+  ;   apply2- byatearr(2) indicating how the mask should be applied
+  ;         [0,0] no mask
+  ;         [1,0] only pixels where data_obs is about the mask threshold 
+  ;         [0,1] only pixels where data_model is about the mask threshold  
+  ;         [1,1] only pixels where both data_obs and data_model is about the mask threshold (default)    
   ;   OR
   ;   mask - bytarr(nx,ny) with ones indicating the area of interest pixels
   ;          to be used for computing the metrics
@@ -46,7 +51,7 @@
   ;  Modification history:
   ;  07/08/20-Gelu Nita (gnita@njit.edu) Redefined metrics and addded the option of using SDEV images
 
-function gx_metrics_image, data_model, data_obs, data_sdev,mask=mask,n_free=n_free
+function gx_metrics_image, data_model, data_obs, data_sdev,mask=mask,apply2=apply2,n_free=n_free
   if ~isa(data_model) or ~isa(data_obs) then begin
     message, 'Model Data, Observational Data, or both, not provided',/cont
     return,!null
@@ -65,7 +70,10 @@ function gx_metrics_image, data_model, data_obs, data_sdev,mask=mask,n_free=n_fr
   if isa(mask) then begin
     if n_elements(mask) eq 1 then begin
       ;this is assumed to be a brightness threshold provided as a pecentage, so the image mask must be computed
-      img_mask = data_obs gt (mask * max(data_obs)/100)
+      default,apply2,[1,1]
+      img_mask=data_obs gt 0
+      if apply2[0] gt 0 then img_mask=img_mask and (data_obs gt (mask * max(data_obs)/100))
+      if apply2[1] gt 0 then img_mask=img_mask and (data_model gt (mask * max(data_model)/100))
     endif else begin
       if array_equal(size(img_mask),size(data_obs)) then begin
         ;this is assumed to be an already precompute image mask

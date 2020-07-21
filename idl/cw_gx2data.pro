@@ -72,8 +72,13 @@ pro gx2data::CreatePanel,xsize=xsize,ysize=ysize
    wControlBase=widget_base(wControlPanel,/column,xsize=xsize,ysize=ysize*1.1)
    toolbar= widget_base(wControlBase, /row,/toolbar)
    geom = widget_info (wControlPanel, /geom)
-   wConvolve=WIDGET_BUTTON(toolbar, VALUE='Convolve Selected', uname='CONVOLVE',font=font)
-   wCompute=WIDGET_BUTTON(toolbar, VALUE='Compute Metrics', uname='COMPUTE',font=font)
+   wBeam=Widget_Button(toolbar,/menu,value='PSF')
+   wNORH=WIDGET_BUTTON(wBeam, VALUE='Import reference map and PSF parameters from NORH Fits', uname='BEAM:NORH',font=font)
+   wSSRT=WIDGET_BUTTON(wBeam, VALUE='Generate SSRT PSF Parameters', uname='BEAM:SSRT',font=font)
+   wConvolve=WIDGET_BUTTON(wBeam, VALUE='Convolve Selected Map', uname='CONVOLVE',font=font)
+   wMetrics=Widget_Button(toolbar,/menu,value='Metrics')
+   wCompute=WIDGET_BUTTON(wMetrics, VALUE='Compute Metrics', uname='COMPUTE',font=font)
+   ;wCompute=WIDGET_BUTTON(wMetrics, VALUE='Save Metrics', uname='SAVE',font=font)
    
    wlabel=widget_label(wControlBase,value=' ',font=font,/align_left)
    wlabel=widget_label(wControlBase,value='INPUT DATA SELECTION:',font=font,/align_left)
@@ -95,15 +100,18 @@ pro gx2data::CreatePanel,xsize=xsize,ysize=ysize
    wlabel=widget_label(wbase,value='no reference map selected',font=font,scr_xsize=scr_xsize,scr_ysize=scr_ysize,uname='REF:ID',/dynamic,/frame)
    wlabel=widget_label(wbase,value='no sdev map selected',font=font,scr_xsize=scr_xsize,scr_ysize=scr_ysize,uname='SDEV:ID',/dynamic,/frame)
    wlabel=widget_label(wbase,value='no beam map selected',font=font,scr_xsize=scr_xsize,scr_ysize=scr_ysize,uname='BEAM:ID',/dynamic,/frame)
-   wBeamBase=widget_base(wControlBase,/row)
-   button=widget_button(wBeamBase,VALUE='GENERATE BEAM',uname='BEAM:GENERATE',font=font,/align_left,xsize=geom_button.scr_xsize,/frame)
+   wBeamBase=widget_base(wControlBase,/row,/frame)
+   wBeamSubBase=widget_base(wBeamBase,/column,/frame)
+   button=widget_button(wBeamSubBase,VALUE='GENERATE BEAM',uname='BEAM:GENERATE',font=font,/align_left,xsize=geom_button.scr_xsize,/frame)
+   map=make_map(findgen(100,100))
+   label=widget_text(wBeamSubBase,uname='BEAM:TIME',value=map.time,font=font,/editable)
    wBeamParmsBase=widget_base(wBeamBase,/column)
-   wBeamCorr=cw_objArray(wBeamParmsBase,value=[6.79,7.92,-55.21,2,2],units=['"','"',STRING(176b),'"','"'],names=['a','b','phi','dx','dy'],font=font,/frame,label='Shythetic Beam',inc=0.1,xtextsize=4,xlabelsize=4,uname='BEAM:PARMS',/static)
-   wBeamCorr=cw_objArray(wBeamParmsBase,value=[100,1.1849999],units=['pix',''],names=['beam width','magnification factor'],font=font,/frame,label='Shythetic Beam Corr',inc=0.1,xtextsize=4,xlabelsize=24,uname='BEAM:CORR',/static)
-
-   wMask=cw_objfield(wControlBase,value=12.00,unit='%',font=font,/frame,label='ROI MASK THRESHOLD:',inc=1,xtextsize=6,xlabelsize=xlabelsize,uname='MASK:LEVEL')
-   
- 
+   wBeamCorr=cw_objArray(wBeamParmsBase,value=[6.79,7.92,-55.21,2,2],units=['"','"',STRING(176b),'"','"'],names=['a','b','phi','dx','dy'],font=font,/frame,label='Synthetic Beam',inc=0.1,xtextsize=4,xlabelsize=4,uname='BEAM:PARMS',/static)
+   wBeamCorr=cw_objArray(wBeamParmsBase,value=[100,1.1849999],units=['pix',''],names=['beam width','magnification factor'],font=font,/frame,label='Synthetic Beam Corr',inc=0.1,xtextsize=4,xlabelsize=24,uname='BEAM:CORR',/static)
+   wMaskBase=widget_base(wControlBase,/frame,/row)
+   wMask=cw_objfield(wMaskBase,value=12.00,unit='%',font=font,/frame,label='ROI MASK THRESHOLD:',inc=1,xtextsize=6,xlabelsize=xlabelsize,uname='MASK:LEVEL')
+   wMaskOptions=cw_bgroup(wMaskBase,['Data','Model'],/nonexclusive,font=font,uname='MASK:OPTIONS',/frame,/row)
+   widget_control,wMaskOptions,set_value=[1,1]
    wbase=widget_base(wControlBase,/frame,/row)
    label=widget_label(wBase,value='Model to Data Shift ',font=font,xsize=geom_button.scr_xsize)  
    wShift=cw_objArray(wBase,value=[0,0],units=['"','"'],names=['X:','Y:'],font=font,/frame,label='Model to Data Shift',inc=0.1,xtextsize=8,xlabelsize=4,uname='MAP:SHIFT',/static)
@@ -191,7 +199,37 @@ function gx2data::HandleEvent, event
                       self.beam=obj_clone(self.select_map())
                       if valid_map(self.beam) then widget_control,widget_info(event.handler,find_by_uname='BEAM:ID'),set_value=self.beam->get(/id)
                     end   
+    'BEAM:NORH': begin
+                  file=dialog_pickfile(Title='Select a norh fits file to import observing beam parameters')
+                  if file_exist(file) then begin
+                    norh_rd_img,file, index, data
+                    norh_index2map,index,data,map
+                    omap=obj_new('map')
+                    omap->setmap,0,map
+                    beam=norh_beam(index,marx=marx)
+                    spp=index.norh.sec_per_pix
+                    x=(dindgen(marx)-long(marx)/2)*spp
+                    y=(dindgen(marx)-long(marx)/2)*spp
+                    FitBeam, x, y, beam, a, b, theta
+                    widget_control,widget_info(event.handler,find_by_uname='BEAM:PARMS'),set_value=[a,b,-theta/!dtor,spp,spp]
+                    widget_control,widget_info(event.handler,find_by_uname='BEAM:CORR'),set_value=[marx,1]
+                    goto,generate_beam
+                  endif
+                 end  
+    'BEAM:SSRT':begin
+                  widget_control,widget_info(event.handler,find_by_uname='BEAM:TIME'),get_value=time
+                  GetSSRTangles, time, dEW, dNS, pEW, pNS
+                  marx=100
+                  dx=2.
+                  dy=2.
+                  MakeSSRTbeam, dEW, dNS, pEW, pNS, marx, marx, dx, dy, x, y, beam
+                  FitBeam, x, y, beam, a, b, theta
+                  widget_control,widget_info(event.handler,find_by_uname='BEAM:PARMS'),set_value=[a,b,-theta/!dtor,dx,dx]
+                  widget_control,widget_info(event.handler,find_by_uname='BEAM:CORR'),set_value=[marx,1]
+                  goto,generate_beam
+                end                        
     'BEAM:GENERATE': begin
+                      generate_beam:
                       widget_control,widget_info(event.handler,find_by_uname='BEAM:PARMS'),get_value=parms
                       widget_control,widget_info(event.handler,find_by_uname='BEAM:CORR'),get_value=corr
                       a=parms[0]
@@ -202,11 +240,22 @@ function gx2data::HandleEvent, event
                       width=corr[0]
                       beam_corr=corr[1] 
                       beam=gx_psf(beam_corr*[a,b]/[dx,dy],phi,width)
-                      omap=obj_new('map')
-                      omap->setmap,0,make_map(beam,dx=dx,dy=dy)
-                      omap->set,0,id='Synthetic Beam'
-                      omap->plotman,0,plotman_obj=self.plotman,nodup=0
-                     end
+                      if obj_valid(omap) then begin
+                       time=omap->get(/time) 
+                       id='Instrument Beam'
+                      endif else begin
+                        omap=obj_new('map')
+                        widget_control,widget_info(event.handler,find_by_uname='BEAM:TIME'),get_value=time
+                      end  
+                      widget_control,widget_info(event.handler,find_by_uname='BEAM:TIME'),set_value=atime(time)
+                      k=omap->get(/count)
+                      omap->setmap,k,make_map(beam,dx=dx,dy=dy,time=time)
+                      omap->set,k,id=isa(id)?id:'Synthetic Beam'
+                      if k gt 0 then begin
+                        widget_control,widget_info(widget_info(event.top,find_by_uname='GXMAPCONTAINER:MENU'),/parent),get_uvalue=oMapContainer
+                        oMapContainer->add,omap,'NORH '+omap->get(/time)
+                      endif else omap->plotman,k,plotman_obj=self.plotman,nodup=0
+                    end  
     'CONVOLVE': begin
                       if valid_map(self.beam) then begin
                         map=self.select_map()
@@ -234,8 +283,9 @@ function gx2data::HandleEvent, event
                       endif
                       if valid_map(self.refmap) and valid_map(self.gxmap) then begin
                        if valid_map(self.sdevmap) then sdev=self.sdevmap->get(/map)
-                       widget_control,widget_info(event.handler,find_by_uname='MASK:LEVEL'),get_value=mask                      
-                       self.metrics=gx_metrics_map(self.gxmap->get(/map),self.refmap->get(/map),sdev,mask=mask,shift=shift)
+                       widget_control,widget_info(event.handler,find_by_uname='MASK:LEVEL'),get_value=mask    
+                       widget_control,widget_info(event.handler,find_by_uname='MASK:OPTIONS'),get_value=apply2                   
+                       self.metrics=gx_metrics_map(self.gxmap->get(/map),self.refmap->get(/map),sdev,mask=mask,apply2=apply2,shift=shift)
                        widget_control,widget_info(widget_info(event.top,find_by_uname='GXMAPCONTAINER:MENU'),/parent),get_uvalue=oMapContainer
                        for k=0,self.metrics->get(/count)-1 do begin
                         wid=widget_info(event.handler,find_by_uname=self.metrics->get(k,/uname))
