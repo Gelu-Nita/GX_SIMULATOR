@@ -111,6 +111,8 @@ pro gx2data::CreatePanel,xsize=xsize,ysize=ysize
    wMaskBase=widget_base(wControlBase,/frame,/row)
    wMask=cw_objfield(wMaskBase,value=12.00,unit='%',font=font,/frame,label='ROI MASK THRESHOLD:',inc=1,xtextsize=6,xlabelsize=xlabelsize,uname='MASK:LEVEL')
    wMaskOptions=cw_bgroup(wMaskBase,['Data','Model'],/nonexclusive,font=font,uname='MASK:OPTIONS',/frame,/row)
+   wROIFlux=cw_objArray(wMaskBase,value=[0,0],units=['',''],names=['Data[ROI]','Model[ROI]'],font=font,/frame,label='Synthetic Beam Corr',inc=0.1,xtextsize=14,xlabelsize=12,uname='ROI:TOTAL',/static,/ind)
+
    widget_control,wMaskOptions,set_value=[1,1]
    wbase=widget_base(wControlBase,/frame,/row)
    label=widget_label(wBase,value='Model to Data Shift ',font=font,xsize=geom_button.scr_xsize)  
@@ -155,9 +157,9 @@ pro gx2data::CreatePanel,xsize=xsize,ysize=ysize
      'chi=total(chi_img[mask_pix])/n_mask_pix',$
      ;'',$
      'chi2_img=chi_img^2',$
-     ;'',$
      'chi2=total(chi2_img[mask_pix])/(n_mask_pix-n_free)-chi^2']
-   wMetrics=widget_text(wControlBase,scr_xsize=scr_xsize,ysize=40,value=info)
+     ;'',$
+   wMetrics=widget_text(wControlBase,scr_xsize=scr_xsize,ysize=18,value=info,/scroll)
 end
 
 function gx2data::select_map
@@ -287,6 +289,9 @@ function gx2data::HandleEvent, event
                        widget_control,widget_info(event.handler,find_by_uname='MASK:OPTIONS'),get_value=apply2                   
                        self.metrics=gx_metrics_map(self.gxmap->get(/map),self.refmap->get(/map),sdev,mask=mask,apply2=apply2,shift=shift)
                        widget_control,widget_info(widget_info(event.top,find_by_uname='GXMAPCONTAINER:MENU'),/parent),get_uvalue=oMapContainer
+                       mod_total=total(self.metrics->get(0,/data)*self.metrics->get(3,/data))
+                       obs_total=total(self.metrics->get(1,/data)*self.metrics->get(3,/data))
+                       widget_control,widget_info(event.handler,find_by_uname='ROI:TOTAL'),set_value=[obs_total,mod_total]
                        for k=0,self.metrics->get(/count)-1 do begin
                         wid=widget_info(event.handler,find_by_uname=self.metrics->get(k,/uname))
                         if widget_valid(wid) then begin

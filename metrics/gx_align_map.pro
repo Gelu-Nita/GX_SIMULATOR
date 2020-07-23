@@ -33,9 +33,15 @@ pro gx_align_map, map, reference, shifts = shifts
   map_2 = inter_map(map_2, map_1, cubic = -0.5)
   
   ;find shifts betweeen maps if not already provided
-  if ~isa(shifts,/number,/array) then shifts=gx_align_image(map_2.data, map_1.data)
-  shift_x = shifts[0]*map_1.dx/dx_sign
-  shift_y = shifts[1]*map_1.dy/dx_sign
+  if ~isa(shifts,/number,/array) then begin
+    shifts=gx_align_image(map_2.data, map_1.data)
+    shift_x = shifts[0]*map_1.dx/dx_sign
+    shift_y = shifts[1]*map_1.dy/dx_sign
+  endif else begin
+    shift_x = shifts[0]
+    shift_y = shifts[1]
+  endelse
+
   
   ;save orginal xc and yc
   add_prop, map,orig_xc=map.xc

@@ -56,8 +56,7 @@ function gx_align_image, image, ref_image, replace = replace
 
   dx = xc - zero_x
   dy = yc - zero_y
-  ;dxdy=[-dx,-dy]
-  ;print,xc,yc
+
   if keyword_set(replace) then begin
     x = findgen(nx) + dx
     y = findgen(ny) + dy
