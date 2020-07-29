@@ -1,5 +1,5 @@
 function objArray::INIT,wParent,value=value,units=units,uname=uname,label=label,names=names,frame=frame,sensitive=sensitive,display=display,$
-                             column=column,vertical=vertical,row=row,static=static,_extra=_extra
+                             column=column,vertical=vertical,row=row,static=static,xlabelsizes=xlabelsizes,_extra=_extra
  compile_opt hidden
   catch, error_stat
   if error_stat ne 0 then begin
@@ -19,6 +19,12 @@ function objArray::INIT,wParent,value=value,units=units,uname=uname,label=label,
   1: iunits=replicate(units,  n_elements(value))
   n_elements(value): iunits=units
   else: iunits=replicate('',  n_elements(value))
+ endcase
+ 
+ case n_elements(xlabelsizes) of
+   1: ixlabelsizes=replicate(xlabelsizes,  n_elements(value))
+   n_elements(value): ixlabelsizes=xlabelsizes
+   else: ixlabelsizes=strlen(ilabels)
  endcase
  
  case n_elements(sensitive) of
@@ -88,7 +94,8 @@ function objArray::INIT,wParent,value=value,units=units,uname=uname,label=label,
                 row=keyword_set(vertical)?0:1, $
                 XPAD=0, YPAD=0, SPACE=0,/frame)             
     for i=0,n_elements(value)-1 do begin
-     item=cw_objField(self.wItemBase,value=value[i],units=iunits[i],label=ilabels[i],flat=self.flat,sensitive=isensitive[i],map=idisplay[i],_extra=_extra)
+     item=cw_objField(self.wItemBase,value=value[i],units=iunits[i],label=ilabels[i],xlibelsize=ixlabelsizes[i],$
+                      flat=self.flat,sensitive=isensitive[i],map=idisplay[i],_extra=_extra)
     end
     
 

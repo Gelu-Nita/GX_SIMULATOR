@@ -82,7 +82,7 @@ pro gx2data::CreatePanel,xsize=xsize,ysize=ysize
    
    wlabel=widget_label(wControlBase,value=' ',font=font,/align_left)
    wlabel=widget_label(wControlBase,value='INPUT DATA SELECTION:',font=font,/align_left)
-   wlabel=widget_label(wControlBase,value=' ',font=font,/align_left)
+  ; wlabel=widget_label(wControlBase,value=' ',font=font,/align_left)
    wSelectBase=widget_base(wControlBase,/row,/frame)
    wButtonBase=widget_base(wSelectBase,/column,/frame)
    button=widget_button(wButtonBase,VALUE='SELECT MODEL MAP',uname='MODEL:SELECT',font=font,/align_left,/frame)
@@ -107,12 +107,10 @@ pro gx2data::CreatePanel,xsize=xsize,ysize=ysize
    label=widget_text(wBeamSubBase,uname='BEAM:TIME',value=map.time,font=font,/editable)
    wBeamParmsBase=widget_base(wBeamBase,/column)
    wBeamCorr=cw_objArray(wBeamParmsBase,value=[6.79,7.92,-55.21,2,2],units=['"','"',STRING(176b),'"','"'],names=['a','b','phi','dx','dy'],font=font,/frame,label='Synthetic Beam',inc=0.1,xtextsize=4,xlabelsize=4,uname='BEAM:PARMS',/static)
-   wBeamCorr=cw_objArray(wBeamParmsBase,value=[100,1.1849999],units=['pix',''],names=['beam width','magnification factor'],font=font,/frame,label='Synthetic Beam Corr',inc=0.1,xtextsize=4,xlabelsize=24,uname='BEAM:CORR',/static)
+   wBeamCorr=cw_objArray(wBeamParmsBase,value=[100,1.1849999],units=['pix',''],names=['width','correction'],font=font,/frame,label='Synthetic Beam Corr',inc=0.1,xtextsize=4,uname='BEAM:CORR',/static)
    wMaskBase=widget_base(wControlBase,/frame,/row)
    wMask=cw_objfield(wMaskBase,value=12.00,unit='%',font=font,/frame,label='ROI MASK THRESHOLD:',inc=1,xtextsize=6,xlabelsize=xlabelsize,uname='MASK:LEVEL')
    wMaskOptions=cw_bgroup(wMaskBase,['Data','Model'],/nonexclusive,font=font,uname='MASK:OPTIONS',/frame,/row)
-   wROIFlux=cw_objArray(wMaskBase,value=[0,0],units=['',''],names=['Data[ROI]','Model[ROI]'],font=font,/frame,label='Synthetic Beam Corr',inc=0.1,xtextsize=14,xlabelsize=12,uname='ROI:TOTAL',/static,/ind)
-
    widget_control,wMaskOptions,set_value=[1,1]
    wbase=widget_base(wControlBase,/frame,/row)
    label=widget_label(wBase,value='Model to Data Shift ',font=font,xsize=geom_button.scr_xsize)  
@@ -122,20 +120,21 @@ pro gx2data::CreatePanel,xsize=xsize,ysize=ysize
    widget_control,wCHECK,set_value=0
    wlabel=widget_label(wControlBase,value=' ',font=font,/align_left)
    wlabel=widget_label(wControlBase,value='COMPUTED METRICS:',font=font,/align_left)
-   wlabel=widget_label(wControlBase,value=' ',font=font,/align_left)
-   wMetrics=cw_objfield(wControlBase,value=0.0,font=font,/frame,label='ROI NPIX:',xtextsize=16,xlabelsize=xlabelsize,uname='ROI:NPIX',/indicator)
+   wMetrics=cw_objfield(wControlBase,value=0.0,font=font,/frame,label='NPIX [ROI]:',xtextsize=16,xlabelsize=xlabelsize,uname='ROI:NPIX',/indicator)
+   wMetrics=cw_objfield(wControlBase,value=0.0,font=font,/frame,label='Data [ROI]:',xtextsize=16,xlabelsize=xlabelsize,uname='ROI:DATATOTAL',/indicator)
+   wMetrics=cw_objfield(wControlBase,value=0.0,font=font,/frame,label='Model[ROI]:',xtextsize=16,xlabelsize=xlabelsize,uname='ROI:MODELTOTAL',/indicator)
    wMetrics=cw_objfield(wControlBase,value=0.0,font=font,/frame,label='R:',xtextsize=16,xlabelsize=xlabelsize,uname='MAP:R',/indicator)
    wMetrics=cw_objfield(wControlBase,value=0.0,font=font,/frame,label='RES:',xtextsize=16,xlabelsize=xlabelsize,uname='ROI:RES',/indicator)
    wMetrics=cw_objfield(wControlBase,value=0.0,font=font,/frame,label='RES_NORM:',xtextsize=16,xlabelsize=xlabelsize,uname='ROI:RES_NORM',/indicator)
-   wMetrics=cw_objfield(wControlBase,value=0.0,font=font,/frame,label='RES2',xtextsize=16,xlabelsize=xlabelsize,uname='ROI:RES2',/indicator)
+   wMetrics=cw_objfield(wControlBase,value=0.0,font=font,/frame,label='RES2:',xtextsize=16,xlabelsize=xlabelsize,uname='ROI:RES2',/indicator)
    wMetrics=cw_objfield(wControlBase,value=0.0,font=font,/frame,label='RES2_NORM:',xtextsize=16,xlabelsize=xlabelsize,uname='ROI:RES2_NORM',/indicator)
    wMetrics=cw_objfield(wControlBase,value=0.0,font=font,/frame,label='CHI:',xtextsize=16,xlabelsize=xlabelsize,uname='ROI:CHI',/indicator)
    wMetrics=cw_objfield(wControlBase,value=0.0,font=font,/frame,label='CHI2:',xtextsize=16,xlabelsize=xlabelsize,uname='ROI:CHI2',/indicator)
    info=[ '',$
      'METRICS DEFINITIONS:',$
-     '',$
+     ;'',$
      'R=Pearson correlation coefficient',$
-     '',$
+     ;'',$
      'res_img= data_model - data_obs',$
      ;'',$
      'res= total(res_img[mask_pix])',$
@@ -145,13 +144,13 @@ pro gx2data::CreatePanel,xsize=xsize,ysize=ysize
      'res_norm=total(res_img_norm[mask_pix])/n_mask_pix',$
      ;'',$
      'res2_img=res_img^2',$
-     '',$
+     ;'',$
      'res2=total(res2_img[mask_pix])-res^2/n_mask_pix',$
      ;'',$
      'res2_img_norm=res_img_norm^2',$
      ;'',$
      'res2_norm=total(res2_img_norm[mask_pix])-res_norm^2',$
-     '',$
+     ;'',$
      'chi_img=res_img/data_sdev',$
      ;'',$
      'chi=total(chi_img[mask_pix])/n_mask_pix',$
@@ -159,7 +158,7 @@ pro gx2data::CreatePanel,xsize=xsize,ysize=ysize
      'chi2_img=chi_img^2',$
      'chi2=total(chi2_img[mask_pix])/(n_mask_pix-n_free)-chi^2']
      ;'',$
-   wMetrics=widget_text(wControlBase,scr_xsize=scr_xsize,ysize=18,value=info,/scroll)
+   wMetrics=widget_text(wControlBase,scr_xsize=scr_xsize,ysize=15,value=info,/scroll)
 end
 
 function gx2data::select_map
@@ -291,7 +290,8 @@ function gx2data::HandleEvent, event
                        widget_control,widget_info(widget_info(event.top,find_by_uname='GXMAPCONTAINER:MENU'),/parent),get_uvalue=oMapContainer
                        mod_total=total(self.metrics->get(0,/data)*self.metrics->get(3,/data))
                        obs_total=total(self.metrics->get(1,/data)*self.metrics->get(3,/data))
-                       widget_control,widget_info(event.handler,find_by_uname='ROI:TOTAL'),set_value=[obs_total,mod_total]
+                       widget_control,widget_info(event.handler,find_by_uname='ROI:DATATOTAL'),set_value=obs_total
+                       widget_control,widget_info(event.handler,find_by_uname='ROI:MODELTOTAL'),set_value=mod_total
                        for k=0,self.metrics->get(/count)-1 do begin
                         wid=widget_info(event.handler,find_by_uname=self.metrics->get(k,/uname))
                         if widget_valid(wid) then begin

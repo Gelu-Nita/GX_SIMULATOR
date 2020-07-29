@@ -161,10 +161,10 @@ self.wCharSize=cw_objfield(PlotOptionBase,value=2.0,label='Plots Char Size',incr
 self.wSpectralPlotOptions=cw_objPlotOptions(PlotOptionBase,uname='Spectral Plot Options',/xlog,/ylog)
 g=widget_info(self.wSpectralPlotOptions,/geometry)
 self.wSpectralExtraOptions=cw_bgroup(PlotOptionBase,['Show Res. Xrange'],/column,/nonexclusive,xsize=g.scr_xsize,/frame)
-self.wSDEV=widget_text(PlotOptionBase,uname='SDEV',scr_ysize=g.ysize/3)
+self.wSDEV=widget_text(PlotOptionBase,uname='SDEV',scr_ysize=g.ysize/3,ysize=2)
 self.wResidualsPlotOptions=cw_objPlotOptions(PlotOptionBase,uname='Residuals Plot Options',/xlog)
 self.wResidualsExtraOptions=cw_bgroup(PlotOptionBase,['Show Spec. Xrange','Limit to Yrange'],/column,/nonexclusive,xsize=g.scr_xsize,/frame)
-self.wRDEV=widget_text(PlotOptionBase,uname='RDEV',scr_ysize=g.ysize/2.5)
+self.wRDEV=widget_text(PlotOptionBase,uname='RDEV',scr_ysize=g.ysize/2.5,ysize=2)
 self.wXProfilePlotOptions=cw_objPlotOptions(PlotOptionBase,uname='X Profile Plot Options',/ylog)
 self.wYProfilePlotOptions=cw_objPlotOptions(PlotOptionBase,uname='Y Profile Plot Options',/ylog)
 
@@ -462,6 +462,7 @@ compile_opt hidden
        xref=(*self.refspectrum).x
        widget_control,self.wTimeReference,get_value=t
        yref=((*self.refspectrum).y)[*,*,t]
+       if tag_exist(*self.refspectrum,'yerr') then yerr=((*self.refspectrum).yerr)[*,*,t]
       endif
      end 
    else:begin
@@ -471,7 +472,8 @@ compile_opt hidden
           widget_control,self.wTimeReference,get_value=t
           sz=size((*pData)[*,*,0,0,0,0,0,0]) 
           yref=((*self.refspectrum).y)[*,*,t]/sz[1]/sz[2]
-      endif
+          if tag_exist(*self.refspectrum,'yerr') then yerr=((*self.refspectrum).yerr)[*,*,t]/sz[1]/sz[2]
+         endif
         end 
    endcase
    
@@ -490,19 +492,30 @@ compile_opt hidden
             xprofile=total(xprofile,2)
             yprofile=total(yprofile,2)
             spectrum=total(spectrum,2)
-            if hasref then if size(yref,/n_dim) ge 2 then yref=total(yref,2)
+            if hasref then if size(yref,/n_dim) ge 2 then begin
+              yref=total(yref,2)
+              if isa(yerr) then yerr=sqrt(total(yerr^2,2))
+            endif
            end
      (sz[3]+1):begin
             xprofile=(xprofile[*,1]-xprofile[*,0])
             yprofile=(yprofile[*,1]-yprofile[*,0])
             spectrum=(spectrum[*,1]-spectrum[*,0])
-            if hasref then yref=yref[*,1]-yref[*,0]
+            if hasref then begin
+              yref=yref[*,1]-yref[*,0]
+              if isa(yerr) then yerr=sqrt(yerr[*,1]^2+yerr[*,0]^2)
+            endif
            end
      (sz[3]+2):begin
             xprofile=100*(xprofile[*,1]-xprofile[*,0])/total(xprofile,2)
             yprofile=100*(yprofile[*,1]-yprofile[*,0])/total(yprofile,2)
             spectrum=100*(spectrum[*,1]-spectrum[*,0])/total(spectrum,2)
-            if hasref then yref=100*(yref[*,1]-yref[*,0])/total(yref,2)
+            if hasref then begin
+              yref=100*(yref[*,1]-yref[*,0])/total(yref,2)
+              if isa(yerr) then begin
+                yerr=100*sqrt((yref[*,1]^2+yref[*,0]^2)/(yerr[*,1]^2+yerr[*,0]^2))
+              endif
+            endif
            end
      (sz[3]+3):begin
              xprofile=coeff*xprofile[*,0]/f2[fidx]
@@ -532,7 +545,10 @@ compile_opt hidden
          end
     endcase
    endif else idx=0
-
+   if hasref then begin
+    if size(yref,/n_dim) ge 2 then yref=yref[*,idx]
+    if size(yerr,/n_dim) ge 2 then yerr=yerr[*,idx]
+   endif
 
   ytitle=((*self.info).spectrum).y.label[idx]+' ('+((*self.info).spectrum).y.unit[idx]+')'
   axis=((*self.info).spectrum).x.axis
@@ -568,18 +584,19 @@ compile_opt hidden
    if hasref then begin
     oplot,xref,yref,psym=2,color=0
     data = SPLINE( axis, spectrum, xref )
-    res=(data/yref-1)
-    sdev=(res)^2
-    good=where(finite(sdev),n)
-    if n gt 0 then begin
-    sdev=100*sqrt(total(sdev[good],/nan,/double)/n)
-    widget_control,self.wSDEV,set_value=string(sdev,format="('SDEV=',g0,'%')")
-    endif else  widget_control,self.wSDEV,set_value=''
+    metrics=gx_metrics_spectrum(data,yref,yerr)
+    rdev=100*sqrt(metrics.res2_norm)
+    res=100*metrics.res_spec_norm
+    if tag_exist(metrics,'chi2') then chi2=metrics.res2_norm
+    info=string(rdev,format="('FULL RDEV=',g0,'%')")
+    if isa(chi2) then info =[info, string(chi2,format="('FULL CHI2=',g0)")]
+    
+    widget_control,self.wSDEV,set_value=info
     if ResidualsExtraOptions[0] eq 0 then begin 
-      plot,xref,100*res,charsize=charsize,color=0,back=255,xlog=res_xlog,ylog=res_ylog,xrange=res_pxrange,yrange=res_pyrange,psym=-2,$
+      plot,xref,res,charsize=charsize,color=0,back=255,xlog=res_xlog,ylog=res_ylog,xrange=res_pxrange,yrange=res_pyrange,psym=-2,$
            xtitle=((*self.info).spectrum).x.unit,ytitle='Relative Residual (%)',xsty=isa(res_pxrange),ysty=isa(res_pyrange)
     endif else begin
-      plot,xref,100*res,charsize=charsize,color=0,back=255,xlog=res_xlog,ylog=res_ylog,xrange=spec_pxrange,yrange=res_pyrange,psym=-2,$
+      plot,xref,res,charsize=charsize,color=0,back=255,xlog=res_xlog,ylog=res_ylog,xrange=spec_pxrange,yrange=res_pyrange,psym=-2,$
            xtitle=((*self.info).spectrum).x.unit,ytitle='Relative Residual (%)',xsty=isa(spec_pxrange),ysty=isa(res_pyrange)
       if isa(res_pxrange) then begin
         oplot,res_pxrange[[0,0]],keyword_set(res_ylog)?10^!y.crange:!y.crange,thick=2,linesty=2,color=0
@@ -589,20 +606,18 @@ compile_opt hidden
     oplot,keyword_set(res_xlog)?10^!x.crange:!x.crange,[0,0],color=0
     if res_range eq 'Auto' then ResPlotOptions->SetProperty,xrange=keyword_set(res_xlog)?10^!x.crange:!x.crange, yrange=keyword_set(res_ylog)?10^!y.crange:!y.crange
     ResPlotOptions->GetProperty,range=res_range,xrange=res_pxrange,yrange=res_pyrange,xlog=res_xlog,ylog=res_ylog
-    
-    res=(data/yref-1)
-    if isa(res_pxrange) then begin
-     good=where((xref ge min(res_pxrange)) and (xref le max(res_pxrange)),n) 
-     if n gt 0 then res=res[good]
-    endif
-    if (ResidualsExtraOptions[1] eq 1) and isa(res_pyrange) then begin
-     good=where((res ge min(res_pyrange)/100) and (res le max(res_pyrange)/100),n) 
-     if n gt 0 then res=res[good]
-    endif
-    rdev=res^2
-    rdev=100*sqrt(mean(rdev,/nan))   
-
-    widget_control,self.wRDEV,set_value=string(rdev,format="('RDEV=',g0,'%')")
+   
+    if isa(res_pxrange) then $
+      good=where((xref ge min(res_pxrange)) and (xref le max(res_pxrange))) 
+    if (ResidualsExtraOptions[1] eq 1) and isa(res_pyrange) then $
+      good=where((res ge min(res_pyrange)) and (res le max(res_pyrange)) $
+                  and (xref ge min(res_pxrange)) and (xref le max(res_pxrange)))    
+    metrics=gx_metrics_spectrum(data,yref,yerr,range_idx=good)
+    rdev=100*sqrt(metrics.res2_norm)
+    if tag_exist(metrics,'chi2') then chi2=metrics.res2_norm
+    info=string(rdev,format="('RDEV=',g0,'%')")
+    if isa(chi2) then info =[info, string(chi2,format="('CHI2=',g0)")]
+    widget_control,self.wRDEV,set_value=info
     !p.multi=[2,2,3]
    endif
   endif else begin
