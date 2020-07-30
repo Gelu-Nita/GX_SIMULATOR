@@ -20,7 +20,7 @@
   ;         [0,0] no mask
   ;         [1,0] only pixels where data_obs is about the mask threshold 
   ;         [0,1] only pixels where data_model is about the mask threshold  
-  ;         [1,1] only pixels where both data_obs and data_model is about the mask threshold (default) 
+  ;         [1,1] only pixels where either data_obs and data_model are about the mask threshold (default)    
   ;   OR
   ;   mask - bytarr(nx,ny) with ones indicating the area of interest pixels
   ;          to be used for computing the metrics

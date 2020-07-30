@@ -161,10 +161,12 @@ self.wCharSize=cw_objfield(PlotOptionBase,value=2.0,label='Plots Char Size',incr
 self.wSpectralPlotOptions=cw_objPlotOptions(PlotOptionBase,uname='Spectral Plot Options',/xlog,/ylog)
 g=widget_info(self.wSpectralPlotOptions,/geometry)
 self.wSpectralExtraOptions=cw_bgroup(PlotOptionBase,['Show Res. Xrange'],/column,/nonexclusive,xsize=g.scr_xsize,/frame)
-self.wSDEV=widget_text(PlotOptionBase,uname='SDEV',scr_ysize=g.ysize/3,ysize=2)
+self.wSDEV=widget_text(PlotOptionBase,uname='SDEV',scr_ysize=g.ysize/4,ysize=2)
 self.wResidualsPlotOptions=cw_objPlotOptions(PlotOptionBase,uname='Residuals Plot Options',/xlog)
+self.wRESCHI=cw_bgroup(PlotOptionBase,['RES','CHI'],/row,/exclusive,xsize=g.scr_xsize,/frame)
+widget_control,self.wRESCHI,set_value=0,sensitive=0
 self.wResidualsExtraOptions=cw_bgroup(PlotOptionBase,['Show Spec. Xrange','Limit to Yrange'],/column,/nonexclusive,xsize=g.scr_xsize,/frame)
-self.wRDEV=widget_text(PlotOptionBase,uname='RDEV',scr_ysize=g.ysize/2.5,ysize=2)
+self.wRDEV=widget_text(PlotOptionBase,uname='RDEV',scr_ysize=g.ysize/4,ysize=2)
 self.wXProfilePlotOptions=cw_objPlotOptions(PlotOptionBase,uname='X Profile Plot Options',/ylog)
 self.wYProfilePlotOptions=cw_objPlotOptions(PlotOptionBase,uname='Y Profile Plot Options',/ylog)
 
@@ -582,22 +584,36 @@ compile_opt hidden
                      
    if spec_range eq 'Auto' then SpecPlotOptions->SetProperty,xrange=keyword_set(spec_xlog)?10^!x.crange:!x.crange, yrange=keyword_set(spec_ylog)?10^!y.crange:!y.crange
    if hasref then begin
-    oplot,xref,yref,psym=2,color=0
+    loadct,39
+    if n_elements(yref) eq n_elements(yerr) then $
+    oplot_err,xref,yref,yerr=yerr,psym=3,color=0,bcolor=250,thick=2 $
+    else oplot,xref,yref,psym=2,color=0
+    
     data = SPLINE( axis, spectrum, xref )
     metrics=gx_metrics_spectrum(data,yref,yerr)
-    rdev=100*sqrt(metrics.res2_norm)
-    res=100*metrics.res_spec_norm
-    if tag_exist(metrics,'chi2') then chi2=metrics.res2_norm
-    info=string(rdev,format="('FULL RDEV=',g0,'%')")
+    rdev=metrics.res2_norm
+    widget_control,self.wRESCHI,get_value=reschi
+    
+    if tag_exist(metrics,'chi2') then begin
+     widget_control,self.wRESCHI,sensitive=1
+     res=(keyword_set(reschi)?metrics.chi_spec:metrics.res_spec_norm)
+     restitle=keyword_set(reschi)?'(ModelSpec-RefSpec)/RefErr':'(ModSpec-RefSpec)/RefSpec'
+     chi2=metrics.chi2
+    endif else begin
+      widget_control,self.wRESCHI,sensitive=0
+      res=metrics.res_spec_norm
+      restitle='Data Normalized Residual'
+    endelse
+    info=string(rdev,format="('FULL RDEV=',g0)")
     if isa(chi2) then info =[info, string(chi2,format="('FULL CHI2=',g0)")]
     
     widget_control,self.wSDEV,set_value=info
     if ResidualsExtraOptions[0] eq 0 then begin 
       plot,xref,res,charsize=charsize,color=0,back=255,xlog=res_xlog,ylog=res_ylog,xrange=res_pxrange,yrange=res_pyrange,psym=-2,$
-           xtitle=((*self.info).spectrum).x.unit,ytitle='Relative Residual (%)',xsty=isa(res_pxrange),ysty=isa(res_pyrange)
+           xtitle=((*self.info).spectrum).x.unit,ytitle=restitle,xsty=isa(res_pxrange),ysty=isa(res_pyrange)
     endif else begin
       plot,xref,res,charsize=charsize,color=0,back=255,xlog=res_xlog,ylog=res_ylog,xrange=spec_pxrange,yrange=res_pyrange,psym=-2,$
-           xtitle=((*self.info).spectrum).x.unit,ytitle='Relative Residual (%)',xsty=isa(spec_pxrange),ysty=isa(res_pyrange)
+           xtitle=((*self.info).spectrum).x.unit,ytitle=restitle,xsty=isa(spec_pxrange),ysty=isa(res_pyrange)
       if isa(res_pxrange) then begin
         oplot,res_pxrange[[0,0]],keyword_set(res_ylog)?10^!y.crange:!y.crange,thick=2,linesty=2,color=0
         oplot,res_pxrange[[1,1]],keyword_set(res_ylog)?10^!y.crange:!y.crange,thick=2,linesty=2,color=0
@@ -613,9 +629,9 @@ compile_opt hidden
       good=where((res ge min(res_pyrange)) and (res le max(res_pyrange)) $
                   and (xref ge min(res_pxrange)) and (xref le max(res_pxrange)))    
     metrics=gx_metrics_spectrum(data,yref,yerr,range_idx=good)
-    rdev=100*sqrt(metrics.res2_norm)
-    if tag_exist(metrics,'chi2') then chi2=metrics.res2_norm
-    info=string(rdev,format="('RDEV=',g0,'%')")
+    rdev=metrics.res2_norm
+    if tag_exist(metrics,'chi2') then chi2=metrics.chi2
+    info=string(rdev,format="('RDEV2=',g0)")
     if isa(chi2) then info =[info, string(chi2,format="('CHI2=',g0)")]
     widget_control,self.wRDEV,set_value=info
     !p.multi=[2,2,3]
@@ -1395,6 +1411,9 @@ case event.id of
                      self->SelectImg
                     end 
   self.wPlotSelection:self->PlotProfile
+  self.wRESCHI:begin 
+                 if event.select then self->PlotProfile
+               end  
   self.wLog2File:result=self->SaveLog()
   self.wSave:self->SaveMaps,event.top
   self.wSaveTb:self->SaveTbMaps,event.top
@@ -1402,7 +1421,6 @@ case event.id of
   self.wMap2Plotman:self->Map2Plotman,event.top
   self.wExportImgCube:self->ImgCube2File,event.top
   self.wImportImgCube:self->ImgCubeFile2Renderer,event.top
-  ;self.wImportImgCube:self->MapArray2ImgCubeFile,event.top; this was used just for testing EOVSA maps, subject of change
   self.wSpec2Plotman:self->Spec2Plotman,event.top
   self.wSpec2File:self->Spec2File,event.top
   self.wContrast:self->SelectImg
@@ -1481,6 +1499,7 @@ pro gxImgViewWid__define
     wTimeReference:0l,$
     wSDEV:0L,$
     wRDEV:0L,$
+    wRESCHI:0L,$
     wCharSize:0L,$
     wSpectralPlotOptions:0L,$
     wResidualsPlotOptions:0L,$
