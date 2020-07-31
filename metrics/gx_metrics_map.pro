@@ -16,11 +16,12 @@
   ;       only pixels with the brightness above some threshold.
   ;       Setting "mask=10d" will result in processing only pixels
   ;       with the brightness above 10% of the maximum brigntness values in the reference image
-  ;   apply2- byatearr(2) indicating how the mask should be applied
-  ;         [0,0] no mask
-  ;         [1,0] only pixels where data_obs is about the mask threshold 
-  ;         [0,1] only pixels where data_model is about the mask threshold  
-  ;         [1,1] only pixels where either data_obs and data_model are about the mask threshold (default)    
+  ;   apply2- byte indicating how the mask should be applied
+  ;         0 no mask
+  ;         1 only pixels where data_obs is about the mask threshold 
+  ;         2 only pixels where data_model is about the mask threshold  
+  ;         3 only pixels where either data_obs or data_model are above the mask threshold (default)
+  ;         4 only pixels where both data_obs and data_model are above the mask threshold     
   ;   OR
   ;   mask - bytarr(nx,ny) with ones indicating the area of interest pixels
   ;          to be used for computing the metrics

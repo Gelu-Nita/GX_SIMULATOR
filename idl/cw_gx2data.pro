@@ -106,12 +106,12 @@ pro gx2data::CreatePanel,xsize=xsize,ysize=ysize
    map=make_map(findgen(100,100))
    label=widget_text(wBeamSubBase,uname='BEAM:TIME',value=map.time,font=font,/editable)
    wBeamParmsBase=widget_base(wBeamBase,/column)
-   wBeamCorr=cw_objArray(wBeamParmsBase,value=[6.79,7.92,-55.21,2,2],units=['"','"',STRING(176b),'"','"'],names=['a','b','phi','dx','dy'],font=font,/frame,label='Synthetic Beam',inc=0.1,xtextsize=4,xlabelsize=4,uname='BEAM:PARMS',/static)
-   wBeamCorr=cw_objArray(wBeamParmsBase,value=[100,1.1849999],units=['pix',''],names=['width','correction'],font=font,/frame,label='Synthetic Beam Corr',inc=0.1,xtextsize=4,uname='BEAM:CORR',/static)
+   wBeamCorr=cw_objArray(wBeamParmsBase,value=[1,1,0,2,2],units=['"','"',STRING(176b),'"','"'],names=['a','b','phi','dx','dy'],font=font,/frame,label='Synthetic Beam',inc=0.1,xtextsize=4,xlabelsize=4,uname='BEAM:PARMS',/static)
+   wBeamCorr=cw_objArray(wBeamParmsBase,value=[100,1],units=['pix',''],names=['width','correction'],font=font,/frame,label='Synthetic Beam Corr',inc=0.1,xtextsize=4,uname='BEAM:CORR',/static)
    wMaskBase=widget_base(wControlBase,/frame,/row)
    wMask=cw_objfield(wMaskBase,value=12.00,unit='%',font=font,/frame,label='ROI MASK THRESHOLD:',inc=1,xtextsize=6,xlabelsize=xlabelsize,uname='MASK:LEVEL')
-   wMaskOptions=cw_bgroup(wMaskBase,['Data','Model'],/nonexclusive,font=font,uname='MASK:OPTIONS',/frame,/row)
-   widget_control,wMaskOptions,set_value=[1,1]
+   wMaskOptions=cw_bgroup(wMaskBase,['No Mask','Data','Model','OR', 'AND'],/exclusive,font=font,uname='MASK:OPTIONS',/frame,/row)
+   widget_control,wMaskOptions,set_value=3
    wbase=widget_base(wControlBase,/frame,/row)
    label=widget_label(wBase,value='Model to Data Shift ',font=font,xsize=geom_button.scr_xsize)  
    wShift=cw_objArray(wBase,value=[0,0],units=['"','"'],names=['X:','Y:'],font=font,/frame,label='Model to Data Shift',inc=0.1,xtextsize=8,xlabelsize=4,uname='MAP:SHIFT',/static)

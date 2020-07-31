@@ -14,11 +14,12 @@
   ;       only pixels with the brightness above some threshold.
   ;       Setting "mask=10d" will result in processing only pixels
   ;       with the brightness above 10% of the maximum brigntness values in the reference image
-  ;   apply2- byatearr(2) indicating how the mask should be applied
-  ;         [0,0] no mask
-  ;         [1,0] only pixels where data_obs is about the mask threshold 
-  ;         [0,1] only pixels where data_model is about the mask threshold  
-  ;         [1,1] only pixels where either data_obs and data_model are about the mask threshold (default)    
+  ;   apply2- byte indicating how the mask should be applied
+  ;         0 no mask
+  ;         1 only pixels where data_obs is about the mask threshold 
+  ;         2 only pixels where data_model is about the mask threshold  
+  ;         3 only pixels where either data_obs or data_model are above the mask threshold (default)
+  ;         4 only pixels where both data_obs and data_model are above the mask threshold      
   ;   OR
   ;   mask - bytarr(nx,ny) with ones indicating the area of interest pixels
   ;          to be used for computing the metrics
@@ -70,10 +71,18 @@ function gx_metrics_image, data_model, data_obs, data_sdev,mask=mask,apply2=appl
   if isa(mask) then begin
     if n_elements(mask) eq 1 then begin
       ;this is assumed to be a brightness threshold provided as a pecentage, so the image mask must be computed
-      default,apply2,[1,1]
+      default,apply2,3
       img_mask=byte(data_obs*0)
-      if apply2[0] gt 0 then img_mask=img_mask or (data_obs gt (mask * max(data_obs)/100))
-      if apply2[1] gt 0 then img_mask=img_mask or (data_model gt (mask * max(data_model)/100))
+      data_mask=data_obs gt (mask * max(data_obs)/100d)
+      model_mask=data_model gt (mask * max(data_model)/100d)
+      case apply2 of
+        1: img_mask=data_mask
+        2: img_mask=model_mask
+        3: img_mask=data_mask or model_mask
+        4: img_mask=data_mask and model_mask
+        else: img_mask[*]=1;nomask
+      endcase
+      
     endif else begin
       if array_equal(size(img_mask),size(data_obs)) then begin
         ;this is assumed to be an already precompute image mask
