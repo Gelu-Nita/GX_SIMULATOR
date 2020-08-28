@@ -288,8 +288,8 @@ function gx2data::HandleEvent, event
                        widget_control,widget_info(event.handler,find_by_uname='MASK:OPTIONS'),get_value=apply2                   
                        self.metrics=gx_metrics_map(self.gxmap->get(/map),self.refmap->get(/map),sdev,mask=mask,apply2=apply2,shift=shift)
                        widget_control,widget_info(widget_info(event.top,find_by_uname='GXMAPCONTAINER:MENU'),/parent),get_uvalue=oMapContainer
-                       mod_total=total(self.metrics->get(0,/data)*self.metrics->get(3,/data))
-                       obs_total=total(self.metrics->get(1,/data)*self.metrics->get(3,/data))
+                       mod_total=total(self.metrics->get(0,/data)*self.metrics->get(3,/data)*self.metrics->get(0,/dx)*self.metrics->get(0,/dy))
+                       obs_total=total(self.metrics->get(1,/data)*self.metrics->get(3,/data)*self.metrics->get(1,/dx)*self.metrics->get(1,/dy))
                        widget_control,widget_info(event.handler,find_by_uname='ROI:DATATOTAL'),set_value=obs_total
                        widget_control,widget_info(event.handler,find_by_uname='ROI:MODELTOTAL'),set_value=mod_total
                        for k=0,self.metrics->get(/count)-1 do begin

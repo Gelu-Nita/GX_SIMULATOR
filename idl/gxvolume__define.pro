@@ -347,7 +347,7 @@ pro gxVolume::DisplayModelStatistics,data
      widget_control,widget_info(wParent,find_by_uname='GXMODEL:sdev'),set_value=sdev
 end
 
-function gxVolume::SetQ,q_formula
+function gxVolume::SetQ,q_formula,quiet=quiet
   q_default='q0*(B/q[1])/(L/q[2])^0.75'
   self->GetVertexAttributeData,'q_formula',undo
   if n_elements(undo) eq 0 then undo=q_default
@@ -356,12 +356,16 @@ function gxVolume::SetQ,q_formula
   catch, error_stat
   if error_stat ne 0 then begin
     catch, /cancel
-    answ= dialog_message(/INFO, ['Q formula error: '+!ERROR_STATE.MSG,'Rolling it back to: '+undo])
+    if ~keyword_set(quiet) then answ= dialog_message(/INFO, ['Q formula error: '+!ERROR_STATE.MSG,'Rolling it back to: '+undo])
     q_formula=undo
     result=execute('newQ='+q_formula)
     goto,skip
   end
   self->GetVertexAttributeData,'q0_coeff',q
+  if n_elements(q) eq 0 then begin
+    q=[0.415e-3,1e2,1e9,0,0]
+    self->SetVertexAttributeData,'q0_coeff',q
+  end
   self->GetVertexAttributeData,'Q0',Q0
   self->GetVertexAttributeData,'Q',oldQ
   self->GetVertexAttributeData,'bmed',B
@@ -369,6 +373,7 @@ function gxVolume::SetQ,q_formula
   self->GetVertexAttributeData,'curlb',curlb 
   self->GetVertexAttributeData,'length',L
   self->GetVertexAttributeData,'dz',dz
+  default,oldQ,L*0
   ;TO BE REVISITED!!!
   if n_elements(dz) gt 0 then dz=max(dz) else dz=self.zcoord_conv[1]
   short_idx=where(L lt dz,short_count)
@@ -394,7 +399,7 @@ function gxVolume::SetQ,q_formula
   return,q_formula
 end
 
-function gxVolume::SetQ0,q0_formula,q_formula=q_formula
+function gxVolume::SetQ0,q0_formula,q_formula=q_formula,quiet=quiet
   q0_default='q[0]'
   self->GetVertexAttributeData,'q0_formula',undo
   if n_elements(undo) eq 0 then undo=q0_default
@@ -404,7 +409,7 @@ function gxVolume::SetQ0,q0_formula,q_formula=q_formula
   catch, error_stat
   if error_stat ne 0 then begin
     catch, /cancel
-    answ= dialog_message(/INFO, ['Q0 formula error: '+!ERROR_STATE.MSG,'Rolling it back to: '+undo])
+    if ~keyword_set(quiet) then answ= dialog_message(/INFO, ['Q0 formula error: '+!ERROR_STATE.MSG,'Rolling it back to: '+undo])
     q0_formula=undo
     result=execute('q0='+q0_formula)
     goto,skip
@@ -916,9 +921,9 @@ function gxVolume::NewNT,newkey,oldkey
   default,oldkey,byte('')
   default,newkey,oldkey
   if self.flags.NTDEM then newkey=byte(strcompress('q=['+arr2str(q0_coeff)+'] & q0='+string(byte(q0_formula))+' & q='+string(byte(q_formula))+$
-    ' & NTDEM='+string(self.flags.NTDEM)+' & NTSSDEM='+string(self.flags.NTSSDEM))+(n_elements(demavg) gt 0? string(demavg,format="(' & DEMAVG=',i1)"):'')+' & EBTEL='+file_basename(gx_ebtel_path()))
+    ' & NTDEM='+string(self.flags.NTDEM)+' & NTSSDEM='+string(self.flags.NTSSDEM))+(n_elements(demavg) gt 0? string(demavg,format="(' & DEMAVG=',i1)"):'')+' & EBTEL='+file_basename(gx_ebtel_path(ss=self.flags.NTSSDEM)))
   if self.flags.NTSS then newkey=byte(strcompress('q=['+arr2str(q0_coeff)+'] & q0='+string(byte(q0_formula))+' & q='+string(byte(q_formula))+$
-    ' & NTSS='+string(self.flags.NTSS))+(n_elements(demavg) gt 0? string(demavg,format="(' & DEMAVG=',i1)"):'')+'& EBTEL='+file_basename(gx_ebtel_path(/ss)))
+    ' & NTSS='+string(self.flags.NTSS))+(n_elements(demavg) gt 0? string(demavg,format="(' & DEMAVG=',i1)"):'')+'& EBTEL=Analytical SS')
   flags=self->setflags(newNT=(string(newkey) ne string(oldkey)))
   return,flags.newNT
 end

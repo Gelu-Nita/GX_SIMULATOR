@@ -119,13 +119,13 @@ function gx_metrics_image, data_model, data_obs, data_sdev,mask=mask,apply2=appl
   R = correlate(data_model_d*img_mask, data_obs_d*img_mask)     
          res_img= data_model_d - data_obs_d
          if nbad gt 0 then res_img[bad]=0
-         res= total(res_img[mask_pix])
+         res= total(res_img[mask_pix])/n_mask_pix
          res_img_norm=res_img/data_obs_d
          if nbad gt 0 then res_img_norm[bad]=1
          res_norm=total(res_img_norm[mask_pix])/n_mask_pix
          res2_img=res_img^2
          if nbad gt 0 then res2_img[bad]=0
-         res2=total(res2_img[mask_pix])/n_mask_pix-res^2/n_mask_pix
+         res2=total(res2_img[mask_pix])/n_mask_pix-res^2
          res2_img_norm=res_img_norm^2
          if nbad gt 0 then res2_img_norm[bad]=1
          res2_norm=total(res2_img_norm[mask_pix])/n_mask_pix-res_norm^2

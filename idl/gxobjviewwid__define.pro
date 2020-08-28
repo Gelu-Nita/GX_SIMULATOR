@@ -493,7 +493,7 @@ pro gxObjViewWid::OnMovie
                     self.oWindow->SetProperty, units=orig_units
                     oBuff = obj_new('IDLgrBuffer', dimensions=dimensions)
                     if float(!version.release) ge 8.1 then begin
-                      oVid = gxVideo(dimensions,stream=stream,fps=9)
+                      oVid = gxVideo(dimensions,stream=stream,fps=9,filename=filename)
                     endif else begin
                       desc = [ $
                         '0, LABEL, Movie Output Options, CENTER', $
@@ -511,9 +511,9 @@ pro gxObjViewWid::OnMovie
                         title='Please choose a filename to save this video')
                       oVid= OBJ_NEW('IDLgrMPEG',frame_rate=2)
                     endelse
-                    if ~obj_valid(oVid) then begin
-                      return
-                    endif
+;                    if ~obj_valid(oVid) then begin
+;                      return
+;                    endif
                     parm_list=['T_0','n_0','n_b']
                     vol=strcompress('None',/rem)
                     for i=0, n_elements(parm_list)-1 do vol=vol+'|'+strcompress(parm_list[i],/rem)
@@ -544,6 +544,11 @@ pro gxObjViewWid::OnMovie
                       parm_list='dR'
                       pwr_idx=1
                      endelse
+                     if count gt 1 then begin
+                      parm_list=['dR',parm_list]
+                      count+=1
+                      pwr_idx=[1,pwr_idx]
+                     endif
                     for k=0,count-1 do begin
                       (model->GetVolume())->Update,parm_list[k],pwr_idx=pwr_idx[k],/update
                       print,parm_list[k],pwr_idx[k]
@@ -552,14 +557,14 @@ pro gxObjViewWid::OnMovie
                       oBuff->Draw, self.oViewgroup
                       oBuff->GetProperty, image_data=image_data
                       if obj_isa(oVid,'IDLgrMPEG') then begin
-                        for i=0, 2 do image_data[i,*,*]=rotate(reform(image_data[i,*,*]),7)
+                        for l=0, 2 do image_data[l,*,*]=rotate(reform(image_data[l,*,*]),7)
                         for j=1, 24/opt.fps do oVid->Put, image_data
                       endif else if obj_valid(oVid) then result=oVid->Put(stream,image_data)
+                      ;if i eq 2 then write_png,parm_list[k]+'.png',image_data
                       wait,0.05
                       model->Rotate,ez,10
                     end
                   end  
-                    
                   endif
                   obj_destroy, oBuff
                   if obj_isa(oVid,'IDLgrMPEG') then  oVid->Save, FILENAME=filename

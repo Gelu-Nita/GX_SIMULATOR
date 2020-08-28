@@ -37,7 +37,7 @@
 pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km, out_dir = out_dir, tmp_dir = tmp_dir,$
                         empty_box_only=empty_box_only,save_empty_box=save_empty_box,potential_only=potential_only,$
                         save_potential=save_potential,save_bounds=save_bounds,use_potential=use_potential, use_idl=use_idl,$
-                        nlfff_only=nlfff_only, generic_only=generic_only,centre=centre,euv=euv,uv=uv,hmifiles=hmifiles,old_combo_format=old_combo_format,_extra=_extra
+                        nlfff_only=nlfff_only, generic_only=generic_only,centre=centre,euv=euv,uv=uv,hmifiles=hmifiles,old_combo_format=old_combo_format,out_files=out_files,_extra=_extra
   setenv, 'WCS_RSUN=6.96d8'
   
   break_file, ROUTINE_FILEPATH(), dsk_log, dir, routine_name, ext
@@ -114,10 +114,12 @@ pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km
     if tag_exist(files,'AIA_1700') then if file_test(files.AIA_1700) then gx_box_add_refmap, box, files.aia_1700, id = 'AIA_1700'
   endif   
   message,strcompress(string(systime(/seconds)-t0,format="('Box structure created in ',g0,' seconds')")),/cont  
-  
+  out_files=[]
   if keyword_set(empty_box_only) or keyword_set(save_empty_box) then begin
-    save,box,file=out_dir+path_sep()+box.id+'.sav'
-    message,'Empty box structure saved to '+out_dir+path_sep()+box.id+'.sav',/cont
+    file=out_dir+path_sep()+box.id+'.sav'
+    save,box,file=file
+    out_files=[out_files,file]
+    message,'Empty box structure saved to '+file,/cont
   endif
   if keyword_set(empty_box_only) then return
   
@@ -127,13 +129,17 @@ pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km
   message,strcompress(string(systime(/seconds)-t0,format="('Potential extrapolation performed in ',g0,' seconds')")),/cont
   
   if size(pbox,/tname) eq 'STRUCT' and ( keyword_set(save_potential) or keyword_set(potential_only) ) then begin
-    save,pbox,file=out_dir+path_sep()+pbox.id+'.sav'
-    message,'Potential box structure saved to '+out_dir+path_sep()+pbox.id+'.sav',/cont
+    file=out_dir+path_sep()+pbox.id+'.sav'
+    save,pbox,file=file
+    out_files=[out_files,file]
+    message,'Potential box structure saved to '+file,/cont
   end
   
   if keyword_set(save_bounds) then begin
-    save,box,file=out_dir+path_sep()+box.id+'.sav'
-    message,'Bound Box structure saved to '+out_dir+path_sep()+box.id+'.sav',/cont
+    file=out_dir+path_sep()+box.id+'.sav'
+    save,box,file=file
+    out_files=[out_files,file]
+    message,'Bound Box structure saved to '+file,/cont
   endif
  
   if keyword_set(potential_only) then return
@@ -151,8 +157,10 @@ pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km
   message,'Performing NLFFF extrapolation',/cont
   return_code = gx_box_make_nlfff_wwas_field(path, box)
   message,strcompress(string(systime(/seconds)-t0,format="('NLFFF extrapolation performed in ',g0,' seconds')")),/cont
-  save,box,file=out_dir+path_sep()+box.id+'.sav'
-  message,'NLFFF box structure saved to '+out_dir+path_sep()+box.id+'.sav',/cont
+  file=out_dir+path_sep()+box.id+'.sav'
+  save,box,file=file
+  out_files=[out_files,file]
+  message,'NLFFF box structure saved to '+file,/cont
   
   if keyword_set(nlfff_only) then return
   
@@ -177,8 +185,10 @@ pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km
   endelse
   
   box.id=box.id+'.GEN'
-  save,box,file=out_dir+path_sep()+box.id+'.sav'
-  message,'Box structure saved to '+out_dir+path_sep()+box.id+'.sav',/cont
+  file=out_dir+path_sep()+box.id+'.sav'
+  save,box,file=file
+  out_files=[out_files,file]
+  message,'Box structure saved to '+file,/cont
   
   
   if keyword_set(generic_only) then return 
@@ -188,7 +198,10 @@ pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km
   chromo_mask=decompose(box.base.bz,box.base.ic)
   box=keyword_set(old_combo_format)?combo_model_deprecated(box,chromo_mask):combo_model(box,chromo_mask)
   message,strcompress(string(systime(/seconds)-t0,format="('Chromo model generated in ',g0,' seconds')")),/cont
-  box.id=box.id+'.CHR'
-  save,box,file=out_dir+path_sep()+box.id+'.sav'
-  message,'Box structure saved to '+out_dir+path_sep()+box.id+'.sav',/cont
+  file=out_dir+path_sep()+box.id+'.sav'
+  save,box,file=file
+  out_files=[out_files,file]
+  message,'Box structure saved to '+file,/cont
+  message,'This script generated the following files:',/cont
+  message,out_files,/cont
 end
