@@ -152,7 +152,7 @@ pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km
   t0=systime(/seconds)
   
   dirpath=file_dirname((ROUTINE_INFO('gx_box_make_potential_field',/source)).path,/mark)
-  path=dirpath+'WWNLFFFReconstruction.dll'
+  path=dirpath+'\Magnetic-Field_Library\WWNLFFFReconstruction.dll'
   
   message,'Performing NLFFF extrapolation',/cont
   return_code = gx_box_make_nlfff_wwas_field(path, box)

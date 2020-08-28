@@ -17,7 +17,10 @@ pro gx_addlines2box, box,tr_height_km, status=status, physLength=physLength, avF
   if not tag_exist(box,'dr') then box=add_tag(box,[1000,1000,1000]/gx_rsun(unit='km'),'dr',/no_copy,/duplicate)
   default,tr_height_km,1000
   chromo_level=tr_height_km
-  if n_elements(dll_path) eq 0 then dll_path=gx_findfile('WWNLFFFReconstruction.dll',folder='gxbox')
+  if n_elements(dll_path) eq 0 then begin
+    dirpath=file_dirname((ROUTINE_INFO('gx_box_make_potential_field',/source)).path,/mark)
+    dll_path=dirpath+'\Magnetic-Field_Library\WWNLFFFReconstruction.dll'
+  end
   rc=gx_box_calculate_lines(dll_path, box, status=status, physLength=physLength, avField=avField, startIdx=startIdx, endIdx=endIdx,chromo_level=chromo_level,_extra = _extra) 
   elapsed_time=systime(/seconds)-t0
   message,strcompress(string(elapsed_time,format="('Field line computation performed using DLL implementation in ',g0,' seconds')")),/cont
