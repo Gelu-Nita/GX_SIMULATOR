@@ -137,7 +137,7 @@ pro gx2data::CreatePanel,xsize=xsize,ysize=ysize
      ;'',$
      'res_img= data_model - data_obs',$
      ;'',$
-     'res= total(res_img[mask_pix])',$
+     'res= total(res_img[mask_pix])/n_mask_pix',$
      ;'',$
      'res_img_norm=res_img/data_obs',$
      ;'',$
@@ -145,7 +145,7 @@ pro gx2data::CreatePanel,xsize=xsize,ysize=ysize
      ;'',$
      'res2_img=res_img^2',$
      ;'',$
-     'res2=total(res2_img[mask_pix])-res^2/n_mask_pix',$
+     'res2=total(res2_img[mask_pix])-res^2',$
      ;'',$
      'res2_img_norm=res_img_norm^2',$
      ;'',$
