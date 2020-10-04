@@ -41,12 +41,11 @@ xrange=xrange,yrange=yrange,zrange=zrange,Nx=Nx,Ny=Ny,Nz=Nz,nthreads=nthreads,_e
  self.renderer=self->DefaultRenderer()
  info=self->RendererInfo()
  cd,cdir
- self.parms=ptr_new(info.parms)
  self.info=ptr_new(info)
  wControlTab=widget_info(wScanner,/parent)
  wPlotBase=Widget_base(wControlTab,/column,Title='IMAGE PROFILES',/frame)
  self.ImgViewWid=obj_new('gxImgViewWid', wImgBase,info=self.info,renderer=self.renderer,wPlotBase=wPlotBase,/save)
- parms=*self.parms
+ parms=(*self.info).parms
  row_labels=strarr(n_elements(parms))
  for i=0,n_elements(parms)-1 do row_labels[i]=string(i+1,format='(i3)')  
  wScannerBase=widget_base(wScanner,/column,event_func='gxScanboxHandleEvent',uvalue=self)
@@ -57,12 +56,13 @@ xrange=xrange,yrange=yrange,zrange=zrange,Nx=Nx,Ny=Ny,Nz=Nz,nthreads=nthreads,_e
              value=gx_bitmap(filepath('open.bmp', subdirectory=['resource', 'bitmaps'])), $
              /bitmap,tooltip='Select Rendering Method IDL Wrapper')
  edit=1
-     
- self.wParmsTable=widget_table(font=!defaults.font,base,xsize=4,ysize=n_elements(*self.parms),$
- y_scroll_size=0,x_scroll_size=0,value=*self.parms,COLUMN_WIDTHS =xscale*[100,100,100,400],$
+   
+ self.wParmsTable=widget_table(font=!defaults.font,base,xsize=4,ysize=n_elements((*self.info).parms),$
+ y_scroll_size=0,x_scroll_size=0,value=(*self.info).parms,COLUMN_WIDTHS =xscale*[100,100,100,400],$
  edit=edit,format=format,$
  column_labels=['Parameter','Value','Unit','Comments'],/RESIZEABLE_COLUMNS,uname='ParmsTable',$
- row_labels=row_labels,SCR_ySIZE=550*xscale)
+ row_labels=row_labels,SCR_ySIZE=300*xscale);550*xscale)
+
  geometry1=widget_info(self.wParmsTable,/geometry)
  geometry2=widget_info(self.wSelectRenderer,/geometry)
  self.wRenderer=widget_text(font=!defaults.font,wParmToolbarBase,value=self.renderer,SCR_XSIZE=geometry1.SCR_XSIZE-3*geometry2.SCR_XSIZE,/wrap)
@@ -86,7 +86,7 @@ xrange=xrange,yrange=yrange,zrange=zrange,Nx=Nx,Ny=Ny,Nz=Nz,nthreads=nthreads,_e
     self.bridges->Add,bridge
   end  
  end 
-wEBTELToolbarBase = widget_base(base, /row, /frame,/TOOLBAR,map=0)
+wEBTELToolbarBase = widget_base(base, /row, /frame,/TOOLBAR,map=1)
 self.wSelectEBTEL= widget_button( wEBTELToolbarBase, $
   value=gx_bitmap(filepath('open.bmp', subdirectory=['resource', 'bitmaps'])), $
   /bitmap,tooltip='Select Impulsive heating EBTEL Table')
@@ -97,7 +97,26 @@ self.wSelectEBTELSS= widget_button( wEbtelSSToolbarBase, $
     value=gx_bitmap(filepath('open.bmp', subdirectory=['resource', 'bitmaps'])), $
     /bitmap,tooltip='Select Steady-State heating EBTEL Table')  
 self.wEBTELSSTable=widget_text(font=!defaults.font,wEBTELSSToolbarBase,value=gx_ebtel_path(/ss),SCR_XSIZE=geometry1.SCR_XSIZE-3*geometry2.SCR_XSIZE,/wrap)
-  
+
+self.wNRbase=widget_base(base,/row)
+if widget_valid(self.wNparms) then widget_control,self.wNparms,/destroy
+if tag_exist((*self.info),'nparms') then begin
+  self.wNparms=cw_objarray(self.wNRbase,value=(*self.info).nparms.value,items=strcompress((*self.info).nparms.name,/rem),names=strcompress((*self.info).nparms.name+'; '+$
+                           (*self.info).nparms.unit+'; '+(*self.info).nparms.hint),/frame,inc=1,/static,$
+                           sensitive=(*self.info).nparms.user,/vert,/right,xtextsize=10,font=!defaults.font,type=1l)
+  widget_control,self.wNparms,set_uvalue=(*self.info).nparms.name,set_uname='renderer:nparms'
+  wDEMavg=widget_info(get_tlb(self.wNparms),find_by_uname='GXMODEL:DEMAVG')
+  if widget_valid(wDEMavg) then widget_control,wDEMAvg,get_value=DEMavg else DEMavg=0
+  wDEMavg=widget_info(self.wNparms,find_by_uname='DEMavg')
+  if widget_valid(wDEMavg) then widget_control,wDEMavg,set_value=DEMavg
+endif
+if widget_valid(self.wRparms) then widget_control,self.wRparms,/destroy
+if tag_exist((*self.info),'rparms') then begin
+  self.wRparms=cw_objarray(self.wNRbase,value=(*self.info).rparms.value,items=strcompress((*self.info).rparms.name,/rem),names=strcompress((*self.info).rparms.name+'; '+$
+                          (*self.info).rparms.unit+'; '+(*self.info).rparms.hint),/frame,inc=1,/static,$
+                          sensitive=(*self.info).rparms.user,/vert,/right,xtextsize=10,font=!defaults.font,type=0d)
+  widget_control,self.wRparms,set_uvalue=(*self.info).rparms.name,set_uname='renderer:rparms'
+endif  
   
   main_base=get_tlb(wExecBase)
   self.wScan=widget_info(main_base,find_by_uname='SCAN_START')
@@ -162,14 +181,35 @@ end
 
 
 pro gxScanBox::ReplaceParmValue,name,value
- if ptr_valid(self.parms) then begin
-   idx=where(strupcase((*self.parms).name) eq strupcase(name),count)
+ if ptr_valid(self.info) then begin
+   idx=where(strupcase(((*self.info).parms).name) eq strupcase(name),count)
    if count eq 1 then begin
-     (*self.parms)[idx].value=value
+     parms=(*self.info).parms
+     parms[idx].value=value
+     (*self.info).parms=parms
      widget_control,self.wParmsTable,get_value=parms
      parms[idx].value=value
      widget_control,self.wParmsTable,set_value=parms
-   end
+   endif else begin
+    if tag_exist(*self.info,'nparms') and widget_valid(self.wNparms) then begin
+      idx=where(strupcase(((*self.info).nparms).name) eq strupcase(name),count)
+      if count eq 1 then begin
+        nparms=(*self.info).nparms
+        nparms[idx].value=value
+        (*self.info).nparms=nparms
+        widget_control,widget_info(self.wNparms,find_by_uname=name),set_value=value
+      endif
+    end
+    if tag_exist(*self.info,'rparms') and widget_valid(self.wRparms) then begin
+      idx=where(strupcase(((*self.info).rparms).name) eq strupcase(name),count)
+      if count eq 1 then begin
+        rparms=(*self.info).rparms
+        rparms[idx].value=value
+        (*self.info).rparms=rparms
+        widget_control,widget_info(self.wRparms,find_by_uname=name),set_value=value
+      endif
+    end
+   endelse
  end
 end
 
@@ -190,10 +230,6 @@ case size(renderer,/tname) of
               self.renderer=renderer[0] 
               info=self->RendererInfo()  
               if size(info,/tname) eq 'STRUCT' then begin
-                if ptr_valid(self.parms) then begin
-                  info.parms[0].value=(*self.parms)[0].value
-                  info.parms[1].value=(*self.parms)[1].value
-                end  
                 nx=self.nx 
                 ny=self.ny 
                 xrange=self.xrange
@@ -221,17 +257,35 @@ endcase
 if size(info,/tname) eq 'STRUCT' then begin
  widget_control,self.wRenderer,set_value=self.renderer
  ptr_free,self.info
- ptr_free,self.parms
- self.parms=ptr_new(info.parms)
  self.info=ptr_new(info)
  row_labels=strarr(n_elements(info.parms))
  for i=0,n_elements(info.parms)-1 do row_labels[i]=string(i+1,format='(i3)') 
- widget_control,self.wParmsTable,set_value=*self.parms,row_labels=row_labels,table_ysize=n_elements(info.parms)
+ widget_control,self.wParmsTable,set_value=(*self.info).parms,row_labels=row_labels,table_ysize=n_elements(info.parms)
  self.pData=(self.ImgViewWid)->NewView(self.info,renderer=self.renderer,nx=nx,ny=ny,xrange=xrange,yrange=yrange,data=data,fovmap=fovmap)
+ if widget_valid(self.wNparms) then widget_control,self.wNparms,/destroy
+ if widget_valid(self.wRparms) then widget_control,self.wRparms,/destroy
+ 
+ if tag_exist((*self.info),'nparms') then begin
+   self.wNparms=cw_objarray(self.wNRbase,value=(*self.info).nparms.value,items=strcompress((*self.info).nparms.name,/rem),names=strcompress((*self.info).nparms.name+'; '+(*self.info).nparms.unit+'; '+(*self.info).nparms.hint),/frame,inc=1,/static,sensitive=(*self.info).nparms.user,/vert,/right,xtextsize=10,font=!defaults.font,type=1l)
+   widget_control,self.wNparms,set_uvalue=(*self.info).nparms.name,set_uname='renderer:nparms'
+ endif
+ 
+ if widget_valid(self.wNparms) then wDEMavg=widget_info(get_tlb(self.wNparms),find_by_uname='GXMODEL:DEMAVG')
+ if widget_valid(wDEMavg) then widget_control,wDEMAvg,get_value=DEMavg else DEMavg=0
+ if widget_valid(self.wNparms) then wDEMavg=widget_info(self.wNparms,find_by_uname='DEMavg')
+ if widget_valid(wDEMavg) then widget_control,wDEMavg,set_value=DEMavg
+ 
+
+ if tag_exist((*self.info),'rparms') then begin
+   self.wRparms=cw_objarray(self.wNRbase,value=(*self.info).rparms.value,items=strcompress((*self.info).rparms.name,/rem),names=strcompress((*self.info).rparms.name+'; '+(*self.info).rparms.unit+'; '+(*self.info).rparms.hint),/frame,inc=1,/static,sensitive=(*self.info).rparms.user,/vert,/right,xtextsize=10,font=!defaults.font,type=0d)
+   widget_control,self.wRparms,set_uvalue=(*self.info).rparms.name,set_uname='renderer:rparms'
+ endif
+ 
+ self->UpdateFields
  self->MakeGrid
  self->Slice
  self->ResetAllBridges
- widget_control,self.wSliceSelect,set_combobox_select=(where((*self.parms).name eq 'n_0'))[0],set_value=[(*self.parms).name,'B','curlB','divB+','divB-','helB+','helB-','Q0','Q','VoxelID']
+ widget_control,self.wSliceSelect,set_combobox_select=(where(((*self.info).parms).name eq 'n_0'))[0],set_value=[((*self.info).parms).name,'B','curlB','divB+','divB-','helB+','helB-','Q0','Q','VoxelID']
  endif else begin
   self.renderer=current
   answ=dialog_message(/error,'Invalid rendering method selected. Operation aborted!')
@@ -239,7 +293,7 @@ if size(info,/tname) eq 'STRUCT' then begin
 end
 
 function gxScanBox::name2idx,name
- return,where(strcompress(strupcase((*self.parms).name),/rem) eq strcompress(strupcase(name),/rem))
+ return,where(strcompress(strupcase(((*self.info).parms).name),/rem) eq strcompress(strupcase(name),/rem))
 end
 
 function gxScanBox::Rewrite, event,auto=auto
@@ -276,8 +330,8 @@ pro gxScanbox::SetRefModel,model
   model_info='SELECTED MODEL: '+model->GetName()+'['+model->GetTime()+']'
   widget_control,widget_info(widget_info(self.wScan,/parent),/parent),map=1
   hasBL=((model->GetVolume())->getflags()).hasBL
-  widget_control,widget_info(self.wEbtelTable,/parent),map=hasBL
-  widget_control,widget_info(self.wEbtelSSTable,/parent),map=hasBL
+  ;widget_control,widget_info(self.wEbtelTable,/parent),map=hasBL
+  ;widget_control,widget_info(self.wEbtelSSTable,/parent),map=hasBL
  endif else begin model_info='NO GX MODEL SELECTED!'
   widget_control,widget_info(widget_info(self.wScan,/parent),/parent),map=0
  end
@@ -406,16 +460,35 @@ pro gxScanBox::NewGrid,xrange=xrange,yrange=yrange,zrange=zrange,nx=nx,ny=ny,com
   widget_control,self.wslice,SET_SLIDER_MAX=((self.ny-1)>0)
   widget_control,self.wLOS,SET_SLIDER_MAX=((self.nx-1)>0)
   widget_control,self.wslice,set_value=index
-  widget_control,self.wParmsTable,get_value=table
-  idx=self->name2idx('dS')
+  
   dS=self.dx*self.dy*(gx_rsun()^2)
-  table[idx].value=dS
-  (*self.parms)[idx].value=dS
+  dR=self.dz*(gx_rsun()) 
+  widget_control,self.wParmsTable,get_value=table
+  parms=(*self.info).parms
+  idx=self->name2idx('dS')
+  if idx ge 0 then begin
+    table[idx].value=dS
+    parms[idx].value=dS
+  endif else begin
+    if tag_exist(*self.info,'rparms') and widget_valid(self.wRparms) then begin
+      wdS=widget_info(self.wRparms,find_by_uname='dS')
+      if widget_valid(wdS) then widget_control,wdS,set_value=dS
+      idx=gx_name2idx((*self.info).rparms,'dS')
+      if idx ge 0 then begin
+        rparms=(*self.info).rparms
+        rparms[idx].value=ds
+        (*self.info).rparms=rparms
+      endif
+    endif
+  endelse
   idx=self->name2idx('dR')
-  dR=self.dz*(gx_rsun())
-  table[idx].value=dR
-  (*self.parms)[idx].value=dR
+  if idx ge 0 then begin
+    table[idx].value=dR
+    parms[idx].value=dR
+  end
+  (*self.info).parms=parms
   widget_control,self.wParmsTable,set_value=table
+  
   self.pData=(self.ImgViewWid)->NewView(*self.info,nx=self.nx,ny=self.ny,xrange=self.xrange,yrange=self.yrange)
   self->MakeGrid
   if keyword_set(compute_grid) then begin
@@ -457,7 +530,7 @@ pro gxScanBox::MakeGrid
  empty_slice=fltarr(self.nx,self.nz)
   
  self.grid=ptr_new({grid:ptr_new(),B:dblarr(self.nx*self.nz,3),$
-   parms:dblarr(self.nx,self.nz,n_elements(*self.parms)),slice:empty_slice})    
+   parms:dblarr(self.nx,self.nz,n_elements((*self.info).parms)),slice:empty_slice})    
                
 end
 
@@ -497,8 +570,6 @@ PRO gxScanBox::Slice,row
   self->GetProperty,parent=oSun
   if ~obj_isa(osun,'gxsun') then return
   self->CleanGrid   
-  assigned=lonarr(n_elements(*self.parms))
-  
   self->DrawSlicer,column,row
   
   self.ImgViewWid->GetProperty,model=model
@@ -506,16 +577,9 @@ PRO gxScanBox::Slice,row
     goto, unassigned
   endif
  scanner=self.grid
- parms=*self.parms
- model->Slice,parms,row,scanner=scanner
+ model->Slice,(*self.info).parms,row,scanner=scanner,dS=self.dx*self.dy*(gx_rsun()^2)
  self.grid=scanner
-;  n_oculted=0
-;  ;oculted=where((slice_grid[*,0]^2+slice_grid[*,1]^2 lt 1 and slice_grid[*,2] lt 0) or (slice_grid[*,0]^2+slice_grid[*,1]^2 +slice_grid[*,2]^2 lt 1),n_oculted)
-;  ;ondisk=where((slice_grid[*,0]^2+slice_grid[*,1]^2 lt 1 and slice_grid[*,2] ge 0) and (slice_grid[*,0]^2+slice_grid[*,1]^2 +slice_grid[*,2]^2 lt 1),n_ondisk)
-;  if n_oculted gt 0 then self->CleanGrid,oculted=oculted
-;   
-unassigned:   
-  
+unassigned: 
 if ptr_valid(self.grid) then self->TV_Slice    
 END
 
@@ -545,10 +609,18 @@ pro gxScanBox::SaveLOS
 end
 
 pro gxScanbox::UpdateParmsTable, info
- widget_control,self.wParmsTable,get_value=value
- (*self.parms)=value
+ widget_control,self.wParmsTable,get_value=Parms
+ (*self.info).parms=Parms
+ if widget_valid(self.wNparms) then begin
+  widget_control,self.wNparms,get_value=nparms
+  (*self.info).nparms.value=nparms
+ endif
+ if widget_valid(self.wRparms) then begin
+  widget_control,self.wRparms,get_value=rparms
+  (*self.info).rparms.value=rparms
+ endif
  if n_elements(info) eq 0 then begin
-   (*self.info).parms=value
+   (*self.info).parms=Parms
    (*self.info)=self->RendererInfo(*self.info)
  endif else begin
    ptr_free,self.info
@@ -560,12 +632,12 @@ pro gxScanbox::UpdateParmsTable, info
  self->ResetAllBridges
 end
 
-
-
 function gxScanbox::HandleEvent,event
 subdirectory=['resource', 'bitmaps']
 case event.id of   
   self.wParmsTable: self->UpdateParmsTable 
+  self.wNParms: self->UpdateParmsTable 
+  self.wRParms: self->UpdateParmsTable 
   self.wSquareFOV: begin
                     square=widget_info(self.wSquareFOV,/button_set)
                     autoFov=widget_info(self.wAuto,/button_set)
@@ -827,6 +899,23 @@ pro gxScanBox::ReplaceEBTELtables,ss=ss
     flags=(volume->setflags(newNT=volume->NewNT()))
     volume->Update
   endif
+ if not keyword_set(ss) and widget_valid(self.wNparms) then begin
+  widget_control,self.wNparms,get_uvalue=names,get_value=nparms
+  idx=where(strupcase(strcompress(names,/rem)) eq 'N_TEMP',count)
+  if count eq 1 then begin
+    restore,gx_ebtel_path(path)
+    hasDDM=(n_elements(DDM_cor_run) gt 0)?1:0
+    nparms[idx]=n_elements(logtdem)
+    idx=where(strupcase(strcompress(names,/rem)) eq 'DDM_KEY',count)
+    if count eq 1 then begin
+      nparms[idx]=1-hasDDM
+      wDDM_key=widget_info(self.wNparms,find_by_uname='DDM_key')
+      if widget_valid(wDDM_key) then widget_control,wDDM_key,sensitive=hasDDM
+    endif
+    widget_control,self.wNparms,set_value=nparms
+    (*self.info).nparms.value=nparms
+  endif
+ endif
  endif else answ=dialog_message('This is not a valid EBTEL file, operation aborted!',/info)
 end
 
@@ -975,6 +1064,8 @@ pro gxScanBox::OnStartScan,event,debug=debug
           bridges[i]->SetVar,'t_start',t_start
           bridges[i]->SetVar,'t_end',t_start
           bridges[i]->SetVar,'parms',(*self.grid).parms
+          if tag_exist(*self.info,'nparms') then bridges[i]->SetVar,'nparms',(*self.info).nparms.value
+          if tag_exist(*self.info,'rparms') then bridges[i]->SetVar,'rparms',(*self.info).rparms.value
           bridges[i]->SetVar,'calls',1
           bridges[i]->SetVar,'row',self.row   
           bridges[i]->SetVar,'OnDebug',0
@@ -1052,6 +1143,8 @@ pro gxScanBox::OnCallback,Status, Error,bridge
           widget_control,widget_info(get_tlb(self.wBase),Find_By_Uname='STATEBASE'),get_uvalue=state
           if n_elements(state) ne 0 then state.oObjviewWid->Draw
           bridge->SetVar,'parms',(*self.grid).parms
+          if tag_exist(*self.info,'nparms') then bridge->SetVar,'nparms',(*self.info).nparms.value
+          if tag_exist(*self.info,'rparms') then bridge->SetVar,'rparms',(*self.info).rparms.value
           bridge->SetVar,'calls',calls+1
           bridge->SetVar,'row',self.row
           bridge->SetVar,'t_start',systime(/s)
@@ -1224,8 +1317,8 @@ self.wPlotLOSOptions=cw_objPlotOptions(wPlotLOSBase,uname='LOS Profile Plot Opti
 
 
  wSelect=widget_base(wRow4, /row,/toolbar)
- self.wSliceSelect= widget_combobox(wSelect, value=[(*self.parms).name,'B','curlB','divB+','divB-','helB+','helB-','Q0','Q','VoxelID'])
- widget_control,self.wSliceSelect,set_combobox_select=(where((*self.parms).name eq 'n_0'))[0]
+ self.wSliceSelect= widget_combobox(wSelect, value=[((*self.info).parms).name,'B','curlB','divB+','divB-','helB+','helB-','Q0','Q','VoxelID'])
+ widget_control,self.wSliceSelect,set_combobox_select=(where(((*self.info).parms).name eq 'n_0'))[0]
 
  self.wMinVolume=CW_objFIELD(wSelect, UNAME='MinVolume', LABEL=' Min:',$
    XTEXTSIZE=XTEXTSIZE*0.5, XLABELSIZE=XLABELSIZE,$
@@ -1364,7 +1457,7 @@ pro gxScanbox::SetDim,dim
 end  
 
 
-pro gxScanbox::UpdateFields
+pro gxScanbox::UpdateFields,_extra=_extra
   R=self->R()
 
   widget_control,self.wNx,set_value=self.nx
@@ -1379,6 +1472,44 @@ pro gxScanbox::UpdateFields
   widget_control,self.wXrange,set_value=R*delta(self.xrange)
   widget_control,self.wYrange,set_value=R*delta(self.yrange)
   widget_control,self.wl,set_value=R*(self.zrange[1]-self.zrange[0])
+  
+  dS=self.dx*self.dy*(gx_rsun()^2)
+  dR=self.dz*(gx_rsun())
+  widget_control,self.wParmsTable,get_value=table
+  parms=(*self.info).parms
+  idx=self->name2idx('dS')
+  if idx ge 0 then begin
+    table[idx].value=dS
+    parms[idx].value=dS
+  endif else begin
+    if tag_exist(*self.info,'rparms') and widget_valid(self.wRparms) then begin
+      wdS=widget_info(self.wRparms,find_by_uname='dS')
+      if widget_valid(wdS) then widget_control,wdS,set_value=dS
+      idx=gx_name2idx((*self.info).rparms,'dS')
+      if idx ge 0 then begin
+        rparms=(*self.info).rparms
+        rparms[idx].value=ds
+        (*self.info).rparms=rparms
+      endif
+    endif
+  endelse
+  idx=self->name2idx('dR')
+  if idx ge 0 then begin
+    table[idx].value=dR
+    parms[idx].value=dR
+  end
+  if tag_exist(*self.info,'nparms') and widget_valid(self.wNparms) then begin
+    wNvox=widget_info(self.wNparms,find_by_uname='N_vox')
+    if widget_valid(wNvox) then widget_control,wNvox,set_value=self.Nz
+    idx=gx_name2idx((*self.info).nparms,'N_vox')
+    if idx ge 0 then begin
+      nparms=(*self.info).nparms
+      nparms[idx].value=self.Nz
+      (*self.info).nparms=nparms
+    endif
+  endif
+  (*self.info).parms=parms
+  widget_control,self.wParmsTable,set_value=table
   
 end
 
@@ -1400,7 +1531,6 @@ pro gxScanBox::Cleanup
   compile_opt hidden
   self->OnAbortScan
   ptr_free,self.grid
-  ptr_free,self.parms
   ptr_free,self.pData
   ptr_free,self.info
   obj_destroy,self.bridges
@@ -1413,8 +1543,8 @@ Xrange:[0d,0d],Yrange:[0d,0d],Zrange:[0d,0d],Nx:0l,Ny:0l,Nz:0l,dx:0d,dy:0d,dz:0d
 wX:0l,wY:0l,wL:0l,wXrange:0L,wyrange:0L,wNx:0l,wNy:0l,wNz:0l,wTV_Slice:0l,wInfo:0l,wToolbar:0l,wHideVolume:0l,TaskManager:obj_new(),ImgViewWid:obj_new(),$
 wHideScanbox:0l,wHideSun:0l,wSlice:0l,wSliceSelect:0l,wSaveLOS:0l,wSquareFOV:0L,wdx:0l,wdy:0l,wAuto:0L,$
 ROI:obj_new(),slicer:obj_new(),wParmsTable:0l,wScan:0L,wPause:0L,wAbort:0L,wDebug:0L,wTaskTable:0L,wBridges:0l,wStatusBar:0l,$
-renderer:'',wRenderer:0l,wSelectRenderer:0l,pData:ptr_new(),grid:ptr_new(),info:ptr_new(),parms:ptr_new(),bridges:obj_new(),$
+renderer:'',wRenderer:0l,wSelectRenderer:0l,pData:ptr_new(),grid:ptr_new(),info:ptr_new(),bridges:obj_new(),$
 pause:0b,active:0b,new_view:0b,log:0l,t_start:0d,wPlotLOSOptions:0L,wLOS:0L,wPlotLOS:0L,wModelInfo:0l,profiler:obj_new(),$
 Grid2Update:0L,wGrid2Update:0L,wMinVolume:0l,wMaxVolume:0l,wPowerIndexVolume:0l,wResetVolumeScale:0l,$
-wSelectEbtel:0l,wEbtelTable:0l,wSelectEbtelSS:0l,wEbtelSSTable:0l}
+wSelectEbtel:0l,wEbtelTable:0l,wSelectEbtelSS:0l,wEbtelSSTable:0l,wNRbase:0l,wNparms:0l,wRparms:0l}
 end

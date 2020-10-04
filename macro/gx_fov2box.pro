@@ -99,6 +99,7 @@ pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km
   endif
   
   box = gx_box_create(files.field, files.inclination, files.azimuth,files.disambig, files.continuum, center_arcsec, size_pix, dx_km,_extra=_extra)
+  gx_box_add_vertical_current_map, box, files.field, files.inclination, files.azimuth, files.disambig
   box=create_struct(box,'execute',exec)
   if n_elements(files) gt 0   then begin
     if tag_exist(files,'magnetogram') then if file_test(files.magnetogram) then gx_box_add_refmap, box, files.magnetogram, id = 'Bz_reference'

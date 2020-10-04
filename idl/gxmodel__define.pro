@@ -953,7 +953,7 @@ function gxModel::MakeScanboxGrid,parms
  return,grid
 end
 
-pro gxModel::Slice,parms,row,scanner=scanner
+pro gxModel::Slice,parms,row,scanner=scanner,dS=dS
   if ~ptr_valid(scanner) then scanner=self->MakeScanboxGrid(parms)
   void=self->Box2Volume(box2vol=box2vol)
   grid=self->GetGrid()
@@ -1311,7 +1311,7 @@ pro gxModel::Slice,parms,row,scanner=scanner
     ;ez is the box z-axis versor (normal to TR) in the observer coordinate system, where LOS is the z axis
     ;So, phi is the angle betwen the TR normal and LOS, so cosphi is the z component of the ez versor
     ez=btm[*,2]
-    dz=sqrt((*self.parms)[gx_name2idx(parms,'dS')].value);pixel area
+    dz=sqrt(ds);pixel area
     r=gx_rsun(unit='cm')
     mincosphi=sin(0.5*acos(1-dz/R))
     cosphi=(abs(ez[2])>mincosphi)

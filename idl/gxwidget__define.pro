@@ -1280,7 +1280,7 @@ end
                          usetheta=widget_info(event.id,/button_set)
                          flags=(self.subject->GetVolume())->setflags(TRFACTOR=usetheta)
                          widget_control,widget_info(event.top,find_by_uname='Scanbox'),get_uvalue=scanbox
-                         scanbox->ReplaceParmValue,'USETHETA', usetheta
+                         scanbox->ReplaceParmValue,'ApplyTRfactor', usetheta
                        END                  
      'GXMODEL:SS': BEGIN
                          NTSSDEM=widget_info(event.id,/button_set)
@@ -1308,6 +1308,12 @@ end
      'GXMODEL:DEMAVG': BEGIN
                         volume=(self.subject->GetVolume())
                         flags=volume->setflags(newNT=volume->NewNT())
+                        wnparms=widget_info(event.top,FIND_BY_UNAME='renderer:nparms')
+                        if widget_valid(wnparms) then begin
+                          widget_control,event.id,get_value=value
+                          wDEMavg=widget_info(wnparms,find_by_uname='DEMavg')
+                          if widget_valid(wDEMavg) then widget_control,wDEMavg,set_value=value
+                        endif
                        END                    
      'GXMODEL:TRMASKMENU':begin
                             self.subject->ReplaceTRMask,event

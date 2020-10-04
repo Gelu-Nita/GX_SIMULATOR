@@ -41,7 +41,7 @@ pro aia,parms,rowdata,path=path,logtdem=logtdem,dem_run=dem_run,qrun=qrun,lrun=l
                     y:{label:'I',unit:'counts/s/pix'}},rgb:rgb} 
      return
  end
-   
+
    sz=size(rowdata,/dim)
    Npix=sz[0]
    Nchan=sz[1]
@@ -64,7 +64,7 @@ pro aia,parms,rowdata,path=path,logtdem=logtdem,dem_run=dem_run,qrun=qrun,lrun=l
      ;if tr_idx ge 0 then print,'1:',tr_idx,minmax(point_in)
      if Nvox gt 0 then begin
         parmin=rparms[*,point_in]
-        norm=parmin[0,*]*parmin[1,*]/((4.5e7)^2)
+        norm=parmin[1,*]*norm_tr;parmin[0,*]/((4.5e7)^2)
        if useDEM eq 1 then begin
          dem_interpolate,n,t,dem,path=path,logtdem=logtdem,dem_run=dem_run,qrun=qrun,lrun=lrun,qarr=parmin[4,*],larr=parmin[5,*],ss=parmin[11,0],avgdem=parmin[14,0]
          tr_factor=1

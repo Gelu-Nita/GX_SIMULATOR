@@ -1,21 +1,22 @@
-pro dem_interpolate,n,t,dem,ddm,path=path,logtdem=logtdem,dem_run=dem_run,ddm_run=ddm_run,qrun=qrun,lrun=lrun,qarr=qarr,larr=larr,tr=tr,ss=ss,avgdem=avgdem,duration=duration,method=method,info=info,expert=expert
+pro dem_interpolate,n,t,dem,ddm,path=path,logtdem=logtdem,dem_run=dem_run,ddm_run=ddm_run,qrun=qrun,lrun=lrun,qarr=qarr,$
+                    larr=larr,tr=tr,avgdem=avgdem,ss=ss,duration=duration,method=method,info=info,expert=expert,$
+                    use_dem=use_dem,has_ddm=has_ddm
   if keyword_set(info) then goto,getinfo
   if n_elements(logtdem) eq 0 or n_elements(dem_run) eq 0 or n_elements(qrun) eq 0 or n_elements(lrun) eq 0 then begin
     if n_elements(path) eq 0 then path=gx_ebtel_path(ss=ss)
     restore,path,/verb
     has_ddm=(n_elements(ddm_cor_run) eq n_elements(dem_cor_run)) and (n_elements(ddm_cor_run) eq n_elements(dem_cor_run))
-    has_ddm=0b
+    use_ddm=keyword_set(has_ddm) and ~keyword_set(use_dem)
     if keyword_set(tr) then begin
       dem_run=dem_tr_run 
-      if has_ddm then ddm_run=ddm_tr_run
+      if use_ddm then ddm_run=ddm_tr_run
     endif else begin
       dem_run=dem_cor_run
-      if has_ddm then ddm_run=ddm_cor_run
+      if use_ddm then ddm_run=ddm_cor_run
     endelse
   end  
   if n_elements(larr) eq 0 then larr=0
   if n_elements(qarr) eq 0 then qarr=0
-  
   t0=systime(/s)
   sz=size(qrun)
   x=reform(lrun[0,*])
@@ -27,8 +28,9 @@ pro dem_interpolate,n,t,dem,ddm,path=path,logtdem=logtdem,dem_run=dem_run,ddm_ru
   ones=replicate(1,ntdem)
   n=fltarr(n_elements(larr))
   T=fltarr(n_elements(larr))
+  use_ddm=keyword_set(has_ddm) and ~keyword_set(use_dem)
   if arg_present(dem) then dem=fltarr(n_elements(logtdem), n_elements(larr)) 
-  if arg_present(ddm) and has_ddm then ddm=fltarr(n_elements(logtdem), n_elements(larr)) 
+  if arg_present(ddm) and keyword_set(use_ddm)then ddm=fltarr(n_elements(logtdem), n_elements(larr)) 
   getinfo:
   default,avgdem,0
   case avgdem of
@@ -63,21 +65,21 @@ pro dem_interpolate,n,t,dem,ddm,path=path,logtdem=logtdem,dem_run=dem_run,ddm_ru
         if dx1 lt dx2 then begin
           if dy1 lt dy2 then begin
             dem_k=dem_run[*,j1,i1]
-            if has_ddm then ddm_k=ddm_run[*,j1,i1]
+            if use_ddm then ddm_k=ddm_run[*,j1,i1]
           endif else begin
             dem_k=dem_run[*,j1+1,i1]
-            if has_ddm then ddm_k=ddm_run[*,j1+1,i1]
+            if use_ddm then ddm_k=ddm_run[*,j1+1,i1]
           endelse
         endif else begin
           if dy3 lt dy4 then begin
             dem_k=dem_run[*,j3,i1+1]
-            if has_ddm then ddm_k=ddm_run[*,j3,i1+1]
+            if use_ddm then ddm_k=ddm_run[*,j3,i1+1]
           endif else begin
             dem_k=dem_run[*,j3+1,i1+1]
-            if has_ddm then ddm_k=ddm_run[*,j3+1,i1+1]
+            if use_ddm then ddm_k=ddm_run[*,j3+1,i1+1]
           endelse
         endelse
-        if has_ddm then begin
+        if use_ddm then begin
           N[k]=alog(10.)*dlogt*total(ddm_k*tdem,/double)
           T[k]=total(ddm_k*sqrtdem,/double)/total(ddm_k*tdem,/double)
         endif else begin
@@ -85,7 +87,7 @@ pro dem_interpolate,n,t,dem,ddm,path=path,logtdem=logtdem,dem_run=dem_run,ddm_ru
           T[k]=total(dem_k*sqrtdem,/double)/total(dem_k*tdem,/double)
         endelse
         if arg_present(dem) then dem[*,k]=dem_k
-        if arg_present(ddm) and has_ddm then ddm[*,k]=ddm_k
+        if arg_present(ddm) and use_ddm then ddm[*,k]=ddm_k
         skip1:
       endfor
     end 
@@ -111,16 +113,16 @@ pro dem_interpolate,n,t,dem,ddm,path=path,logtdem=logtdem,dem_run=dem_run,ddm_ru
         ;          a4=dem_run[*,j3+1,i1+1]
 
         dem_k=(dem_run[*,j1,i1]+dem_run[*,j1+1,i1]+dem_run[*,j3,i1+1]+dem_run[*,j3+1,i1+1])/4
-        if has_ddm then begin 
+        if use_ddm then begin 
           ddm_k=(ddm_run[*,j1,i1]+ddm_run[*,j1+1,i1]+ddm_run[*,j3,i1+1]+ddm_run[*,j3+1,i1+1])/4
-          ;N[k]=?
-          ;T[k]=?
+          N[k]=alog(10.)*dlogt*total(ddm_k*tdem,/double)
+          T[k]=total(ddm_k*sqrtdem,/double)/total(ddm_k*tdem,/double)
         endif else begin  
           N[k]=sqrt(alog(10.)*dlogt*total(dem_k*tdem,/double))
           T[k]=total(dem_k*sqrtdem,/double)/total(dem_k*tdem,/double)
         end
         if arg_present(dem) then dem[*,k]=dem_k
-        if arg_present(ddm) and has_ddm then ddm[*,k]=ddm_k
+        if arg_present(ddm) and use_ddm then ddm[*,k]=ddm_k
         skip2:
       endfor
     end
@@ -144,7 +146,7 @@ pro dem_interpolate,n,t,dem,ddm,path=path,logtdem=logtdem,dem_run=dem_run,ddm_ru
             a2=dem_run[*,jloc1+1,iloc[k]]
             a3=dem_run[*,jloc2,iloc[k]+1]
             a4=dem_run[*,jloc2+1,iloc[k]+1]
-            if has_ddm then begin
+            if use_ddm then begin
               ddm_i=ddm_run[*,jloc1,iloc[k]]
               b2=ddm_run[*,jloc1+1,iloc[k]]
               b3=ddm_run[*,jloc2,iloc[k]+1]
@@ -174,22 +176,23 @@ pro dem_interpolate,n,t,dem,ddm,path=path,logtdem=logtdem,dem_run=dem_run,ddm_ru
             w4=(c2*dy3)
             for c=0,count-1 do begin
               dem_i[*,c]=dem_i[*,c]*w1[c]+a2[*,c]*w2[c]+a3[*,c]*w3[c]+a4[*,c]*w4[c]
-              if has_ddm then ddm_i[*,c]=ddm_i[*,c]*w1[c]+b2[*,c]*w2[c]+b3[*,c]*w3[c]+b4[*,c]*w4[c]
+              if use_ddm then ddm_i[*,c]=ddm_i[*,c]*w1[c]+b2[*,c]*w2[c]+b3[*,c]*w3[c]+b4[*,c]*w4[c]
             endfor
             if count eq 1 then begin
               dem_i=reform(dem_i,ntdem,count)
-              if has_ddm then ddm_i=reform(ddm_i,ntdem,count)
+              if use_ddm then ddm_i=reform(ddm_i,ntdem,count)
             endif
-            if has_ddm then begin
-              ;N[i]=
-              ;T[i]=
+            if use_ddm then begin
+              narr=(ddm_i##tdem)
+              N[i]=alog(10.)*dlogt*narr
+              T[i]=ddm_i##sqrtdem/narr
             endif else begin
               n2arr=(dem_i##tdem)
               N[i]=sqrt(alog(10.)*dlogt*n2arr)
               T[i]=dem_i##sqrtdem/n2arr
             end
             if arg_present(dem) then dem[*,i]=dem_i
-            if arg_present(ddm) and has_ddm then ddm[*,i]=ddm_i
+            if arg_present(ddm) and use_ddm then ddm[*,i]=ddm_i
           endif
         endif
       endfor
@@ -208,16 +211,16 @@ pro dem_interpolate,n,t,dem,ddm,path=path,logtdem=logtdem,dem_run=dem_run,ddm_ru
         j1=VALUE_LOCATE(qrun[*,i1], q)
         if j1 eq ymm[0] or j1 eq ymm[1] then goto,skip4
         dem_k=dem_run[*,j1,i1]
-        if has_ddm then begin
+        if use_ddm then begin
           ddm_k=ddm_run[*,j1,i1]
-          ;N[k]=
-          ;T[k]=
+          N[k]=alog(10.)*dlogt*total(ddm_k*tdem,/double)
+          T[k]=total(ddm_k*sqrtdem,/double)/total(ddm_k*tdem,/double)
         endif else begin
           N[k]=sqrt(alog(10.)*dlogt*total(dem_k*tdem,/double))
           T[k]=total(dem_k*sqrtdem,/double)/total(dem_k*tdem,/double)
         end
         if arg_present(dem) then dem[*,k]=dem_k
-        if arg_present(ddm) and has_ddm then ddm[*,k]=ddm_k
+        if arg_present(ddm) and use_ddm then ddm[*,k]=ddm_k
         skip4:
       endfor
     end
@@ -246,15 +249,16 @@ pro dem_interpolate,n,t,dem,ddm,path=path,logtdem=logtdem,dem_run=dem_run,ddm_ru
               dem_i=(dem_i+a2+a3+a4)/4
               if count eq 1 then dem_i=reform(dem_i,ntdem,count)
               
-              if has_ddm then begin
+              if use_ddm then begin
                 ddm_i=ddm_run[*,jloc1,iloc[k]]
                 b2=ddm_run[*,jloc1+1,iloc[k]]
                 b3=ddm_run[*,jloc2,iloc[k]+1]
                 b4=ddm_run[*,jloc2+1,iloc[k]+1]
                 ddm_i=(ddm_i+b2+b3+b4)/4
                 if count eq 1 then ddm_i=reform(ddm_i,ntdem,count)
-                ;N[i]=
-                ;T[i]=
+                narr=(ddm_i##tdem)
+                N[i]=alog(10.)*dlogt*narr
+                T[i]=ddm_i##sqrtdem/narr
               endif else begin
                 n2arr=(dem_i##tdem)
                 N[i]=sqrt(alog(10.)*dlogt*n2arr)
@@ -262,7 +266,7 @@ pro dem_interpolate,n,t,dem,ddm,path=path,logtdem=logtdem,dem_run=dem_run,ddm_ru
               endelse
               
               if arg_present(dem) then dem[*,i]=dem_i
-              if arg_present(ddm) and has_ddm then ddm[*,i]=ddm_i
+              if arg_present(ddm) and use_ddm then ddm[*,i]=ddm_i
             endif
           endif
          endfor   
@@ -298,7 +302,7 @@ pro dem_interpolate,n,t,dem,ddm,path=path,logtdem=logtdem,dem_run=dem_run,ddm_ru
           a34=(a3*dy4+a4*dy3)/(dy3+dy4)
           dem_k=(a12*dx3+a34*dx1)/(dx1+dx3)
           
-          if has_ddm then begin
+          if use_ddm then begin
             b1=ddm_run[*,j1,i1]
             b2=ddm_run[*,j1+1,i1]
             b3=ddm_run[*,j3,i1+1]
@@ -312,14 +316,14 @@ pro dem_interpolate,n,t,dem,ddm,path=path,logtdem=logtdem,dem_run=dem_run,ddm_ru
             b12=(b1*dy2+b2*dy1)/(dy1+dy2)
             b34=(b3*dy4+b4*dy3)/(dy3+dy4)
             ddm_k=(b12*dx3+b34*dx1)/(dx1+dx3)
-            ;N[k]=?
-            ;T[k]=?
+            N[k]=alog(10.)*dlogt*total(ddm_k*tdem,/double)
+            T[k]=total(ddm_k*sqrtdem,/double)/total(ddm_k*tdem,/double)
           endif else begin
             N[k]=sqrt(alog(10.)*dlogt*total(dem_k*tdem,/double))
             T[k]=total(dem_k*sqrtdem,/double)/total(dem_k*tdem,/double)
           endelse
           if arg_present(dem) then dem[*,k]=dem_k
-          if arg_present(ddm) and has_ddm then ddm[*,k]=ddm_k
+          if arg_present(ddm) and use_ddm then ddm[*,k]=ddm_k
           skip3:
         endfor
       end
@@ -337,21 +341,22 @@ pro dem_interpolate,n,t,dem,ddm,path=path,logtdem=logtdem,dem_run=dem_run,ddm_ru
               i=i[good]
               jloc=jloc[good]
               dem_i=dem_run[*,jloc,iloc[k]]
-              if has_ddm then ddm_i=ddm_run[*,jloc,iloc[k]]
+              if use_ddm then ddm_i=ddm_run[*,jloc,iloc[k]]
               if count eq 1 then begin 
                 dem_i=reform(dem_i,ntdem,count)
-                if has_ddm then ddm_i=reform(ddm_i,ntdem,count)
+                if use_ddm then ddm_i=reform(ddm_i,ntdem,count)
               end 
-              if has_ddm then begin
-                ;N[i]=
-                ;T[i]=
+              if use_ddm then begin
+                narr=(ddm_i##tdem)
+                N[i]=alog(10.)*dlogt*narr
+                T[i]=ddm_i##sqrtdem/narr
               endif else begin
                 n2arr=(dem_i##tdem)
                 N[i]=sqrt(alog(10.)*dlogt*n2arr)
                 T[i]=dem_i##sqrtdem/n2arr
               endelse
               if arg_present(dem) then dem[*,i]=dem_i
-              if arg_present(ddm) and has_ddm then ddm[*,i]=ddm_i
+              if arg_present(ddm) and use_ddm then ddm[*,i]=ddm_i
             endif
           endif
         endfor
