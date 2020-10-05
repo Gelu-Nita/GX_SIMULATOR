@@ -1277,10 +1277,10 @@ end
                          flags=(self.subject->GetVolume())->setflags(TRMASK=trmask,/NEWID)
                        END                  
      'GXMODEL:TRFACTOR': BEGIN
-                         usetheta=widget_info(event.id,/button_set)
-                         flags=(self.subject->GetVolume())->setflags(TRFACTOR=usetheta)
+                         ApplyTRfactor=widget_info(event.id,/button_set)
+                         flags=(self.subject->GetVolume())->setflags(TRFACTOR=ApplyTRfactor)
                          widget_control,widget_info(event.top,find_by_uname='Scanbox'),get_uvalue=scanbox
-                         scanbox->ReplaceParmValue,'ApplyTRfactor', usetheta
+                         scanbox->ReplaceParmValue,'ApplyTRfactor', ApplyTRfactor
                        END                  
      'GXMODEL:SS': BEGIN
                          NTSSDEM=widget_info(event.id,/button_set)
@@ -1289,6 +1289,13 @@ end
                          volume=(self.subject->GetVolume())
                          flags=volume->Setflags(NTSSDEM=NTSSDEM) 
                          flags=volume->setflags(newNT=volume->NewNT())
+                         if flags.NTSSDEM then begin
+                          widget_control,event.id,set_uvalue=gx_ebtel_path()
+                          scanbox->ReplaceEBTELtables,path=gx_ebtel_path(/ss)
+                         endif else begin
+                          widget_control,event.id,get_uvalue=path
+                          scanbox->ReplaceEBTELtables,path=path
+                         endelse
                          volume->PlotModelAttributes
                        END                  
      'GXMODEL:USEDEM': BEGIN

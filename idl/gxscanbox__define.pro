@@ -89,14 +89,14 @@ xrange=xrange,yrange=yrange,zrange=zrange,Nx=Nx,Ny=Ny,Nz=Nz,nthreads=nthreads,_e
 wEBTELToolbarBase = widget_base(base, /row, /frame,/TOOLBAR,map=1)
 self.wSelectEBTEL= widget_button( wEBTELToolbarBase, $
   value=gx_bitmap(filepath('open.bmp', subdirectory=['resource', 'bitmaps'])), $
-  /bitmap,tooltip='Select Impulsive heating EBTEL Table')
+  /bitmap,tooltip='Select EBTEL Table')
 self.wEBTELTable=widget_text(font=!defaults.font,wEBTELToolbarBase,value=gx_ebtel_path(),SCR_XSIZE=geometry1.SCR_XSIZE-3*geometry2.SCR_XSIZE,/wrap)
   
 wEBTELSSToolbarBase = widget_base(base, /row, /frame,/TOOLBAR,map=0)  
 self.wSelectEBTELSS= widget_button( wEbtelSSToolbarBase, $
     value=gx_bitmap(filepath('open.bmp', subdirectory=['resource', 'bitmaps'])), $
     /bitmap,tooltip='Select Steady-State heating EBTEL Table')  
-self.wEBTELSSTable=widget_text(font=!defaults.font,wEBTELSSToolbarBase,value=gx_ebtel_path(/ss),SCR_XSIZE=geometry1.SCR_XSIZE-3*geometry2.SCR_XSIZE,/wrap)
+self.wEBTELSSTable=widget_text(font=!defaults.font,wEBTELSSToolbarBase,value=gx_ebtel_path(/ss),uvalue=gx_ebtel_path(),SCR_XSIZE=geometry1.SCR_XSIZE-3*geometry2.SCR_XSIZE,/wrap)
 
 self.wNRbase=widget_base(base,/row)
 if widget_valid(self.wNparms) then widget_control,self.wNparms,/destroy
@@ -879,14 +879,14 @@ case event.id of
 return, self->Rewrite(event,auto=auto)
 END
 
-pro gxScanBox::ReplaceEBTELtables,ss=ss
+pro gxScanBox::ReplaceEBTELtables,path=path,ss=ss
  if self.active then begin
   answ=dialog_message('There is an active scan in progress.'+string(10b)+$
     'Any unsaved results will be lost!'+string(10b)+$
     'Do you want to continue anyway?',/question)
   if strupcase(answ) eq 'NO' then return
  end
- path=dialog_pickfile(path=gx_findfile(filename,folder='userslib'+path_sep()+'aia'+path_sep()+'ebtel'),default='.sav')
+ path=gx_ebtel_valid_path(path)?path:dialog_pickfile(path=gx_findfile(filename,folder='userslib'+path_sep()+'aia'+path_sep()+'ebtel'),default='.sav')
  if gx_ebtel_valid_path(path) then begin
   widget_control,keyword_set(ss)?self.wEbtelSSTable:self.wEbtelTable,set_value=gx_ebtel_path(path,ss=ss)
   bridges=self.bridges->Get(/all,count=count)
