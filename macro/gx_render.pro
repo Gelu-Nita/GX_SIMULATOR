@@ -1,5 +1,5 @@
 ;this is general purpose macro that may be used to compute radiation transfer images programatically
-function gx_render,model,renderer,_extra=_extra
+function gx_render,model,renderer,logfile=logfile,_extra=_extra
   t0=systime(/s)
   if ~isa(model) then begin
     message,'None or nvalid model provided! Operation aborted!',/cont
@@ -36,11 +36,21 @@ function gx_render,model,renderer,_extra=_extra
   for row=0, ny-1 do begin
     print,strcompress(string(row+1,ny,format="('computing image row ', i5,' out of', i5)"))
     rowdata[*]=0
+    if ptr_valid(scanner) then for k=1,n_tags(*scanner)-1 do (*scanner).(k)[*]=0 
     model->Slice,info.parms,row,scanner=scanner
     parms=(*scanner).parms
     result=execute(info.execute)
     data[*,row,*,*,*]=rowdata
+    if size(logfile,/tname) eq 'STRING' then begin
+      if row eq 0 then begin
+       MULTI_SAVE,/new,log,{row:-1L,parms:parms,$
+        data:data[*,row,*,*,*],grid:transpose(reform((*(*scanner).grid)[*,*,0,*]),[1,2,0])},file=logfile, $
+        header={renderer:renderer ,info:info,fovmap:fovmap,nx:nx,ny:ny,xrange:fovmap->get(/xrange),yrange:fovmap->get(/yrange)}
+      endif
+      MULTI_SAVE,log,{row:long(row),parms:parms,data:data[*,row,*,*,*],grid:transpose(reform((*(*scanner).grid)[*,*,row,*]),[1,2,0])},file=logfile, header=info
+    endif
   endfor
+  if size(logfile,/tname) eq 'STRING' then close,log
   model->getproperty,xcoord_conv=dx,ycoord_conv=dy
   dx=dx[1]
   dy=dy[1]

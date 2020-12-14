@@ -250,9 +250,23 @@ case size(renderer,/tname) of
                  xrange=fovmap->Get(/xrange)/rsun
                  yrange=fovmap->Get(/yrange)/rsun
                  info=renderer.info
+                 self.nx=nx
+                 self.ny=ny
+                 self.xrange=xrange
+                 self.yrange=yrange
+                 
+                 self.ImgViewWid->GetProperty,model=model
+                 if isa(model,'gxmodel') then begin
+                   xc=renderer.fovmap->get(/xc)
+                   yc=renderer.fovmap->get(/yc)
+                   xfov=delta(get_map_xrange(renderer.fovmap->get(/map),/edge))
+                   yfov=delta(get_map_yrange(renderer.fovmap->get(/map),/edge))
+                   fovdata=model->SetFOV(xc=xc,yc=yc,xfov=xfov, yfov=yfov)
+                 endif
                end       
     else:return        
 endcase
+
 
 if size(info,/tname) eq 'STRUCT' then begin
  widget_control,self.wRenderer,set_value=self.renderer
@@ -1342,6 +1356,7 @@ self.wPlotLOSOptions=cw_objPlotOptions(wPlotLOSBase,uname='LOS Profile Plot Opti
    VALUE=1.11,Sensitive=1,frame=frame)
  widget_control, self.wPowerIndexVolume, set_value=1 
  
+ self.wFixVolumeScale=cw_bgroup(wSelect,/nonexclusive,'Fix Scale',/frame)
 
  wButtonBase=widget_base( wrow4,/row,/nonexclusive,Event_FUNC='gxScanboxHandleEvent',uvalue=self,/toolbar)
  self.wResetVolumeScale=widget_button(wButtonBase, $
@@ -1545,6 +1560,6 @@ wHideScanbox:0l,wHideSun:0l,wSlice:0l,wSliceSelect:0l,wSaveLOS:0l,wSquareFOV:0L,
 ROI:obj_new(),slicer:obj_new(),wParmsTable:0l,wScan:0L,wPause:0L,wAbort:0L,wDebug:0L,wTaskTable:0L,wBridges:0l,wStatusBar:0l,$
 renderer:'',wRenderer:0l,wSelectRenderer:0l,pData:ptr_new(),grid:ptr_new(),info:ptr_new(),bridges:obj_new(),$
 pause:0b,active:0b,new_view:0b,log:0l,t_start:0d,wPlotLOSOptions:0L,wLOS:0L,wPlotLOS:0L,wModelInfo:0l,profiler:obj_new(),$
-Grid2Update:0L,wGrid2Update:0L,wMinVolume:0l,wMaxVolume:0l,wPowerIndexVolume:0l,wResetVolumeScale:0l,$
+Grid2Update:0L,wGrid2Update:0L,wMinVolume:0l,wMaxVolume:0l,wPowerIndexVolume:0l,wFixVolumeScale:0l,wResetVolumeScale:0l,$
 wSelectEbtel:0l,wEbtelTable:0l,wSelectEbtelSS:0l,wEbtelSSTable:0l,wNRbase:0l,wNparms:0l,wRparms:0l}
 end

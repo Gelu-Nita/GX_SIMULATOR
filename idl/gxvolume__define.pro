@@ -952,10 +952,18 @@ pro gxVolume::ComputeNT,question=question,quiet=quiet,force=force,NTDEM=NTDEM,NT
         id=widget_info(wparent,find_by_uname='GXMODEL:DEMAVG')
         if widget_valid(id) then widget_control,id,get_value=avgdem
       end
-      dem_interpolate,n,t,Qarr=Q,Larr=L,ss=self.flags.NTSSDEM,avgdem=avgdem,duration=duration
+      if widget_valid(wparent) then begin
+        id=widget_info(wparent,find_by_uname='GXMODEL:DEM/DDM')
+        if widget_valid(id) then begin
+          widget_control,id,get_value=useDDM
+          use_dem=~keyword_set(useDDM)
+        endif
+      end
+      dem_interpolate,n,t,Qarr=Q,Larr=L,ss=self.flags.NTSSDEM,avgdem=avgdem,duration=duration,use_dem=use_dem,has_used_ddm=has_used_ddm
       if widget_valid(wparent) then begin
         id=widget_info(wparent,find_by_uname='GXMODEL:DEMDT')
-        if widget_valid(id) then widget_control,id,set_value=strcompress(string(duration,format="('DEM interpolation computed in',f7.2,' s')"))
+        method=keyword_set(has_used_ddm)?'DDM':'DEM'
+        if widget_valid(id) then widget_control,id,set_value=strcompress(string(method,duration,format="(a4,' interpolation computed in',f7.2,' s')"))
       end
       self->SetVertexAttributeData,'n',n
       self->SetVertexAttributeData,'T',t

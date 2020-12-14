@@ -305,7 +305,7 @@ pro gx_simulator_event,event
 end
 
 
-pro gx_simulator,nthreads_or_model,expert=expert,_extra=_extra
+pro gx_simulator,nthreads_or_model,main_base=main_base,expert=expert,_extra=_extra
 if isa(nthreads_or_model,/number) then nthreads=nthreads_or_model
 if isa(nthreads_or_model,'gxmodel') then model=nthreads_or_model
 setenv, 'WCS_RSUN=6.96d8'

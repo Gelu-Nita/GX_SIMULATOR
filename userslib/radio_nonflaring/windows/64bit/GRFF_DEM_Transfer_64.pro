@@ -51,6 +51,7 @@ info=info
       
       ;Start adding integer input parameters need by the wrapper
       nparms=[nparms, {name:' DEMavg',value:0,unit:'',user:0,hint:'DEM Interpolation Method'}]
+      nparms=[nparms, {name:' Recompute n&T',value:0,unit:'',user:1,hint:'Recompute DEM moments'}]
       ;End adding integer input parameters need by the wrapper
       openr,lun,'Real_input.txt',/get,error=error
       line=''
@@ -88,7 +89,7 @@ info=info
     dummy_datain=dblarr(7,nfreq)
     dem_arr= dem_cor_run[*,0,0]
     ddm_arr=n_elements(ddm_cor_run) gt 0?ddm_cor_run[*,0,0]:dem_arr
-    ndat=long((nparms.value)[0:n_elements(nparms.value)-2])
+    ndat=long((nparms.value)[0:n_elements(nparms.value)-3])
     rdat=double(rparms.value)
     test_call=call_external(path, 'GET_MW', ndat, rdat,dummy_parmin, logtdem, dem_arr, DDM_arr, dummy_datain, /unload)
    
@@ -122,8 +123,11 @@ info=info
          DEMvox=where((n gt 0 and t gt 0),nDemvox,comp=noDEMvox,ncomp=nNoDEMvox)
          if ~keyword_set(has_ddm) then ddm=dem*0
          if nDemVox gt 0 then begin
-          ;parmin[1,DEMvox]=t[DEMvox]
-          ;parmin[2,DEMvox]=n[DEMvox]
+          if nparms[6] gt 0 then begin
+            ;Replace n&T computed from volume interpolated DEM/DDM with LOS-interpolated DEM/DDM moments
+            parmin[1,DEMvox]=t[DEMvox]
+            parmin[2,DEMvox]=n[DEMvox]
+          end
           parmin[11,DEMvox]=0
           parmin[12,DEMvox]=0
          end

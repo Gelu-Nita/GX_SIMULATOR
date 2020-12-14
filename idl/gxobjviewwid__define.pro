@@ -471,6 +471,7 @@ end
 pro gxObjViewWid::GetProperty,wExtraToolbarBase=wExtraToolbarBase,_extra=_extra
  wExtraToolbarBase=self.wExtraToolbarBase
 end
+
 ;--------------------------------------------------------------------
 pro gxObjViewWid::OnMovie
                   oCurrent = self.oViewgroup->Get(/current)
@@ -493,7 +494,7 @@ pro gxObjViewWid::OnMovie
                     self.oWindow->SetProperty, units=orig_units
                     oBuff = obj_new('IDLgrBuffer', dimensions=dimensions)
                     if float(!version.release) ge 8.1 then begin
-                      oVid = gxVideo(dimensions,stream=stream,fps=9,filename=filename)
+                      oVid = gxVideo(dimensions,stream=stream,fps=fps,filename=filename)
                     endif else begin
                       desc = [ $
                         '0, LABEL, Movie Output Options, CENTER', $
@@ -511,9 +512,6 @@ pro gxObjViewWid::OnMovie
                         title='Please choose a filename to save this video')
                       oVid= OBJ_NEW('IDLgrMPEG',frame_rate=2)
                     endelse
-;                    if ~obj_valid(oVid) then begin
-;                      return
-;                    endif
                     parm_list=['T_0','n_0','n_b']
                     vol=strcompress('None',/rem)
                     for i=0, n_elements(parm_list)-1 do vol=vol+'|'+strcompress(parm_list[i],/rem)
@@ -559,9 +557,13 @@ pro gxObjViewWid::OnMovie
                       if obj_isa(oVid,'IDLgrMPEG') then begin
                         for l=0, 2 do image_data[l,*,*]=rotate(reform(image_data[l,*,*]),7)
                         for j=1, 24/opt.fps do oVid->Put, image_data
-                      endif else if obj_valid(oVid) then result=oVid->Put(stream,image_data)
+                      endif else begin
+                        if obj_valid(oVid) then begin
+                          for j=1, (fps/8.)>1 do result=oVid->Put(stream,image_data)
+                        endif
+                      endelse
                       ;if i eq 2 then write_png,parm_list[k]+'.png',image_data
-                      wait,0.05
+                      wait,0.005
                       model->Rotate,ez,10
                     end
                   end  
@@ -571,6 +573,21 @@ pro gxObjViewWid::OnMovie
                   obj_destroy, oVid
                   self->Draw
                 end
+                
+pro gxObjViewWid::WritePNG,pngfile
+      default,pngfile,'gxsnapshot.png'
+      self->Draw
+      self.oWindow->GetProperty, units=orig_units
+      self.oWindow->SetProperty, units=0
+      self.oWindow->GetProperty, dimensions=dimensions
+      self.oWindow->SetProperty, units=orig_units
+      oBuff = obj_new('IDLgrBuffer', dimensions=dimensions)
+      oBuff->Draw, self.oViewgroup
+      oBuff->GetProperty, image_data=image_data
+      write_png,pngfile,image_data
+      obj_destroy, oBuff
+    end
+                
 pro gxObjViewWid__define
  struct_hide,{gxObjViewWid, inherits IDLexObjViewWid, $
  wExtraToolbarBase:0l, $

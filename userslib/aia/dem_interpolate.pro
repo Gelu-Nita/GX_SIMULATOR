@@ -1,10 +1,10 @@
 pro dem_interpolate,n,t,dem,ddm,path=path,logtdem=logtdem,dem_run=dem_run,ddm_run=ddm_run,qrun=qrun,lrun=lrun,qarr=qarr,$
                     larr=larr,tr=tr,avgdem=avgdem,ss=ss,duration=duration,method=method,info=info,expert=expert,$
-                    use_dem=use_dem,has_ddm=has_ddm
+                    use_dem=use_dem,has_ddm=has_ddm,has_used_ddm=has_used_ddm
   if keyword_set(info) then goto,getinfo
   if n_elements(logtdem) eq 0 or n_elements(dem_run) eq 0 or n_elements(qrun) eq 0 or n_elements(lrun) eq 0 then begin
     if n_elements(path) eq 0 then path=gx_ebtel_path(ss=ss)
-    restore,path,/verb
+    restore,path
     has_ddm=(n_elements(ddm_cor_run) eq n_elements(dem_cor_run)) and (n_elements(ddm_cor_run) eq n_elements(dem_cor_run))
     use_ddm=keyword_set(has_ddm) and ~keyword_set(use_dem)
     if keyword_set(tr) then begin
@@ -28,7 +28,7 @@ pro dem_interpolate,n,t,dem,ddm,path=path,logtdem=logtdem,dem_run=dem_run,ddm_ru
   ones=replicate(1,ntdem)
   n=fltarr(n_elements(larr))
   T=fltarr(n_elements(larr))
-  use_ddm=keyword_set(has_ddm) and ~keyword_set(use_dem)
+  use_ddm=(has_used_ddm=keyword_set(has_ddm) and ~keyword_set(use_dem))
   if arg_present(dem) then dem=fltarr(n_elements(logtdem), n_elements(larr)) 
   if arg_present(ddm) and keyword_set(use_ddm)then ddm=fltarr(n_elements(logtdem), n_elements(larr)) 
   getinfo:

@@ -82,11 +82,11 @@ pro gxWidget::CreatePanel,_extra=_extra
    
    wLINESFROMSEEDS= widget_button(font=font, wExecBase, $
      value=gx_bitmap(filepath('roi.bmp', subdirectory=subdirectory)), $
-     /bitmap,tooltip='Create fieldlines at seeded locations',uname=prefix+'LINESFROMSEEDS')
+     /bitmap,tooltip='Create field lines at seeded locations',uname=prefix+'LINESFROMSEEDS')
    
    wImportSeeds= widget_button(font=font, wExecBase, $
      value=gx_bitmap(filepath('freehand.bmp', subdirectory=subdirectory)), $
-     /bitmap,tooltip='Import fieldlines seeds',uname=prefix+'ImportSeeds')
+     /bitmap,tooltip='Import field lines seeds',uname=prefix+'ImportSeeds')
    
    wImportLOSMap= widget_button(font=font, wExecBase, $
               value=gx_bitmap(filepath('surface.bmp', subdirectory=subdirectory)), $
@@ -361,7 +361,15 @@ pro gxWidget::CreatePanel,_extra=_extra
       buttons=n_elements(buttons) eq 0?method:[buttons,method]
     endfor
    endelse
-   wLabel=widget_label(wOptionBase,value='DEM Interpolation Method',font=font)
+   wLabel=widget_label(wOptionBase,value='DEM/DDM Interpolation Method',font=font)
+   if keyword_set(expert) then begin
+     restore,gx_ebtel_path(ss=flags.NTSSDEM)
+     has_ddm=(n_elements(ddm_cor_run) eq n_elements(dem_cor_run)) and (n_elements(ddm_cor_run) eq n_elements(dem_cor_run))
+     wDEMDDM=cw_bgroup(font=font,wOptionBase,$
+       ['Use DEM','Use DDM'],$
+       set_value=has_ddm ,$
+       /exclusive,/return_index,/no_release,uname=prefix+'DEM/DDM',/row)
+   end  
    wDEMinterpolate=cw_bgroup(font=font,wOptionBase,$
       buttons,$
       set_value=0 ,$
@@ -1312,6 +1320,17 @@ end
                          all=self.subject->Get(/all,isa='GXFLUXTUBE',count=count)
                          for t=0,count-1 do all[t]->SelectThermalModel,usedem=usedem   
                        END  
+     'GXMODEL:DEM/DDM': BEGIN
+                         volume=(self.subject->GetVolume())
+                         flags=volume->getflags()
+                         restore,gx_ebtel_path(ss=flags.NTSSDEM)
+                         has_ddm=(n_elements(ddm_cor_run) eq n_elements(dem_cor_run)) and (n_elements(ddm_cor_run) eq n_elements(dem_cor_run))
+                         if ~has_ddm and event.value eq 1 then begin
+                          answ=dialog_message('No DDM provided by the selected  EBTEL table, reverting to DEM interpolation!',/info)
+                          widget_control,event.id,set_value=0
+                         endif else flags=volume->setflags(/newNT)
+                       END
+     
      'GXMODEL:DEMAVG': BEGIN
                         volume=(self.subject->GetVolume())
                         flags=volume->setflags(newNT=volume->NewNT())

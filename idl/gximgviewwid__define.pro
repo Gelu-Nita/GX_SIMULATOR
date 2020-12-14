@@ -1272,7 +1272,7 @@ pro gxImgViewWid::OnMovie
     answ=dialog_message('Error creating video stream',/error)
     return
   endif
-    for k=0,n do begin
+    for k=0, n do begin
       widget_control,self.wSlider,set_value=k
       self->OnSlider, k
       oBuff->Draw, self.oViewgroup
