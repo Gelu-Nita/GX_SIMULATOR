@@ -216,8 +216,7 @@ function gxImgViewWid::NewView,info,renderer=renderer,nx=nx,ny=ny,xrange=xrange,
  self.ny=ny
  ptr_free,self.pData
  dim=[nx,ny,(*self.info).pixdim]
- self.pData=ptr_new(make_array(dim,/float))
- if n_elements(data) gt 0 then *self.pData=data
+ if array_equal(size(data,/dim), dim) then self.pData=ptr_new(data) else self.pData=ptr_new(make_array(dim,/float))
  if obj_valid(fovmap) then self.fovmap=fovmap
  self.pConvolvedData=ptr_new(make_array(dim,/float))
 
@@ -400,17 +399,11 @@ self.oWindow->Draw,self.oView
 end
 
 function gxImgViewWid::SFU2TB
-   self.xaxis[0]->getproperty,xrange=xrange
-   self.yaxis[0]->getproperty,yrange=yrange
-  ;R=obj_valid(self.fovmap)?self.fovmap->get(/rsun):(pb0r()*60)[2]
-  ;R=959.62720658243131
-  ;arcsec2cm=gx_rsun(unit='cm')/R
-  ;ds=(arcsec2cm)^2*delta(xrange)*delta(yrange)/self.nx/self.ny
-  ;coeff=1.4568525e026/ds;conversion sfu to K, assuming ds is in arcsec^2 and frequency squared being taken care of below
-  ;1.4673913043478260d+026
-  ds=delta(xrange)*delta(yrange)/(self.nx-1)/(self.ny-1)
-  coeff=gx_sfu2tb(ds)
-  return,coeff
+    self.xaxis[0]->getproperty,xrange=xrange
+    self.yaxis[0]->getproperty,yrange=yrange
+    ds=delta(xrange)*delta(yrange)/self.nx/self.ny
+    coeff=gx_sfu2tb(ds)
+    return,coeff
 end
 
 pro gxImgViewWid::PlotProfile,objxy
@@ -1144,9 +1137,7 @@ pro gxImgViewWid::ImgCubeFile2Renderer,tlb
           nx=sz[1]
           ny=sz[2]
           fovmap=gxcube.fovmap
-          rsun=fovmap->Get(/rsun)
-          xrange=fovmap->Get(/xrange)/rsun
-          yrange=fovmap->Get(/yrange)/rsun
+          gx_fovmap2scanbox,fovmap,xrange=xrange,yrange=yrange
           info=gxcube.info
           self.pData=self->NewView(info,renderer=gxcube.renderer,nx=nx,ny=ny,xrange=xrange,yrange=yrange,data=data,fovmap=fovmap)
         end

@@ -147,7 +147,10 @@ function gxScanBox::DefaultRenderer
 end 
 
 function gxScanBox::SelectRenderer
- return,dialog_pickfile(filter='*.pro',TITLE='Please select a renderer IDL routine/wrapper',path=gx_findfile(folder='userslib'))
+  which,'gx_simulator',outfile=outfile
+  cdir=file_dirname(file_dirname(outfile))
+  path=cdir+path_sep()+'userslib'
+ return,dialog_pickfile(filter='*.pro',TITLE='Please select a renderer IDL routine/wrapper',path=path)
 end
 
 function gxScanBox::RendererInfo,info
@@ -241,34 +244,28 @@ case size(renderer,/tname) of
                  or ~tag_exist(renderer,'info') or ~tag_exist(renderer,'fovmap') then return
                  if ~obj_valid(renderer.fovmap) then return
                  self.renderer=renderer.renderer
-                 data=renderer.data
-                 sz=size(data)
-                 nx=sz[1]
-                 ny=sz[2]
-                 fovmap=renderer.fovmap
-                 rsun=fovmap->Get(/rsun)
-                 xrange=fovmap->Get(/xrange)/rsun
-                 yrange=fovmap->Get(/yrange)/rsun
                  info=renderer.info
+                 fovmap=renderer.fovmap
+                 data=renderer.data
+                 gx_fovmap2scanbox,fovmap,xc=xc,yx=yc,xfov=xfov,yfov=yfov,xrange=xrange,yrange=yrange,nx=nx,ny=ny
+                 self.Rsun=fovmap->get(/rsun)
                  self.nx=nx
                  self.ny=ny
                  self.xrange=xrange
                  self.yrange=yrange
-                 
                  self.ImgViewWid->GetProperty,model=model
                  if isa(model,'gxmodel') then begin
-                   xc=renderer.fovmap->get(/xc)
-                   yc=renderer.fovmap->get(/yc)
-                   xfov=delta(get_map_xrange(renderer.fovmap->get(/map),/edge))
-                   yfov=delta(get_map_yrange(renderer.fovmap->get(/map),/edge))
-                   fovdata=model->SetFOV(xc=xc,yc=yc,xfov=xfov, yfov=yfov)
+                   newgrid=model->SetFOV(xc=xc,yc=yc,xfov=xfov, yfov=yfov,nx=nx,ny=ny)
                  endif
                end       
     else:return        
 endcase
 
-
 if size(info,/tname) eq 'STRUCT' then begin
+ self->UpdateFields
+ self->ComputeFOV,/compute_grid
+
+ 
  widget_control,self.wRenderer,set_value=self.renderer
  ptr_free,self.info
  self.info=ptr_new(info)
@@ -295,7 +292,7 @@ if size(info,/tname) eq 'STRUCT' then begin
    widget_control,self.wRparms,set_uvalue=(*self.info).rparms.name,set_uname='renderer:rparms'
  endif
  
- self->UpdateFields
+
  self->MakeGrid
  self->Slice
  self->ResetAllBridges
@@ -357,22 +354,27 @@ function gxScanbox::GetRefModel
  if obj_isa(model,'gxmodel') then return,model else return,obj_new()
 end 
 
-function gxScanbox::AutoFOV
- return,widget_info(self.wAuto,/button)
+function gxScanbox::GetMOI
+  self->GetProperty,parent=oSun
+  if ~obj_isa(osun,'gxsun') then return,obj_new()
+  all=oSun->Get(/all,count=count,isa='gxmodel')
+  for i=0, count-1 do begin
+    all[i]->GetProperty,IsROI=IsROI
+    if IsROI then begin
+      MOI=all[i]
+    endif
+  endfor
+  if obj_valid(moi) eq 0 then MOI=obj_new()
+  return,MOI
 end
 
-pro gxScanbox::ComputeFOV,compute_grid=compute_grid,upload=upload
+pro gxScanbox::ComputeFOV,compute_grid=compute_grid,upload=upload,auto=auto,fovmap=fovmap
  if self.active then begin
   answ=dialog_message('There is an active scan in progress.'+string(10b)+$
                       'Any unsaved results will be lost!'+string(10b)+$
                       'Do you want to continue anyway?',/question)
   if strupcase(answ) eq 'NO' then return                    
  end
-
-
- auto=widget_info(self.wAuto,/button)
-
-  
  self->GetProperty,parent=oSun
  if ~obj_isa(osun,'gxsun') then return
  all=oSun->Get(/all,count=count,isa='gxmodel')
@@ -382,8 +384,8 @@ pro gxScanbox::ComputeFOV,compute_grid=compute_grid,upload=upload
      MOI=all[i]
      MOI->ResetPosition
      hasrange=get_obj_range(MOI,oSun,odestination,range,ignore=['IDLgrLight','IDLgrImage','IDLgrVolume','gxROI']) 
-     xrange=reform(range[0,*])
-     yrange=reform(range[1,*])
+     inscribing_xrange=reform(range[0,*])
+     inscribing_yrange=reform(range[1,*])
      zrange=reform(range[2,*])
      dx=XCOORD_CONV[1]
      dy=YCOORD_CONV[1]
@@ -392,62 +394,78 @@ pro gxScanbox::ComputeFOV,compute_grid=compute_grid,upload=upload
  endfor 
  if obj_valid(moi) eq 0 then MOI=obj_new()
  
- if keyword_set(auto) then begin
-   if obj_valid(moi) then begin
-    if self->SquareFOV() then begin
-      fov=max([delta(xrange),delta(yrange)])
-      xrange=mean(xrange)+[-1,1]*fov/2
-      yrange=mean(yrange)+[-1,1]*fov/2
-      data=moi->GetROIBox()
-      data=gx_transform(data,moi->GetSTM(),/inv)
-    end
-   endif else begin
-    ;answ=dialog_message('No model of interest selected!',/info)
-    xrange=[-1.5,1.5]
-    yrange=[-1.5,1.5]
-    zrange=[-1.5,1.5]
-    self.nz=mean([self.nx,self.ny])
-   end 
+ if keyword_set(upload) and isa(moi,'gxmodel') then fovmap=moi->GetFovMap()
+ if valid_map(fovmap) then begin
+   gx_fovmap2scanbox,fovmap,xc=xc,yx=yc,xfov=xfov,yfov=yfov,xrange=xrange,yrange=yrange,nx=nx,ny=ny,rsun=rsun
+   self.nx=nx
+   self.ny=ny
+   self.xrange=xrange
+   self.yrange=yrange
+   self.rsun=rsun
+   widget_control,self.wX,set_value=xc
+   widget_control,self.wY,set_value=yc
+   widget_control,self.wXrange,set_value=xfov
+   widget_control,self.wYrange,set_value=yfov
  endif else begin
-  widget_control,self.wXrange,get_value=xfov
-  widget_control,self.wYrange,get_value=yfov
-  widget_control,self.wX,get_value=xc
-  widget_control,self.wY,get_value=yc
-  xrange=(xc+[-1,1]*xfov/2)/self.r()
-  yrange=(yc+[-1,1]*yfov/2)/self.r()
-  if n_elements(zrange) ne 2 then begin
-    zrange=[-1.5,1.5]
-    self.nz=mean([self.nx,self.ny])
-  endif
- endelse
+ if keyword_set(auto) then begin
+       if obj_valid(moi) then begin
+        if self->SquareFOV() then begin
+          fov=max([delta(inscribing_xrange),delta(inscribing_yrange)])
+          xrange=mean(inscribing_xrange)+[-1,1]*fov/2
+          yrange=mean(inscribing_yrange)+[-1,1]*fov/2
+        end
+       endif else begin
+        xrange=[-1.5,1.5]
+        yrange=[-1.5,1.5]
+        zrange=[-1.5,1.5]
+        self.nz=mean([self.nx,self.ny])
+       end 
+  endif else begin
+    if n_elements(xrange) ne 2 then begin
+      widget_control,self.wXrange,get_value=xfov
+      widget_control,self.wX,get_value=xc
+      xrange=(xc+[-1,1]*xfov/2)/self.r()
+    endif
+    if n_elements(yrange) ne 2 then begin
+      widget_control,self.wYrange,get_value=yfov
+      widget_control,self.wY,get_value=yc
+      yrange=(yc+[-1,1]*yfov/2)/self.r()
+    end
+    if n_elements(zrange) ne 2 then begin
+      zrange=[-1.5,1.5]
+      self.nz=mean([self.nx,self.ny])
+    endif
+   endelse
+  end
  self->Reset
  self->SetRefModel,MOI
- self->NewGrid,xrange=xrange, yrange=yrange,zrange=zrange,compute_grid=compute_grid,upload=upload
+ self->NewGrid,xrange=xrange, yrange=yrange,zrange=zrange,compute_grid=compute_grid;,upload=upload
  self->TV_SLICE
 end
 
-pro gxScanBox::NewGrid,xrange=xrange,yrange=yrange,zrange=zrange,nx=nx,ny=ny,compute_grid=compute_grid,upload=upload
+pro gxScanBox::NewGrid,xrange=xrange,yrange=yrange,zrange=zrange,nx=nx,ny=ny,compute_grid=compute_grid;,upload=upload
     self.Grid2Update=1
     newbox=1
-    nz=0
+    ;nz=0
     self.ImgViewWid->GetProperty,model=MOI  
     default,xrange,self.xrange
     default,yrange,self.yrange
     default,zrange,self.zrange
     default,nx,self.nx
     default,ny,self.ny
-    if keyword_set(upload) and isa(moi,'gxmodel') then begin
-        sroi=moi->getroi(/scanbox)
-        sdata=sroi->GetScanboxData(/sun)
-        dim=sroi->GetDim()
-        nx=dim[0]
-        ny=dim[1]
-        nz=dim[2]
-        xrange=minmax(sdata[0,*])
-        yrange=minmax(sdata[1,*])
-        zrange=minmax(sdata[2,*])
-        self.Grid2Update=((moi->GetVolume())->getflags()).newGrid
-    endif else begin
+    default,nz,self.nz
+;    if keyword_set(upload) and isa(moi,'gxmodel') then begin
+;        sroi=moi->getroi(/scanbox)
+;        sdata=sroi->GetScanboxData(/sun)
+;        dim=sroi->GetDim()
+;        nx=dim[0]
+;        ny=dim[1]
+;        nz=dim[2]
+;        xrange=minmax(sdata[0,*])
+;        yrange=minmax(sdata[1,*])
+;        zrange=minmax(sdata[2,*])
+;        self.Grid2Update=((moi->GetVolume())->getflags()).newGrid
+;    endif else begin
         sdata=gx_getboxedges(xrange=xrange,yrange=yrange,zrange=zrange)
         if isa(moi,'gxmodel') then begin
          flags=(moi->GetVolume())->setflags(/newGrid)
@@ -457,8 +475,8 @@ pro gxScanBox::NewGrid,xrange=xrange,yrange=yrange,zrange=zrange,nx=nx,ny=ny,com
          sroi=moi->getroi(/scanbox)
          dim=sroi->GetDim()
          nz=dim[2]
-      endif
-  endelse
+       endif
+  ;endelse
   self.roi->ReplaceData,sdata
   self.xrange=xrange
   self.yrange=yrange
@@ -591,7 +609,7 @@ PRO gxScanBox::Slice,row
     goto, unassigned
   endif
  scanner=self.grid
- model->Slice,(*self.info).parms,row,scanner=scanner,dS=self.dx*self.dy*(gx_rsun()^2)
+ model->Slice,(*self.info).parms,row,scanner=scanner
  self.grid=scanner
 unassigned: 
 if ptr_valid(self.grid) then self->TV_Slice    
@@ -654,20 +672,24 @@ case event.id of
   self.wRParms: self->UpdateParmsTable 
   self.wSquareFOV: begin
                     square=widget_info(self.wSquareFOV,/button_set)
-                    autoFov=widget_info(self.wAuto,/button_set)
+                    ;autoFov=widget_info(self.wAuto,/button_set)
                     if event.select  then begin
                       self.Ny=self.Nx
                       self.Yrange=self.Xrange
                       widget_control,self.wNx,set_value=self.Nx
                       widget_control,self.wNy,set_value=self.Ny,sensitive=0
+                      widget_control,self.wYrange,sensitive=0
                       widget_control,self.wXrange,set_value=delta(self.Xrange)*self.R()
                       widget_control,self.wYrange,set_value=delta(self.YRange)*self.R()
-                    endif else widget_control,self.wNy,sensitive=1
-                    widget_control,self.wX,sensitive=~autoFov
-                    widget_control,self.wY,sensitive=~autoFov
-                    widget_control,self.wXrange,sensitive=~autoFov
-                    widget_control,self.wYrange,sensitive=~square and ~autoFov
-                    auto=autoFov
+                    endif else begin
+                      widget_control,self.wNy,sensitive=1
+                      widget_control,self.wYrange,sensitive=1
+                    endelse
+;                    widget_control,self.wX,sensitive=~autoFov
+;                    widget_control,self.wY,sensitive=~autoFov
+;                    widget_control,self.wXrange,sensitive=~autoFov
+;                    widget_control,self.wYrange,sensitive=~square; and ~autoFov
+;                    auto=1;autoFov
                    end
  self.wXrange: begin
                  square=widget_info(self.wSquareFOV,/button_set)
@@ -682,20 +704,20 @@ case event.id of
                  endif
                  auto=1
                end                  
- self.wAuto: Begin
-               sensitive=~event.select
-               square=widget_info(self.wSquareFOV,/button_set)
-               widget_control,self.wXrange,sensitive=sensitive
-               widget_control,self.wYrange,sensitive=(sensitive and ~square)
-               if square then begin
-                self.Yrange=self.Xrange
-                widget_control,self.wYrange,set_value=delta(self.Xrange)*self.R()
-                widget_control,self.wXrange,set_value=delta(self.YRange)*self.R()
-               endif
-               widget_control,self.wX,sensitive=sensitive
-               widget_control,self.wY,sensitive=sensitive
-               auto=event.select
-             END                 
+; self.wAuto: Begin
+;               sensitive=~event.select
+;               square=widget_info(self.wSquareFOV,/button_set)
+;               widget_control,self.wXrange,sensitive=sensitive
+;               widget_control,self.wYrange,sensitive=(sensitive and ~square)
+;               if square then begin
+;                self.Yrange=self.Xrange
+;                widget_control,self.wYrange,set_value=delta(self.Xrange)*self.R()
+;                widget_control,self.wXrange,set_value=delta(self.YRange)*self.R()
+;               endif
+;               widget_control,self.wX,sensitive=sensitive
+;               widget_control,self.wY,sensitive=sensitive
+;               auto=event.select
+;             END                 
   
   self.wNx: Begin
     widget_control,event.id,get_value=value
@@ -798,11 +820,25 @@ case event.id of
                      update_volume:
                      self.ImgViewWid->GetProperty,model=model
                      if obj_valid(model) then begin
+                        widget_control,self.wSliceSelect,get_uvalue=scale
+                        widget_control,self.wSliceSelect,get_value=list
+                        if n_elements(scale) ne n_elements(list) then begin
+                         scale=replicate({range:[0d,0d],pwr_idx:1d},n_elements(list))
+                        endif
                         volume=(model->GetVolume())
+                        if n_elements(select) eq 0 then select=volume->Selected()
+                        idx=gx_list2idx(list,select)
+                        default,data_range,scale[idx].range
+                        if array_equal(minmax(data_range),[0.0,0.0]) or keyword_set(rescale) then dummy=temporary(data_range)
+                        default,pwr_idx,scale[idx].pwr_idx
+                        if keyword_set(rescale) then dummy=temporary(pwr_idx)
                         volume->Update,select,range=data_range,pwr_idx=pwr_idx,/update;explicitely request volume update
                         widget_control,self.wMinVolume,Set_Value=data_range[0]
                         widget_control,self.wMaxVolume,Set_Value=data_range[1]
                         widget_control,self.wPowerIndexVolume,Set_Value=pwr_idx
+                        scale[gx_list2idx(list,volume->Selected())].range=data_range
+                        scale[gx_list2idx(list,volume->Selected())].pwr_idx=pwr_idx
+                        widget_control,self.wSliceSelect,set_uvalue=scale
                      endif       
                 End 
    self.wPowerIndexVolume: begin
@@ -885,7 +921,10 @@ case event.id of
                    exit_bridges:
                    do_nothing:
                   end                      
-   self.wResetVolumeScale: goto,update_volume                                                                                                                                   
+   self.wResetVolumeScale: begin
+                             rescale=1
+                             goto,update_volume
+                           end                                                                                                                                     
    self.wTV_Slice: self->TV_SLICE    
    self.wSaveLOS:self->SaveLOS                                                                                          
  else:
@@ -1355,8 +1394,6 @@ self.wPlotLOSOptions=cw_objPlotOptions(wPlotLOSBase,uname='LOS Profile Plot Opti
    UNITS='', $
    VALUE=1.11,Sensitive=1,frame=frame)
  widget_control, self.wPowerIndexVolume, set_value=1 
- 
- self.wFixVolumeScale=cw_bgroup(wSelect,/nonexclusive,'Fix Scale',/frame)
 
  wButtonBase=widget_base( wrow4,/row,/nonexclusive,Event_FUNC='gxScanboxHandleEvent',uvalue=self,/toolbar)
  self.wResetVolumeScale=widget_button(wButtonBase, $
@@ -1424,28 +1461,28 @@ self.wPlotLOSOptions=cw_objPlotOptions(wPlotLOSBase,uname='LOS Profile Plot Opti
         INCREMENT=10, $
         UNITS='"', $
         VALUE=mean(self.xrange),Sensitive=1,frame=frame, format=format)
- Widget_Control,self.wx,sensitive=0       
+ ;Widget_Control,self.wx,sensitive=0       
  self.wy=CW_objFIELD(wRow3, UNAME='Y', LABEL=' Yc',$
         XTEXTSIZE=XTEXTSIZE, XLABELSIZE=XLABELSIZE,$
         INCREMENT=10, $
         UNITS='"', $
         VALUE=mean(self.Yrange),Sensitive=1,frame=frame, format=format)    
- Widget_Control,self.wy,sensitive=0                      
+ ;Widget_Control,self.wy,sensitive=0                      
  self.wXrange=CW_objFIELD(wRow3, UNAME='Xrange', LABEL=' Xrange',$
         XTEXTSIZE=XTEXTSIZE, XLABELSIZE=XLABELSIZE,$
         INCREMENT=10, $
         UNITS='"', $
         VALUE=delta(self.Xrange),Sensitive=1,frame=frame, format=format)   
- Widget_Control,self.wXrange,sensitive=0        
+ ;Widget_Control,self.wXrange,sensitive=0        
  self.wYrange=CW_objFIELD(wRow3, UNAME='Yrange', LABEL=' Yrange',$
         XTEXTSIZE=XTEXTSIZE, XLABELSIZE=XLABELSIZE,$
         INCREMENT=10, $
         UNITS='"', $
         VALUE=delta(self.Yrange),Sensitive=1,frame=frame, format=format)             
- Widget_Control,self.wYrange,sensitive=0   
+; Widget_Control,self.wYrange,sensitive=0   
 wAutobase=widget_base(wRow3,/row,/nonexclusive)
-self.wAuto=widget_button(font=font,wAutobase ,value='Auto FOV',uname='Auto FOV')
-      Widget_Control,self.wAuto,Set_Button=1
+;self.wAuto=widget_button(font=font,wAutobase ,value='Auto FOV',uname='Auto FOV')
+;      Widget_Control,self.wAuto,Set_Button=1
 
  self->UpdateFields
 
@@ -1458,8 +1495,15 @@ end
 
 function gxScanbox::R
   self.ImgViewWid->GetProperty,model=moi
-  if obj_isa(moi,'gxmodel') then pbr=pb0r(moi->GetTime()) else pbr=pb0r()
-  return,pbr[2]*60
+  if obj_isa(moi,'gxmodel') then begin
+    self.Rsun=(moi->GetFovMap())->get(/rsun)
+  endif else begin
+    if self.Rsun eq 0 then begin
+      pbr=pb0r()
+      self.Rsun=pbr[2]*60
+    end
+  endelse
+  return,self.Rsun
 end
 
 
@@ -1470,6 +1514,7 @@ pro gxScanbox::SetDim,dim
  self.nz=dim[2]
  self->UpdateFields
 end  
+
 
 
 pro gxScanbox::UpdateFields,_extra=_extra
@@ -1556,10 +1601,10 @@ pro gxScanbox__define
 self={gxScanbox,inherits IDLgrModel, inherits gxWidget,row:0L,completed:0l,$
 Xrange:[0d,0d],Yrange:[0d,0d],Zrange:[0d,0d],Nx:0l,Ny:0l,Nz:0l,dx:0d,dy:0d,dz:0d,$
 wX:0l,wY:0l,wL:0l,wXrange:0L,wyrange:0L,wNx:0l,wNy:0l,wNz:0l,wTV_Slice:0l,wInfo:0l,wToolbar:0l,wHideVolume:0l,TaskManager:obj_new(),ImgViewWid:obj_new(),$
-wHideScanbox:0l,wHideSun:0l,wSlice:0l,wSliceSelect:0l,wSaveLOS:0l,wSquareFOV:0L,wdx:0l,wdy:0l,wAuto:0L,$
+wHideScanbox:0l,wHideSun:0l,wSlice:0l,wSliceSelect:0l,wSaveLOS:0l,wSquareFOV:0L,wdx:0l,wdy:0l,$;wAuto:0L,$
 ROI:obj_new(),slicer:obj_new(),wParmsTable:0l,wScan:0L,wPause:0L,wAbort:0L,wDebug:0L,wTaskTable:0L,wBridges:0l,wStatusBar:0l,$
 renderer:'',wRenderer:0l,wSelectRenderer:0l,pData:ptr_new(),grid:ptr_new(),info:ptr_new(),bridges:obj_new(),$
 pause:0b,active:0b,new_view:0b,log:0l,t_start:0d,wPlotLOSOptions:0L,wLOS:0L,wPlotLOS:0L,wModelInfo:0l,profiler:obj_new(),$
-Grid2Update:0L,wGrid2Update:0L,wMinVolume:0l,wMaxVolume:0l,wPowerIndexVolume:0l,wFixVolumeScale:0l,wResetVolumeScale:0l,$
-wSelectEbtel:0l,wEbtelTable:0l,wSelectEbtelSS:0l,wEbtelSSTable:0l,wNRbase:0l,wNparms:0l,wRparms:0l}
+Grid2Update:0L,wGrid2Update:0L,wMinVolume:0l,wMaxVolume:0l,wPowerIndexVolume:0l,wResetVolumeScale:0l,$
+wSelectEbtel:0l,wEbtelTable:0l,wSelectEbtelSS:0l,wEbtelSSTable:0l,wNRbase:0l,wNparms:0l,wRparms:0l,Rsun:(pb0r())[2]*60}
 end

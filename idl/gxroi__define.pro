@@ -28,8 +28,13 @@ xc=mean(xrange)
 yc=mean(yrange)
 dx=abs(xrange[1]-xrange[0])/(self.nx-1)
 dy=abs(yrange[1]-yrange[0])/(self.ny-1)
+fovmap=make_map(fltarr(self.nx,self.ny)+255,xc=xc,yc=yc,dx=dx,dy=dy,time=time,rsun=rsun)
+;correction needed to avoid double precision math errors
+fovmap.xc=round(fovmap.xc*1000d)/1000d
+fovmap.yc=round(fovmap.yc*1000d)/1000d
+;correction needed to avoid precision math errors
 self.fovmap=obj_new('map',name='fov:fovmap')
-self.fovmap->set,0,map=make_map(fltarr(self.nx,self.ny)+255,xc=xc,yc=yc,dx=dx,dy=dy,time=time,rsun=rsun)
+self.fovmap->set,0,map=fovmap
 self.fovimage=IDLgrImage(bytscl(self.fovmap->get(/data)),name='fov:image')
 self.fovscreen=idlgrpolygon(sdata[*,[0,1,2,15]],texture_map=self.fovimage,Texture_Coord=[[0,0],[1,0],[1,1],[0,1]],Color=[255,255,255],$
                          xcoord_conv=xcoord_conv,ycoord_conv=ycoord_conv,zcoord_conv=zcoord_conv,name='fov:screen')
@@ -107,7 +112,12 @@ pro gxROI::ReplaceFovMap
   yc=mean(yrange)
   dx=abs(xrange[1]-xrange[0])/self.nx
   dy=abs(yrange[1]-yrange[0])/self.ny
-  self.fovmap->set,0,map=make_map(fltarr(self.nx,self.ny)+255,xc=xc,yc=yc,dx=dx,dy=dy,time=time,rsun=rsun)
+  fovmap=make_map(fltarr(self.nx,self.ny)+255,xc=xc,yc=yc,dx=dx,dy=dy,time=time,rsun=rsun)
+  ;correction needed to avoid double precision math errors
+  fovmap.xc=round(fovmap.xc*1000d)/1000d
+  fovmap.yc=round(fovmap.yc*1000d)/1000d
+  ;correction needed to avoid precision math errors
+  self.fovmap->set,0,map=fovmap
   fovdata=data[*,[0,1,2,15]]
   self.fovscreen->SetProperty, data=fovdata
 end
@@ -132,15 +142,16 @@ function gxROI::GetFOVData,sun=sun
   return,data
 end
 
-function gxROI::ComputeGrid,model=model
+function gxROI::ComputeGrid
   t0=systime(/s)
   prog_id = gx_progmeter(/INIT,label='Grid Computation Progress',button='Abort')
   nx=self.nx
   ny=self.ny
-  self.scanbox->GetProperty,data=sdata,xcoord_conv=xcoord_conv,ycoord_conv=ycoord_conv,zcoord_conv=zcoord_conv
-  if ~obj_valid(model) then self->GetProperty,parent=model
+  self->GetProperty,parent=model
+  model->GetProperty,xcoord_conv=xcoord_conv,ycoord_conv=ycoord_conv,zcoord_conv=zcoord_conv
   dx=xcoord_conv[1]
   dy=ycoord_conv[1]
+  scale=[[dx,dy,zcoord_conv[1]],[dx,dy,zcoord_conv[1]]] 
   volume=model->GetVolume()
   volume->GetVertexAttributeData,'dz',dz
   dim=(model->size(/volume))[1:3]
@@ -149,16 +160,16 @@ function gxROI::ComputeGrid,model=model
   if n_elements(dz) eq 0 then begin
     dz=replicate(zcoord_conv[1],dim)
   endif
-  sdata=gx_transform(sdata,model->GetSTM(),/invert)
-  stm=model->GetSTM()
-  scale=[[dx,dy,zcoord_conv[1]],[dx,dy,zcoord_conv[1]]] 
+  sdata=model->GetScanboxData(stm=stm)
   Nlos=nx*ny
   LOSarr=dblarr(3, 2, NLos)
   zrange=minmax(sdata[2,*])
   fovmap=self.fovmap->get(/map)
+  ;correction needed to avoid double precision math errors
+  fovmap.xc=round(fovmap.xc*1000d)/1000d
+  fovmap.yc=round(fovmap.yc*1000d)/1000d
+  ;correction needed to avoid precision math errors
   get_map_coord,fovmap,x,y
-  xrange=get_map_xrange(fovmap,/edge)
-  yrange=get_map_yrange(fovmap,/edge)
   x=x/fovmap.rsun
   y=y/fovmap.rsun
   LOSarr[0,0,*]=x
@@ -179,7 +190,6 @@ function gxROI::ComputeGrid,model=model
   ;erase upper 16 bits of the voxel id
   voxel_id=ishft(ishft(voxel_id,16),-16)
   ;end erase upper 16 bits
-  
   gx_renderirregularmulti, Nlos, dx, dy, dz, LOSarr, $
     Nvoxels, VoxList, ds, $
     x_ind, y_ind, z_ind, $
@@ -254,102 +264,6 @@ function gxROI::ComputeGrid,model=model
   flags=(self.parent->GetVolume())->getflags()
   return,flags.newGrid
 end
-
-;function gxROI::ComputeGrid_old,model=model
-;  nx=self.nx
-;  ny=self.ny
-;  self.scanbox->GetProperty,data=sdata,xcoord_conv=xcoord_conv,ycoord_conv=ycoord_conv,zcoord_conv=zcoord_conv
-;  if ~obj_valid(model) then self->GetProperty,parent=model
-;  idx=[0,1,11,2,7,4,8,5]; this is coming from gx_simulator conventions
-;  ii=idx[1]
-;  jj=idx[2]
-;  kk=idx[4]
-;  dx=xcoord_conv[1]
-;  dy=ycoord_conv[1]
-;  volume=model->GetVolume()
-;  volume->GetVertexAttributeData,'dz',dz
-;  volume->GetVertexAttributeData,'voxel_id',voxel_id
-;  dim=(model->size(/volume))[1:3]
-;  if n_elements(dz) eq 0 then begin
-;    dz=replicate(zcoord_conv[1],dim)
-;  endif
-;  sdata=gx_transform(sdata,model->GetSTM(),/invert)
-;  vx=sdata[*,ii]-sdata[*,0]
-;  vy=sdata[*,jj]-sdata[*,0]
-;  vz=sdata[*,kk]-sdata[*,0]
-;  Lx=norm(vx)
-;  Ly=norm(vy)
-;  Lz=norm(vz)
-;  delta_x=lx/Nx
-;  delta_y=ly/Ny
-;  max_size=total(dim)
-;  delta_z=lz/max_size
-;  k0=0l
-;  k1=0l
-;  n=0l
-;  grid=dblarr(4,nx,ny,max_size)-1
-;  cross=dblarr(2,nx,ny)-1
-;  t0=systime(/s)
-;  prog_id = gx_progmeter(/INIT,label='Grid Computation Progress',button='Abort')
-;  val = 0
-;  stm=model->GetSTM()
-;  scale=[[dx,dy,zcoord_conv[1]],[dx,dy,zcoord_conv[1]]]
-;  o=sdata[*,0]
-;  volume->getvertexattributedata,'voxel_id',voxel_id
-;  for j=0,ny-1 do begin
-;    val = j/(1.0*ny) 
-;    if (gx_progmeter(prog_id,val) eq 'Cancel') then goto,escape
-;    for i=0,nx-1 do begin
-;      dijk=1d-10;THIS IS APPARENTELY NEDED TO AVOID NUMERICAL ERRORS WHEN AT THE EDGE OF THE SCANBOX
-;      LOS_sun=[[o+[(i+dijk)*delta_x,(j+dijk)*delta_y,0]],[o+[(i+dijk)*delta_x,(j+dijk)*delta_y,Lz]]]
-;      LOS=gx_transform(LOS_sun,stm)*scale
-;      gx_RenderIrregular_old,dx, dy, dz, LOS[0,*], LOS[1,*] ,LOS[2,*], ng, vox, ds, x_ind, y_ind, z_ind,entry_point,exit_point,$
-;                         voxel_id=(voxel_id and not(2L)), lib=lib
-;      if ng gt 0 then begin
-;        n=max([n,ng])
-;        LOS_sun_seg=gx_transform([[entry_point],[exit_point]]/scale,stm,/inv)
-;        cross[*,i,j]=LOS_sun_seg[2,*]
-;        k=(floor(max_size*(min(LOS_sun_seg[2,*])-min(Los_sun[2,*]))/Lz))>0
-;        k0=min([k,k0])
-;        k1=max([k+ng-1,k1])
-;        if k1 ge max_size then begin
-;          dk=k1-max_size+64
-;          grid=transpose([transpose(grid),transpose(dblarr(4,nx,ny,dk)-1)])
-;          max_size+=dk
-;        endif
-;        grid[0,i,j,k:k+ng-1]=ds 
-;        grid[1,i,j,k:k+ng-1]=x_ind
-;        grid[2,i,j,k:k+ng-1]=y_ind
-;        grid[3,i,j,k:k+ng-1]=z_ind
-;      end
-;   end
-;  end 
-;  grid=grid[*,*,*,(k0-1)>0:(k1-1)<(max_size-1)]
-;  max_size=n_elements(grid[0,0,0,*])
-;  for i=0,nx-1 do begin
-;    for j=0, ny-1 do begin
-;      full=where(reform(grid[0,i,j,*]) eq -1, count, comp=comp, ncomp=ncomp)
-;      if ncomp gt 0 then begin
-;       if count gt 0 then grid[0,i,j,full]=((Lz-total(grid[0,i,j,comp]))/count)>0
-;      endif else begin
-;        grid[0,i,j,full]=Lz/count
-;      endelse
-;    endfor
-;  endfor
-;  sz=size(grid)
-;  self.nz=sz[4]
-;  ptr_free,self.grid
-;  self.grid=ptr_new(temporary(grid))
-;  status = gx_progmeter(prog_id,/DESTROY)
-;  flags=(self.parent->GetVolume())->setflags(newGrid=0)
-;  message,strcompress('ComputeScanGrid execution time: '+string(systime(/s)-t0)),/cont
-;  return,flags.newGrid
-;  escape:
-;  status = gx_progmeter(prog_id,/DESTROY)
-;  message,'Grid computation aborted',/cont
-;  flags=(self.parent->GetVolume())->getflags()
-;  return,flags.newGrid
-;end
 
 function gxROI::GetGrid
   return,self.grid

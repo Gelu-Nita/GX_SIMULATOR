@@ -464,6 +464,23 @@ function gxModel::SetFOV,xc=xc,yc=yc,xfov=xfov, yfov=yfov,_extra=_extra
  return,self->ReplaceScanboxData(sdata,_extra=_extra)
 end
 
+function gxModel::GetScanboxData,stm=stm
+  rsun=self->Rsun()
+  fovmap=self->GetFovMap()
+  xc=fovmap->get(/xc)
+  yc=fovmap->get(/yc)
+  xfov=delta(get_map_xrange(fovmap->get(/map),/edge))
+  yfov=delta(get_map_yrange(fovmap->get(/map),/edge))
+  xrange=(xc+[-0.5d,0.5d]*xfov)/rsun
+  yrange=(yc+[-0.5d,0.5d]*yfov)/rsun
+  self->ResetPosition
+  box=self->GetRoiBox()
+  stm=self->GetSTM()
+  boxdata=gx_transform(box,stm,/inv)
+  zrange=minmax(boxdata[2,*])
+  return,gx_getboxedges(xrange=xrange,yrange=yrange,zrange=zrange)
+end
+
 
 function gxModel::ReplaceScanboxData,sdata,nx=nx,ny=ny,compute_grid=compute_grid
  return,(self->scanbox())->ReplaceData(sdata,nx=nx,ny=ny,compute_grid=compute_grid)
@@ -953,7 +970,7 @@ function gxModel::MakeScanboxGrid,parms
  return,grid
 end
 
-pro gxModel::Slice,parms,row,scanner=scanner,dS=dS
+pro gxModel::Slice,parms,row,scanner=scanner
   if ~ptr_valid(scanner) then scanner=self->MakeScanboxGrid(parms)
   void=self->Box2Volume(box2vol=box2vol)
   grid=self->GetGrid()
@@ -1311,7 +1328,8 @@ pro gxModel::Slice,parms,row,scanner=scanner,dS=dS
     ;ez is the box z-axis versor (normal to TR) in the observer coordinate system, where LOS is the z axis
     ;So, phi is the angle betwen the TR normal and LOS, so cosphi is the z component of the ez versor
     ez=btm[*,2]
-    dz=sqrt(ds);pixel area
+    dr=model->GetFovPixSize(unit='cm')
+    dz=dr[0]
     r=gx_rsun(unit='cm')
     mincosphi=sin(0.5*acos(1-dz/R))
     cosphi=(abs(ez[2])>mincosphi)
@@ -1509,8 +1527,8 @@ pro gxModel::ResetPosition, unlock=unlock,n=n
    self->Rotate,[1d,0,0],b0
    
  endif else begin
-xy=60*hel2arcmin(self.NS,self.EW,date=time)/rsun
-self->Translate,xy[0],xy[1],0
+   xy=60*hel2arcmin(self.NS,self.EW,date=time)/rsun
+   self->Translate,xy[0],xy[1],0
  endelse
 end
 

@@ -29,11 +29,7 @@ function gx_mwrender_ebtel,model,renderer,ebtel_path=ebtel_path,ss=ss,q_parms=q_
   q_formula=volume->SetQ(q_formula,/quiet)
   message,'EBTEL heating rate formula in use: '+q_formula,/cont
   volume->Update,/nt
-  flags=volume->Getflags()
-  if flags.NewGrid then begin
-    scanbox=model->getroi(/scanbox)
-    newgrid=scanbox->ComputeGrid()
-  end
+  volume->Update,/force
   fovmap=(model->GetFovMap())->get(/map)
   add_prop,fovmap,gx_key=string(model->GetVertexData('NTkey')),/replace
   (model->GetFovMap())->setmap,0,fovmap

@@ -200,11 +200,56 @@ pro gx_simulator_event,event
                free_lun,unit 
               end                             
  state.wFOV:begin
-              state.scanbox->ComputeFOV
+              state.scanbox->ComputeFOV,/auto
+              state.scanbox->DrawSlicer
               state.oObjviewWid->Draw
             end 
+ state.wModelFOV:begin            
+                   MOI=state.scanbox->GetMOI()
+                     if obj_isa(MOI,'gxModel') then begin
+                     state.scanbox->SetDim,(moi->getroi(/scanbox))->GetDim()
+                     state.scanbox->ComputeFOV,/upload
+                     state.scanbox->DrawSlicer
+                     state.scanbox->Slice
+                     state.oObjviewWid->Draw
+                   end     
+                  end
+ state.wImportFOV:begin
+             file=dialog_pickfile(filter=['*.sav','*.map'],$
+                  DEFAULT_EXTENSION='sav',$
+                  /read,/must_exist,$
+                  title='Please select a file containig an map onject or map structure to import its FOV')
+              if file ne '' then begin    
+                  osav=obj_new('idl_savefile',file)
+                  names=osav->names()
+                  valid=0
+                  for i=0,n_elements(names)-1 do begin
+                    osav->restore,names[i];,/RELAXED_STRUCTURE_ASSIGNMENT
+                    e=execute('result=size('+names[i]+',/tname)')
+                    if (result eq 'STRUCT') or (result eq 'OBJREF') then begin
+                      e=execute('m=temporary('+names[i]+')')
+                      if valid_map(m) then map=temporary(m)
+                    endif
+                  endfor
+                  if ~(size(map,/tname) eq 'STRUCT' or size(map,/tname) eq 'OBJREF') then begin
+                    answ=dialog_message('Unexpected file content!',/error)
+                  endif else begin
+                  if size(map,/tname) eq 'STRUCT' then begin
+                    fovmap=obj_new('map')
+                    for k=0,n_elements(map)-1 do begin
+                      fovmap->setmap,k,map[k]
+                    endfor
+                  endif else fovmap=map
+                  state.scanbox->ComputeFOV,fovmap=fovmap,/compute
+                  state.scanbox->DrawSlicer
+                  state.oObjviewWid->Draw
+                  endelse
+               end   
+            end           
+            
  state.wGrid:begin
               state.scanbox->ComputeFOV,/compute
+              state.scanbox->DrawSlicer
               state.oObjviewWid->Draw
             end            
  state.wUploadModelIcon: goto, ReadModel
@@ -275,13 +320,9 @@ pro gx_simulator_event,event
                              endif
                            endfor
                          state.Sun->SetTime,model->GetTime()
-                         if state.scanbox->AutoFov() then begin
-                           state.scanbox->SetDim,(model->getroi(/scanbox))->GetDim()
-                           state.scanbox->ComputeFOV,/upload
-                         endif else state.scanbox->ComputeFOV,/compute
-                         state.scanbox->Slice
                        endif  
                      endif else answ=dialog_message('Invalid GX model!')
+                     state.scanbox->DrawSlicer
                      state.oObjviewWid->Draw
                      nevermind:
                   end
@@ -324,7 +365,7 @@ Widget_Control, DEFAULT_FONT=!defaults.font
 subdirectory=['resource', 'bitmaps']
 state={oObjviewWid:obj_new(),sun:obj_new(),$
 wModelsTab:0l,wUploadModelIcon:0l,wUploadModel:0l,wImportModelIcon:0l,$
-wImportModel:0l,wFOV:0l,wGrid:0l,wHelp:0l,wAbout:0l,ModelCount:0l,view:obj_new(),$
+wImportModel:0l,wFOV:0l,wModelFOV:0l,wImportFOV:0l,wGrid:0l,wHelp:0l,wAbout:0l,ModelCount:0l,view:obj_new(),$
 Scanbox:obj_new(),wScan:0l,wPause:0l,wDebug:0l,wAbort:0l,MapView:obj_new(),expert:keyword_set(expert)}
 
 state.view=OBJ_NEW('IDlexObjview')
@@ -361,6 +402,12 @@ view_menu = WIDGET_BUTTON(wToolbarBase, VALUE=gx_bitmap(filepath('switch_down.bm
 state.wFOV=widget_button(widget_base(wToolbarBase,/toolbar,/row),$
               value=gx_bitmap(filepath('view.bmp', subdirectory=subdirectory)), $
               /bitmap,tooltip='Compute inscribing FOV',sensitive=1)
+state.wModelFOV=widget_button(widget_base(wToolbarBase,/toolbar,/row),$
+              value=gx_bitmap(filepath('copy.bmp', subdirectory=subdirectory)), $
+              /bitmap,tooltip='Copy Model FOV',sensitive=1)   
+state.wImportFOV=widget_button(widget_base(wToolbarBase,/toolbar,/row),$
+              value=gx_bitmap(filepath('importf.bmp', subdirectory=subdirectory)), $
+              /bitmap,tooltip='Import Map FOV',sensitive=1)                         
 state.wGrid=widget_button(widget_base(wToolbarBase,/toolbar,/row),$
               value=gx_bitmap(filepath('scatter.bmp', subdirectory=subdirectory)), $
               /bitmap,tooltip='Compute rendering grid',sensitive=1)              
@@ -437,7 +484,8 @@ state.oObjviewWid = obj_new('gxObjviewWid', $
   XMANAGER, 'gx_simulator', main_base ,/no_block
   widget_control,widget_info(wStatusBar,/child),get_uvalue=oStatusBar
   oStatusBar->Erase
-  state.scanbox->ComputeFOV
+  state.scanbox->ComputeFOV,/auto
+  state.scanbox->DrawSlicer
   if isa(model,'gxmodel') then widget_control,main_base,send_event={inputmodel,id:0l,top:0l,handler:0l,model:model}
 end
 

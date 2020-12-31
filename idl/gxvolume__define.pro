@@ -435,7 +435,7 @@ function gxVolume::SetQ0,q0_formula,q_formula=q_formula,quiet=quiet
 end
 
 function gxVolume::Selected
- return.self.select
+ return,self.select
 end
 
       
