@@ -827,7 +827,7 @@ case event.id of
                         endif
                         volume=(model->GetVolume())
                         if n_elements(select) eq 0 then select=volume->Selected()
-                        idx=gx_list2idx(list,select)
+                        idx=(gx_list2idx(list,select))[0]
                         default,data_range,scale[idx].range
                         if array_equal(minmax(data_range),[0.0,0.0]) or keyword_set(rescale) then dummy=temporary(data_range)
                         default,pwr_idx,scale[idx].pwr_idx
