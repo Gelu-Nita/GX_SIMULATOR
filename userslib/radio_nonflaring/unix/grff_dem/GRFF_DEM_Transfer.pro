@@ -1,9 +1,16 @@
-pro GRFF_DEM_Transfer_64,parms,rowdata,nparms,rparms,path,parmin,datain,logtdem=logtdem,$
+pro GRFF_DEM_Transfer,parms,rowdata,nparms,rparms,path,parmin,datain,logtdem=logtdem,$
 dem_run=dem_run,ddm_run=ddm_run,qrun=qrun,lrun=lrun,use_dem=use_dem,has_ddm=has_ddm,info=info
 info=info
  if n_elements(path) eq 0 then begin
-  dirpath=file_dirname((ROUTINE_INFO('GRFF_DEM_Transfer_64',/source)).path,/mark)
-  path=dirpath+'GRFF_DEM_Transfer_64'
+  dirpath=file_dirname((ROUTINE_INFO('GRFF_DEM_Transfer',/source)).path,/mark)
+  path=dirpath+'GRFF_DEM_Transfer.so'
+  if ~ file_test(path) then begin
+    cdr=curdir()
+    cd,dirpath
+    spawn, 'rm *.o',exit_status=exit_status
+    spawn, 'make',exit_status=exit_status
+    cd,cdr
+  endif
  end
  if arg_present(info) then begin
     if n_elements(parms) gt 0 then dummy=temporary(parms)
@@ -110,7 +117,7 @@ info=info
    Npix=sz[0] 
    Nvox=sz[1]  
    N_parms=sz[2]
-   rowdata[*]=0
+     rowdata[*]=0
    ndat=long(nparms[0:4])
    if n_elements(logtdem) gt 0 then tdem=10d0^logtdem
    if n_elements(datain) eq 0 then datain=dblarr(7,Nfreq)

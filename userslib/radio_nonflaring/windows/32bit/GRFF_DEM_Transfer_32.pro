@@ -1,9 +1,9 @@
-pro GRFF_DEM_Transfer_64,parms,rowdata,nparms,rparms,path,parmin,datain,logtdem=logtdem,$
+pro GRFF_DEM_Transfer_32,parms,rowdata,nparms,rparms,path,parmin,datain,logtdem=logtdem,$
 dem_run=dem_run,ddm_run=ddm_run,qrun=qrun,lrun=lrun,use_dem=use_dem,has_ddm=has_ddm,info=info
 info=info
  if n_elements(path) eq 0 then begin
-  dirpath=file_dirname((ROUTINE_INFO('GRFF_DEM_Transfer_64',/source)).path,/mark)
-  path=dirpath+'GRFF_DEM_Transfer_64'
+  dirpath=file_dirname((ROUTINE_INFO('GRFF_DEM_Transfer_32',/source)).path,/mark)
+  path=dirpath+'GRFF_DEM_Transfer_32'
  end
  if arg_present(info) then begin
     if n_elements(parms) gt 0 then dummy=temporary(parms)
