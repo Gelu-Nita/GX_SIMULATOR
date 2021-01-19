@@ -10,6 +10,17 @@ const char* arr1[]={
 
 #define N1 5
 
+const char* arr1s[]={
+ "      N_pix;       1   ;int;     data;                    Number of pixels",
+ "      N_vox;       1   ;int;     data;                    Number of voxels",
+ "     N_freq;     100   ;int;     user;               Number of frequencies",
+ "     N_temp;       0   ;int;     data;              Number of temperatures",
+ "    DEM_key;       0   ;0/1;     user;         DEM on/off (for all voxels)",
+ "    DDM_key;       0   ;0/1;     user;         DDM on/off (for all voxels)"
+};
+
+#define N1s 6
+
 const char* arr2[]={
  "         dS;   1E+18   ;cm^2;    data;                 Source/pixel area",
  "      f_min;   1E+09   ;Hz;      user;  Starting freq. to calc. spectrum",
@@ -54,8 +65,20 @@ extern "C" __declspec(dllexport) float GET_PARMS(int argc, void **argv)
 extern "C" float GET_PARMS(int argc, void **argv)
 #endif
 {
- WriteParms(arr1, "Long_input.txt", N1);
- WriteParms(arr2, "Real_input.txt", N2);
+ WriteParms(arr1, "Long_input.txt",  N1);
+ WriteParms(arr2, "Real_input.txt",  N2);
  WriteParms(arr3, "Parms_input.txt", N3);
+ return 0;
+}
+
+#ifndef LINUX
+extern "C" __declspec(dllexport) float GET_PARMS_SLICE(int argc, void **argv)
+#else
+extern "C" float GET_PARMS_SLICE(int argc, void **argv)
+#endif
+{
+ WriteParms(arr1s, "Long_input.txt",  N1s);
+ WriteParms(arr2,  "Real_input.txt",  N2);
+ WriteParms(arr3,  "Parms_input.txt", N3);
  return 0;
 }

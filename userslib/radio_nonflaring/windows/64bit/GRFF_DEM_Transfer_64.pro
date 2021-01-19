@@ -1,6 +1,5 @@
 pro GRFF_DEM_Transfer_64,parms,rowdata,nparms,rparms,path,parmin,datain,logtdem=logtdem,$
 dem_run=dem_run,ddm_run=ddm_run,qrun=qrun,lrun=lrun,use_dem=use_dem,has_ddm=has_ddm,info=info
-info=info
  if n_elements(path) eq 0 then begin
   dirpath=file_dirname((ROUTINE_INFO('GRFF_DEM_Transfer_64',/source)).path,/mark)
   path=dirpath+'GRFF_DEM_Transfer_64'
@@ -87,11 +86,12 @@ info=info
     nfreq=nparms[1].value
     dummy_parmin=1d0*(parms.value)[0:n_elements(parms.value)-3]
     dummy_datain=dblarr(7,nfreq)
-    dem_arr= dem_cor_run[*,0,0]
-    ddm_arr=n_elements(ddm_cor_run) gt 0?ddm_cor_run[*,0,0]:dem_arr
+    dem_arr= double(dem_cor_run[*,0,0])
+    ddm_arr=n_elements(ddm_cor_run) gt 0?double(ddm_cor_run[*,0,0]):dem_arr
     ndat=long((nparms.value)[0:n_elements(nparms.value)-3])
     rdat=double(rparms.value)
-    test_call=call_external(path, 'GET_MW', ndat, rdat,dummy_parmin, logtdem, dem_arr, DDM_arr, dummy_datain, /unload)
+    tdem=10d0^logtdem
+    test_call=call_external(path, 'GET_MW', ndat, rdat,dummy_parmin, tdem, dem_arr, DDM_arr, dummy_datain, /unload)
    
     info={parms:parms,$
           nparms:nparms,$
@@ -110,6 +110,7 @@ info=info
    Npix=sz[0] 
    Nvox=sz[1]  
    N_parms=sz[2]
+   parms_idx=N_parms-3
    rowdata[*]=0
    ndat=long(nparms[0:4])
    if n_elements(logtdem) gt 0 then tdem=10d0^logtdem
@@ -119,7 +120,7 @@ info=info
          parmin[*,*]=transpose(parms[pix,*,*])
          datain[*]=0.0 
          dem_interpolate,n,t,dem,ddm,logtdem=logtdem,dem_run=dem_run,ddm_run=ddm_run,qrun=qrun,lrun=lrun,$
-         qarr=parmin[15,*],larr=parmin[16,*],avgdem=nparms[5],use_dem=use_dem,has_ddm=has_ddm
+         qarr=parmin[parms_idx+1,*],larr=parmin[parms_idx+2,*],avgdem=nparms[5],use_dem=use_dem,has_ddm=has_ddm
          DEMvox=where((n gt 0 and t gt 0),nDemvox,comp=noDEMvox,ncomp=nNoDEMvox)
          if ~keyword_set(has_ddm) then ddm=dem*0
          if nDemVox gt 0 then begin
@@ -135,7 +136,7 @@ info=info
            parmin[11,noDEMvox]=1
            parmin[12,noDEMvox]=1
          endif
-         losparms=parmin[0:14,*]
+         losparms=double(parmin[0:14,*])
          dem=double(dem)
          if n_elements(ddm) gt 0 then ddm=double(ddm)
          if n_elements(tdem) eq 0 then tdem=10d0^logtdem

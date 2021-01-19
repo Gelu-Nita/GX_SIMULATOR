@@ -1,12 +1,12 @@
 #pragma once
-#define me 9.10938291e-28
-#define c 299792.458e5
-#define e 4.80320451e-10
-#define kB 1.3806488e-16
+#define me 9.1093837015e-28
+#define c 2.99792458e10
+#define e (1.602176634e-19*c/10)
+#define kB 1.380649e-16
 #define hPl 6.62607015e-27 //Planck constant h (without bar)
 #define hPlbar (hPl/2/M_PI) //Planck constant h_bar
-#define em_alpha (1.0/137.035999084)
-#define AU 1.49599e13
+#define em_alpha (1.0/137.035999084) 
+#define AU 1.495978707e13 
 #define sfu 1e-19
 #define ieH 2.1798718e-11 //hydrogen ionization energy (theoretical), erg
 #define ieHe12 3.9393356e-11 //helium 1st ionization energy, erg

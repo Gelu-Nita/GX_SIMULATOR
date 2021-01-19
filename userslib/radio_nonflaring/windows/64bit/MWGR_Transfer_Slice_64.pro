@@ -2,7 +2,7 @@ pro MWGR_Transfer_Slice_64,parms,rowdata,path,parmin,datain,info=info
 
  if n_elements(path) eq 0 then begin
   dirpath=file_dirname((ROUTINE_INFO('MWGR_Transfer_Slice_64',/source)).path,/mark)
-  path=dirpath+'MWGR_Transfer_Slice_64.dll'
+  path=dirpath+'MWGR_Transfer_64.dll'
  end
  
  if arg_present(info) then begin

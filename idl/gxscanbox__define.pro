@@ -1068,6 +1068,7 @@ pro gxScanBox::OnStartScan,event,debug=debug
          endcase
        end
      end
+     self->UpdateFields
      widget_control,self.wBridges,sensitive=0
      if ~keyword_set(Debug) then begin
       if widget_valid(self.wDebug) then widget_control,self.wDebug,sensitive=0
@@ -1181,7 +1182,7 @@ pro gxScanBox::OnCallback,Status, Error,bridge
    widget_control,self.wTaskTable,set_value=bridge_state
    prog=float(self.completed)/(self.ny)
    if prog gt 0 then prog_status=gx_progmeter(prog_id,prog)
-   status_message=strcompress(string(self.completed,self.ny,systime(/s)-self.t_start,format="('Progress: ',i4,' rows out of ',i4,' in process or processed in ',f7.3,' seconds')"))
+   status_message=strcompress(string(self.completed,self.ny,systime(/s)-self.t_start,format="('Progress: ',i4,' rows out of ',i4,' in process or processed in ',f10.3,' seconds')"))
    widget_control,self.wStatusBar,set_value=status_message
    if (self.completed eq self.ny) and (self.active eq 1) then begin
     self->OnEndScan
@@ -1559,6 +1560,14 @@ pro gxScanbox::UpdateFields,_extra=_extra
     parms[idx].value=dR
   end
   if tag_exist(*self.info,'nparms') and widget_valid(self.wNparms) then begin
+    wNpix=widget_info(self.wNparms,find_by_uname='N_pix')
+    if widget_valid(wNpix) then widget_control,wNpix,set_value=self.Nx
+    idx=gx_name2idx((*self.info).nparms,'N_pix')
+    if idx ge 0 then begin
+      nparms=(*self.info).nparms
+      nparms[idx].value=self.Nx
+      (*self.info).nparms=nparms
+    endif
     wNvox=widget_info(self.wNparms,find_by_uname='N_vox')
     if widget_valid(wNvox) then widget_control,wNvox,set_value=self.Nz
     idx=gx_name2idx((*self.info).nparms,'N_vox')

@@ -1,10 +1,10 @@
-pro MWTransfer1,parms,rowdata,path,parmin,datain,info=info
+pro MWTransfer_user,parms,rowdata,path,parmin,datain,info=info
  if n_elements(path) eq 0 then begin
   dirpath=getenv('HOME')+'/MWTransfer/GS'
   path=dirpath+'/MWTransfer.so'
   if ~file_test(path) then begin
    file_mkdir, dirpath
-   src_path=file_dirname((ROUTINE_INFO('mwtransfer1',/source)).path)
+   src_path=file_dirname((ROUTINE_INFO('mwtransfer_user',/source)).path)
    spawn, 'cp '+src_path+'/*.h '+dirpath
    spawn, 'cp '+src_path+'/*.cpp '+dirpath
    spawn, 'cp '+src_path+'/makefile '+dirpath

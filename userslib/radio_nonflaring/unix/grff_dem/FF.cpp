@@ -67,27 +67,27 @@ void FindFF_DEM_XO(double f, double theta, double f_p, double f_B, double *T_arr
 
   free(I_j);
   free(I_k);
- }
+ 
+  if (finite(NX))
+  {
+   *jX=8*e*e*e*e*e*e*NX/(3.0*sqrt(2.0*M_PI)*sqrt(me*me*me)*c*c*c)*aj*FZhX;
+   *kX=8*e*e*e*e*e*e/(3.0*sqrt(2.0*M_PI)*NX*c*sqr(f)*sqrt(me*me*me))*ak*FZhX;
+  }
+  else
+  {
+   *jX=0.0;
+   *kX=1e100;
+  }
 
- if (finite(NX))
- {
-  *jX=8*e*e*e*e*e*e*NX/(3.0*sqrt(2.0*M_PI)*sqrt(me*me*me)*c*c*c)*aj*FZhX;
-  *kX=8*e*e*e*e*e*e/(3.0*sqrt(2.0*M_PI)*NX*c*sqr(f)*sqrt(me*me*me))*ak*FZhX;
- }
- else
- {
-  *jX=0.0;
-  *kX=1e100;
- }
-
- if (finite(NO))
- {
-  *jO=8*e*e*e*e*e*e*NO/(3.0*sqrt(2.0*M_PI)*sqrt(me*me*me)*c*c*c)*aj*FZhO;
-  *kO=8*e*e*e*e*e*e/(3.0*sqrt(2.0*M_PI)*NO*c*sqr(f)*sqrt(me*me*me))*ak*FZhO;
- }
- else
- {
-  *jO=0.0;
-  *kO=1e100;
+  if (finite(NO))
+  {
+   *jO=8*e*e*e*e*e*e*NO/(3.0*sqrt(2.0*M_PI)*sqrt(me*me*me)*c*c*c)*aj*FZhO;
+   *kO=8*e*e*e*e*e*e/(3.0*sqrt(2.0*M_PI)*NO*c*sqr(f)*sqrt(me*me*me))*ak*FZhO;
+  }
+  else
+  {
+   *jO=0.0;
+   *kO=1e100;
+  }
  }
 }

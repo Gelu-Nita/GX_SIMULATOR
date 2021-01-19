@@ -58,7 +58,6 @@ void FindGR_DDM_XO(double f, double theta, int s, double f_p, double f_B, double
   free(Int_tau);
   free(Int_J);
  
-
   if (finite(NX))
   {
    if (f_p<=0)

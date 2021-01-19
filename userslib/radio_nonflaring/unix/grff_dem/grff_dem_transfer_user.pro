@@ -1,17 +1,21 @@
-pro grff_dem_transfer,parms,rowdata,nparms,rparms,path,parmin,datain,logtdem=logtdem,$
+pro grff_dem_transfer_user,parms,rowdata,nparms,rparms,path,parmin,datain,logtdem=logtdem,$
 dem_run=dem_run,ddm_run=ddm_run,qrun=qrun,lrun=lrun,use_dem=use_dem,has_ddm=has_ddm,info=info
 info=info
  if n_elements(path) eq 0 then begin
-  dirpath=file_dirname((ROUTINE_INFO('grff_dem_transfer',/source)).path,/mark)
-  path=dirpath+'GRFF_DEM_Transfer.so'
-  if ~ file_test(path) then begin
-    cdr=curdir()
-    cd,dirpath
-    spawn, 'rm *.o',exit_status=exit_status
-    spawn, 'make',exit_status=exit_status
-    cd,cdr
-  endif
- end
+   dirpath=getenv('HOME')+'/mwtransfer/grff_dem'
+   path=dirpath+'/GRFF_DEM_Transfer.so'
+   if ~file_test(path) then begin
+     file_mkdir, dirpath
+     src_path=file_dirname((ROUTINE_INFO('grff_dem_transfer_user',/source)).path)
+     spawn, 'cp '+src_path+'/*.h '+dirpath
+     spawn, 'cp '+src_path+'/*.cpp '+dirpath
+     spawn, 'cp '+src_path+'/makefile '+dirpath
+     cd, dirpath, current=cdr
+     spawn, 'rm *.o'
+     spawn, 'make'
+     cd, cdr
+   endif
+ endif
  if arg_present(info) then begin
     if n_elements(parms) gt 0 then dummy=temporary(parms)
     ;update EBTEL Fields
