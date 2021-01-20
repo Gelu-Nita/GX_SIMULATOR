@@ -2,10 +2,12 @@ function gx_rerender,parms_cube,orig_data=orig_data,header=header
 if n_elements(parms_cube) eq 0 then begin
  gx_readlos,parms_cube,orig_data,header=header
 endif
+if tag_exist(header,'EBTEL') then begin
+  ebtel_path=gx_ebtel_path(header.ebtel)
+endif
 info=header.info
-sz=size(parms_cube)
-nx=sz[1]
-ny=sz[2]
+nx=header.nx
+ny=header.ny
 rowdata=make_array([nx,(info).pixdim],/float)
 dim=[nx,ny,info.pixdim]
 data=make_array(dim,/float)

@@ -89,7 +89,7 @@ xrange=xrange,yrange=yrange,zrange=zrange,Nx=Nx,Ny=Ny,Nz=Nz,nthreads=nthreads,_e
 wEBTELToolbarBase = widget_base(base, /row, /frame,/TOOLBAR,map=1)
 self.wSelectEBTEL= widget_button( wEBTELToolbarBase, $
   value=gx_bitmap(filepath('open.bmp', subdirectory=['resource', 'bitmaps'])), $
-  /bitmap,tooltip='Select EBTEL Table')
+  /bitmap,tooltip='Select EBTEL Table',uname='EBTEL')
 self.wEBTELTable=widget_text(font=!defaults.font,wEBTELToolbarBase,value=gx_ebtel_path(),SCR_XSIZE=geometry1.SCR_XSIZE-3*geometry2.SCR_XSIZE,/wrap)
   
 wEBTELSSToolbarBase = widget_base(base, /row, /frame,/TOOLBAR,map=0)  
@@ -247,6 +247,7 @@ case size(renderer,/tname) of
                  info=renderer.info
                  fovmap=renderer.fovmap
                  data=renderer.data
+                 if tag_exist(renderer,'EBTEL') then widget_control,self.wEbtelTable,set_value=gx_ebtel_path(renderer.ebtel)
                  gx_fovmap2scanbox,fovmap,xc=xc,yx=yc,xfov=xfov,yfov=yfov,xrange=xrange,yrange=yrange,nx=nx,ny=ny
                  self.Rsun=fovmap->get(/rsun)
                  self.nx=nx
@@ -628,7 +629,7 @@ pro gxScanBox::SaveLOS
   self.ImgViewWid->GetProperty,fovmap=fovmap
   ;order matters
   MULTI_SAVE,/new,log,{row:-1L,parms:(*self.grid).parms,grid:transpose(reform((*(*self.grid).grid)[*,*,0,*]),[1,2,0])},file=file, $
-     header={renderer:self.renderer ,info:(*self.info),fovmap:fovmap,nx:self.nx,ny:self.ny,xrange:self.xrange,yrange:self.yrange}
+     header={renderer:self.renderer ,info:(*self.info),fovmap:fovmap,nx:self.nx,ny:self.ny,xrange:self.xrange,yrange:self.yrange,ebtel:gx_ebtel_path()}
 
   
   for row=0l,self.ny-1 do begin
@@ -1089,7 +1090,7 @@ pro gxScanBox::OnStartScan,event,debug=debug
      self.t_start=systime(/s)
      MULTI_SAVE,/new,log,{row:-1L,parms:(*self.grid).parms,$
      data:make_array([self.nx,1,(*self.info).pixdim],/float)},file=GETENV('IDL_TMPDIR')+GETENV('USER')+'GX_Simulator.log', $
-     header={renderer:self.renderer ,info:(*self.info),fovmap:fovmap,nx:self.nx,ny:self.ny,xrange:self.xrange,yrange:self.yrange}
+     header={renderer:self.renderer ,info:(*self.info),fovmap:fovmap,nx:self.nx,ny:self.ny,xrange:self.xrange,yrange:self.yrange,ebtel:gx_ebtel_path()}
      self.log=log
    endif else begin
    self.active=1

@@ -1110,7 +1110,7 @@ compile_opt hidden
     dx=dx[1]
     dy=dy[1]
     dim=self.model->Size()
-    gxcube={info:*(self.info),data:*(self.pData),renderer:self.renderer,fovmap:self.fovmap,model:{dx:dx,dy:dy,dz:dz,dim:dim[1:3]}}
+    gxcube={info:*(self.info),data:*(self.pData),renderer:self.renderer,fovmap:self.fovmap,model:{dx:dx,dy:dy,dz:dz,dim:dim[1:3]},ebtel:gx_ebtel_path()}
     save,gxcube,file=file
    end
   end else answ=dialog_message('No valid image data has been created yet!')
@@ -1140,6 +1140,9 @@ pro gxImgViewWid::ImgCubeFile2Renderer,tlb
           gx_fovmap2scanbox,fovmap,xrange=xrange,yrange=yrange
           info=gxcube.info
           self.pData=self->NewView(info,renderer=gxcube.renderer,nx=nx,ny=ny,xrange=xrange,yrange=yrange,data=data,fovmap=fovmap)
+          if tag_exist(gxcube,'EBTEL') then begin
+            widget_control, widget_info(get_tlb(self.wBase), find_by_uname='EBTEL'), set_value=gx_ebtel_path(gxcube.ebtel)
+          endif
         end
       endelse
       self->SelectImg

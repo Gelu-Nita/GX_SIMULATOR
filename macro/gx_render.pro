@@ -45,7 +45,7 @@ function gx_render,model,renderer,logfile=logfile,_extra=_extra
       if row eq 0 then begin
        MULTI_SAVE,/new,log,{row:-1L,parms:parms,$
         data:data[*,row,*,*,*],grid:transpose(reform((*(*scanner).grid)[*,*,0,*]),[1,2,0])},file=logfile, $
-        header={renderer:renderer ,info:info,fovmap:fovmap,nx:nx,ny:ny,xrange:fovmap->get(/xrange),yrange:fovmap->get(/yrange)}
+        header={renderer:renderer,info:info,fovmap:fovmap,nx:nx,ny:ny,xrange:fovmap->get(/xrange),yrange:fovmap->get(/yrange),ebtel:gx_ebtel_path()}
       endif
       MULTI_SAVE,log,{row:long(row),parms:parms,data:data[*,row,*,*,*],grid:transpose(reform((*(*scanner).grid)[*,*,row,*]),[1,2,0])},file=logfile, header=info
     endif
