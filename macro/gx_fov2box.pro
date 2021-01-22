@@ -26,20 +26,28 @@
 ; Options available on LInux/Uix platforms, or if /use_idl is set:
 ;   /center_vox: use this keyword to compute lines that pass exactly through the center of each volume voxel (more computationaly intensive) 
 ;   as oposed to the faster option (default on Unix/LINUX), which assigns the same <B>-L properties to all voxels crossed by an already computed field line
-; Options availble only on indows platforms, id use_idl=0 (default on Windows OS)
+; Options available only on indows platforms, id use_idl=0 (default on Windows OS)
 ;   reduce_passed=0 (default); equivalent to /center_vox described above
 ;   reduce_passed=1; mark as already passed all voxels intersected by some closed field line
 ;   reduced_passed=2; mark as already passed all voxels intersected by some open field line
-;   reduced_passed=3; mark as already passed all voxels intersected ny a closed or open field line
-
-
+;   reduced_passed=3; mark as already passed all voxels intersected by a closed or open field line
 
 pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km, out_dir = out_dir, tmp_dir = tmp_dir,$
                         empty_box_only=empty_box_only,save_empty_box=save_empty_box,potential_only=potential_only,$
                         save_potential=save_potential,save_bounds=save_bounds,use_potential=use_potential, use_idl=use_idl,$
-                        nlfff_only=nlfff_only, generic_only=generic_only,centre=centre,euv=euv,uv=uv,hmifiles=hmifiles,old_combo_format=old_combo_format,out_files=out_files,_extra=_extra
+                        nlfff_only=nlfff_only, generic_only=generic_only,centre=centre,euv=euv,uv=uv,hmifiles=hmifiles,$
+                        old_combo_format=old_combo_format,out_files=out_files,wConsole=wConsole,_extra=_extra
+   CATCH, Error_status
+   IF Error_status NE 0 THEN BEGIN
+      if widget_valid(wConsole) then begin
+        widget_control,wConsole,get_value=txt
+        widget_control,wConsole,set_value=[txt,'% '+!ERROR_STATE.MSG,'% ABORTED!']
+      endif else print,[['% '+!ERROR_STATE.MSG],['% ABORTED!']]
+      CATCH, /CANCEL
+      return
+   ENDIF
+  if ~valid_time(time,err) then message,err 
   setenv, 'WCS_RSUN=6.96d8'
-  
   break_file, ROUTINE_FILEPATH(), dsk_log, dir, routine_name, ext
   par=ROUTINE_INFO(routine_name,/par)
   exec="gx_fov2box, '"+time+"'"
@@ -65,9 +73,9 @@ pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km
       exec+=', '+tnames[i]+'='+val
     endfor
   endif
-  
   t0=systime(/seconds)
-  message,'Downloading data',/cont
+  t_start=t0
+  gx_message,'Downloading data',wConsole,/over
   if not keyword_set(tmp_dir) then tmp_dir = filepath('jsoc_cache',root = GETENV('IDL_TMPDIR'))
   if not file_test(tmp_dir) then file_mkdir, tmp_dir
   if not keyword_set(out_dir) then cd, current = out_dir
@@ -87,14 +95,13 @@ pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km
   time=atime(sxpar(header,'date_obs'))              
   if keyword_set(uv) or keyword_set(euv) then aia_files=gx_box_download_AIA_data(time, cache_dir = tmp_dir, uv=uv, euv=euv, _extra=_extra)
   if size(aia_files,/tname) eq 'STRUCT' then files = create_struct(files,aia_files)
-  message,strcompress(string(systime(/seconds)-t0,format="('Data already found in the local repository or downloaded in ',g0,' seconds')")),/cont
-  
+  gx_message, strcompress(string(systime(/seconds)-t0,format="('Data already found in the local repository or downloaded in ',g0,' seconds')")), wConsole
   t0=systime(/seconds)
-  message,'Creating the box structure',/cont
+  gx_message,'Creating the box structure', wConsole
   ;for backward compatibility with deprecated "centre" input
   if n_elements(center_arcsec) ne 2 then if n_elements(centre) eq 2 then center_arcsec=centre
   if n_elements(center_arcsec) ne 2 then begin
-    message,'Required center_arcsec input is missing or incorrect. Action aborted!',/cont
+    gx_message,'Required center_arcsec input is missing or incorrect. Action aborted!', wConsole
     return
   endif
   
@@ -114,36 +121,36 @@ pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km
     if tag_exist(files,'AIA_1600') then if file_test(files.AIA_1600) then gx_box_add_refmap, box, files.aia_1600, id = 'AIA_1600'
     if tag_exist(files,'AIA_1700') then if file_test(files.AIA_1700) then gx_box_add_refmap, box, files.aia_1700, id = 'AIA_1700'
   endif   
-  message,strcompress(string(systime(/seconds)-t0,format="('Box structure created in ',g0,' seconds')")),/cont  
+  gx_message,strcompress(string(systime(/seconds)-t0,format="('Box structure created in ',g0,' seconds')")), wConsole  
   out_files=[]
   if keyword_set(empty_box_only) or keyword_set(save_empty_box) then begin
     file=out_dir+path_sep()+box.id+'.sav'
     save,box,file=file
     out_files=[out_files,file]
-    message,'Empty box structure saved to '+file,/cont
+    gx_message,'Empty box structure saved to '+file, wConsole
   endif
-  if keyword_set(empty_box_only) then return
+  if keyword_set(empty_box_only) then goto,exit_point
   
   t0=systime(/seconds)
-  message,'Performing initial potential extrapolation',/cont
+  gx_message,'Performing initial potential extrapolation', wConsole
   gx_box_make_potential_field, box,pbox
-  message,strcompress(string(systime(/seconds)-t0,format="('Potential extrapolation performed in ',g0,' seconds')")),/cont
+  gx_message,strcompress(string(systime(/seconds)-t0,format="('Potential extrapolation performed in ',g0,' seconds')")), wConsole
   
   if size(pbox,/tname) eq 'STRUCT' and ( keyword_set(save_potential) or keyword_set(potential_only) ) then begin
     file=out_dir+path_sep()+pbox.id+'.sav'
     save,pbox,file=file
     out_files=[out_files,file]
-    message,'Potential box structure saved to '+file,/cont
+    gx_message,'Potential box structure saved to '+file, wConsole
   end
   
   if keyword_set(save_bounds) then begin
     file=out_dir+path_sep()+box.id+'.sav'
     save,box,file=file
     out_files=[out_files,file]
-    message,'Bound Box structure saved to '+file,/cont
+    gx_message,'Bound Box structure saved to '+file, wConsole
   endif
  
-  if keyword_set(potential_only) then return
+  if keyword_set(potential_only) then goto,exit_point
   
   if !VERSION.OS_FAMILY NE 'Windows' or keyword_set(use_potential) then begin
     if size(pbox,/tname) eq 'STRUCT' then box=temporary(pbox)
@@ -155,19 +162,19 @@ pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km
   dirpath=file_dirname((ROUTINE_INFO('gx_box_make_potential_field',/source)).path,/mark)
   path=dirpath+'\Magnetic-Field_Library\WWNLFFFReconstruction.dll'
   
-  message,'Performing NLFFF extrapolation',/cont
+  gx_message,'Performing NLFFF extrapolation', wConsole
   return_code = gx_box_make_nlfff_wwas_field(path, box)
-  message,strcompress(string(systime(/seconds)-t0,format="('NLFFF extrapolation performed in ',g0,' seconds')")),/cont
+  gx_message,strcompress(string(systime(/seconds)-t0,format="('NLFFF extrapolation performed in ',g0,' seconds')")), wConsole
   file=out_dir+path_sep()+box.id+'.sav'
   save,box,file=file
   out_files=[out_files,file]
-  message,'NLFFF box structure saved to '+file,/cont
+  gx_message,'NLFFF box structure saved to '+file, wConsole
   
-  if keyword_set(nlfff_only) then return
+  if keyword_set(nlfff_only) then goto,exit_point
   
   skip_nlfff:
   
-  message,'Computing field lines for each voxel in the model..',/cont
+  gx_message,'Computing field lines for each voxel in the model..', wConsole
   tr_height_km=1000
   tr_height_sunradius=tr_height_km/(gx_rsun(unit='km'))
   if keyword_set(use_idl) or !version.os_family ne 'Windows' then begin
@@ -176,7 +183,7 @@ pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km
     model->computecoronalmodel,tr_height=tr_height_sunradius,/compute,_extra=_extra
     gx_copylines2box,model,box
     obj_destroy,model
-    message,strcompress(string(systime(/seconds)-t0,format="('Field line computation performed in ',g0,' seconds')")),/cont
+    gx_message,strcompress(string(systime(/seconds)-t0,format="('Field line computation performed in ',g0,' seconds')")), wConsole
   endif else begin
     reduce_passed=1
     if tag_exist(_extra,'center_vox') then begin
@@ -189,20 +196,23 @@ pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km
   file=out_dir+path_sep()+box.id+'.sav'
   save,box,file=file
   out_files=[out_files,file]
-  message,'Box structure saved to '+file,/cont
+  gx_message,'Box structure saved to '+file, wConsole
   
-  
-  if keyword_set(generic_only) then return 
+  if keyword_set(generic_only) then goto,exit_point 
   
   t0=systime(/seconds)
-  message,'Generating chromo model..',/cont
+  gx_message,'Generating chromo model..', wConsole
   chromo_mask=decompose(box.base.bz,box.base.ic)
   box=keyword_set(old_combo_format)?combo_model_deprecated(box,chromo_mask):combo_model(box,chromo_mask)
-  message,strcompress(string(systime(/seconds)-t0,format="('Chromo model generated in ',g0,' seconds')")),/cont
+  gx_message,strcompress(string(systime(/seconds)-t0,format="('Chromo model generated in ',g0,' seconds')")), wConsole
   file=out_dir+path_sep()+box.id+'.sav'
   save,box,file=file
   out_files=[out_files,file]
-  message,'Box structure saved to '+file,/cont
-  message,'This script generated the following files:',/cont
-  message,out_files,/cont
+  gx_message,'Box structure saved to '+file, wConsole
+  exit_point:
+  gx_message,string(systime(/seconds)-t_start,format="('This AMPP script has been executed in ',g0,' seconds and generated the following files:')"), wConsole
+  gx_message,'', wConsole
+  gx_message,out_files, wConsole
+  gx_message,'', wConsole
+  gx_message,'You may use "Import Model Data" file menu option in GX_Simulator to import any of these models.', wConsole
 end

@@ -101,7 +101,12 @@ wMapContainer=cw_objMapContainer(tbar,name='MAP_CONTAINER',plotman_obj=self.plot
 fov_base=widget_base(wMapBase,/row,event_func='IDLexWidget__HandleEvent',uvalue=self)
 field=cw_objArray(fov_base,label='XRANGE',value=[-1000.0,1000.0],unit='"',inc=1,/static,uname='XRANGE') 
 field=cw_objArray(fov_base,label='YRANGE',value=[-1000.0,1000.0],unit='"',inc=1,/static,uname='YRANGE')
- self.wControlBase=widget_base(wParent,/column,/frame,event_func='IDLexWidget__HandleEvent',uvalue=self)
+ wTab=widget_tab(wParent)
+ self.wAMPPbase=widget_base(wTab,/column,/frame,event_func='IDLexWidget__HandleEvent',uvalue=self,$
+   Title='Automated Model Production Pipeline')
+ gxampp=cw_gxampp(self.wAMPPbase)  
+ self.wControlBase=widget_base(wTab,/column,/frame,event_func='IDLexWidget__HandleEvent',uvalue=self,$
+ Title='Legacy Magnetic Field Extrapolation Project')
  wWrapperBase=widget_base(self.wControlBase,/row,/toolbar)
  wSelecWrapper= widget_button(font=font,wWrapperBase, $
                  value=gx_bitmap(filepath('open.bmp', subdirectory=['resource', 'bitmaps'])), $
@@ -1172,6 +1177,7 @@ pro gxMapViewWid__define
  bridge:obj_new(),$
  wPlotmanBase:0l,$
  wControlBase:0l,$
+ wAMPPbase:0l,$
  wToolbar:0l,$
  wBridge:0l,$
  wPause:0l,$

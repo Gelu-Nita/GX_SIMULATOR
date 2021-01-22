@@ -982,8 +982,9 @@ pro gxScanBox::DrawPixel,x,y
 end
 
 pro gxScanBox::BridgeReset,bridge
-; bridge->Execute,'.reset'
-; if !version.os_family eq 'Windows' then bridge->Execute, '@' + pref_get('IDL_STARTUP') else bridge->Execute, '@gx_startup.pro'
+ if !version.os_family eq 'Windows' then $
+      bridge->Execute, '@' + pref_get('IDL_STARTUP') else $
+      bridge->Execute, '@gx_startup.pro'
  gxGetBridgeVar,bridge,(*self.info).execute,vars
  for k=0,n_elements(vars)-1 do bridge->Execute,'delvar,'+vars[k]
  break_file, self.renderer, disk_log, dir, IDL_Renderer, ext
@@ -994,6 +995,7 @@ pro gxScanBox::BridgeReset,bridge
  bridge->Execute,'RESOLVE_ROUTINE, IDL_Renderer, /COMPILE_FULL_FILE ,/either' 
  bridge->SetVar,'rowdata',make_array([self.nx,(*self.info).pixdim],/float)
  bridge->SetVar,'calls',0
+ self->BridgeResetEBTEL,bridge
 end
 
 pro gxScanBox::ResetAllBridges

@@ -1,5 +1,6 @@
 function objArray::INIT,wParent,value=value,units=units,uname=uname,label=label,names=names,items=items,frame=frame,sensitive=sensitive,display=display,$
-                             column=column,vertical=vertical,row=row,static=static,xlabelsizes=xlabelsizes,_extra=_extra
+                             column=column,vertical=vertical,row=row,static=static,xlabelsizes=xlabelsizes,$
+                             show_label=show_label,scr_arraylabelsize=scr_arraylabelsize,_extra=_extra
  compile_opt hidden
   catch, error_stat
   if error_stat ne 0 then begin
@@ -47,10 +48,10 @@ function objArray::INIT,wParent,value=value,units=units,uname=uname,label=label,
     event_func='IDLexWidget__HandleEvent', $
     uvalue=self, $
     notify_realize='IDLexWidget__OnRealize', $
-    KILL_NOTIFY='objArrayKill');,$
- ;   _extra=_extra)
-
-    wbase=widget_base(self.wbase,/row)
+    KILL_NOTIFY='objArrayKill')
+  
+  wbase=widget_base(self.wbase,/row)
+  if keyword_set(show_label) then wlabel=widget_label(wbase,value=self.label,scr_xsize=scr_arraylabelsize,_extra=_extra)
 
   if ~keyword_set(static) then begin   
     wButBase = WIDGET_BASE(wBase, $

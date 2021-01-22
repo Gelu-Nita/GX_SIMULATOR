@@ -1,6 +1,7 @@
 function objField::INIT,wParent,uname=uname,label=label,frame=frame,$
                              xtextsize=xtextsize,tfont=tfont,increment=increment, right_label=right_label,$
-                             format=format,units=units,value=value,xlabelsize=xlabelsize,lfont=lfont,flat=flat,map=map,min=min,max=max,indicator=indicator,type=type,_extra=_extra
+                             format=format,units=units,value=value,xlabelsize=xlabelsize,lfont=lfont,flat=flat,map=map,min=min,max=max,indicator=indicator,$
+                             type=type,scr_labelsize=scr_labelsize,_extra=_extra
  compile_opt hidden
   catch, error_stat
   if error_stat ne 0 then begin
@@ -58,7 +59,7 @@ function objField::INIT,wParent,uname=uname,label=label,frame=frame,$
 
 
     if n_elements(xlabelsize) gt 0 then xlabelsize=self.xlabelsize
-    wLabel=widget_label(wLabelBase,value=self.label,font=lfont,uname='_label',/dynamic_resize,xsize=xlabelsize)
+    wLabel=widget_label(wLabelBase,value=self.label,font=lfont,uname='_label',/dynamic_resize,xsize=xlabelsize,scr_xsize=scr_labelsize)
 
 
     self.wText=widget_text(wTextBase,/editable,font=tfont,value=string(value,format=self.format)+self.units,uname='_text',xsize=self.xtextsize)

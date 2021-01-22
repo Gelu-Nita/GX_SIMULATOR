@@ -1140,9 +1140,7 @@ pro gxImgViewWid::ImgCubeFile2Renderer,tlb
           gx_fovmap2scanbox,fovmap,xrange=xrange,yrange=yrange
           info=gxcube.info
           self.pData=self->NewView(info,renderer=gxcube.renderer,nx=nx,ny=ny,xrange=xrange,yrange=yrange,data=data,fovmap=fovmap)
-          if tag_exist(gxcube,'EBTEL') then begin
-            widget_control, widget_info(get_tlb(self.wBase), find_by_uname='EBTEL'), set_value=gx_ebtel_path(gxcube.ebtel)
-          endif
+          if tag_exist(gxcube,'EBTEL') then set_value=gx_ebtel_path(gxcube.ebtel)
         end
       endelse
       self->SelectImg

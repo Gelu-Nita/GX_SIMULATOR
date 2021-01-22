@@ -159,6 +159,15 @@ pro gx_simulator_event,event
                    goto,UploadModel
                   endif
                 end
+    'MODEL2GX': begin
+      if tag_exist(event,'model') then begin
+        widget_control,widget_info(event.top,find_by_uname='ViewTab'),set_tab_current=0
+        widget_control,widget_info(event.top,find_by_uname='ControlTab'),set_tab_current=0
+        model=event.model
+        if tag_exist(event,'file') then file=event.file
+        goto,UploadModel
+      endif
+    end             
    'PLOTMANDRAWEVENT':begin
                         event=state.MapView->HandleEvent(event)
                       end
@@ -260,6 +269,7 @@ pro gx_simulator_event,event
                      if file eq '' then goto,nevermind
                      UploadModel:
                      if obj_isa(model,'gxmodel') then begin
+                       widget_control,widget_info(event.top,find_by_uname='ControlTab'),set_tab_current=0
                        state.ModelCount+=1
                        model->SetIsRoi,state.ModelCount eq 1
                        name=model->GetName()
@@ -331,7 +341,7 @@ pro gx_simulator_event,event
                   file=dialog_pickfile(filter='*.sav',$
                   DEFAULT_EXTENSION='sav',$
                   /read,/must_exist,$
-                  title='Please select a file containig a {Bx,By,Bz} datacube structure')
+                  title='Please select a file containig a GX datacube structure')
                   if file ne '' then begin
                    model=gx_ImportModel(file)
                    if obj_isa(model,'gxmodel') then goto, UploadModel else obj_destroy,model
@@ -373,7 +383,7 @@ state.sun=OBJ_NEW('gxSUN',grid=10)
 state.view->Add,state.sun
 
 
-main_base= WIDGET_BASE(Title =keyword_set(expert)?'GX SIMULATOR (Expert Version)':'GX SIMULATOR',/column,UNAME='MAINBASE',/TLB_KILL_REQUEST_EVENTS,TLB_FRAME_ATTR=0,$
+main_base= WIDGET_BASE(Title =keyword_set(expert)?'GX SIMULATOR (Expert Version)':'GX SIMULATOR',/column,UNAME='gx_simulator',/TLB_KILL_REQUEST_EVENTS,TLB_FRAME_ATTR=0,$
   x_scroll_size=0.95*scr[0],y_scroll_size=scr[1]*0.90,/scroll)
 
 state_base=widget_base(main_base, /column,UNAME='STATEBASE')
@@ -480,6 +490,7 @@ state.oObjviewWid = obj_new('gxObjviewWid', $
   wGX2DataControl=Widget_Base(wControlTab,Title='Data To Model Image Comparison',UNAME='gx2data')
   wgx2data=cw_gx2data(wGX2DataControl,plotman=state.MapView->GetPlotmanObj())          
   widget_control,state_base,set_uvalue=state
+  widget_control,widget_info(state_base,find_by_uname='ControlTab'),set_tab_current=4
   WIDGET_CONTROL, /REALIZE, main_base
   XMANAGER, 'gx_simulator', main_base ,/no_block
   widget_control,widget_info(wStatusBar,/child),get_uvalue=oStatusBar
