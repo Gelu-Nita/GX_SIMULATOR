@@ -1,6 +1,6 @@
 pro gx_message,msg,wConsole,overwrite=overwrite,prompt=prompt
   default,prompt,'% '
-  console=long(wConsole)
+  if n_elements(wConsole) ne 0 then console= long(wConsole)
   if widget_valid(console) then begin
     if ~keyword_set(overwrite) then begin
       widget_control,console,get_value=txt

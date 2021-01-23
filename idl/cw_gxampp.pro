@@ -68,6 +68,11 @@ pro gxampp::CreatePanel,xsize=xsize,ysize=ysize
     names=['X: ','Y: ','Z: '],units='',xtextsize=6,/static,xlabelsize=4,font=font,/show,uname='size_pix',increment=1,type=1l)  
    
    wResolution=cw_objField(wBox,label=' Resolution ',value=1400.0,unit='km',xtextsize=10,uname='dx_km')
+   wBufferBase=widget_base(wControlBase,/row)
+   wBufferZone=cw_objField(wBufferBase,label='Buffer Zone Size',value=10.0,unit='%',$
+                           scr_labelsize=label.scr_xsize,xtextsize=10,increment=1,$
+                           uname='weight_bound_size',tooltip='Blah',min=0,max=50)
+   buffer_tip=widget_label(wBufferBase,value='(default, 10% of the box dimensions recommended)')
    wProjectionBase=widget_base(wControlBase,/row)
    wlabel=widget_label(wProjectionBase,value='Geometrical Projection',scr_xsize=label.scr_xsize)
    wProjection=cw_bgroup(wProjectionBase,['CEA','TOP'],/row,/exclusive,/frame,uname='projection',set_value=0)
@@ -214,6 +219,8 @@ pro gxampp::GenerateScript
     if widget_info(wKey,/button_set) then script+=', '+keywords[k]
   endif
  endfor
+ widget_control,widget_info(self.wBase,find_by_uname='weight_bound_size'),get_value=buffer
+ if buffer ne 10 then script+=string(buffer/100., format="(', weight_bound_size=',g0)")
  widget_control,wScript,set_value=script
 end
 

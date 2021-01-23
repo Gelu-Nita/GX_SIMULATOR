@@ -357,6 +357,10 @@ end
 
 
 pro gx_simulator,nthreads_or_model,main_base=main_base,expert=expert,_extra=_extra
+if (XREGISTERED('gx_simulator') ne 0) then begin
+  answ=dialog_message('Only one instance of GX Simulator may run in the same IDL session!')
+  return
+endif
 if isa(nthreads_or_model,/number) then nthreads=nthreads_or_model
 if isa(nthreads_or_model,'gxmodel') then model=nthreads_or_model
 setenv, 'WCS_RSUN=6.96d8'
