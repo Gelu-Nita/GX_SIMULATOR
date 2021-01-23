@@ -163,7 +163,7 @@ pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km
   path=dirpath+'\Magnetic-Field_Library\WWNLFFFReconstruction.dll'
   
   gx_message,'Performing NLFFF extrapolation', wConsole
-  return_code = gx_box_make_nlfff_wwas_field(path, box)
+  return_code = gx_box_make_nlfff_wwas_field(path, box,_extra=_extra)
   gx_message,strcompress(string(systime(/seconds)-t0,format="('NLFFF extrapolation performed in ',g0,' seconds')")), wConsole
   file=out_dir+path_sep()+box.id+'.sav'
   save,box,file=file
