@@ -52,17 +52,19 @@ pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km
   par=ROUTINE_INFO(routine_name,/par)
   exec="gx_fov2box, '"+time+"'"
   for i=0, par.num_kw_args-2 do begin
-    dummy=execute('set=keyword_set('+par.kw_args[i]+')')
-    if set eq 1 then begin
-      dummy=execute('val='+par.kw_args[i])
-      if size(val,/tname) ne 'STRUCT' then begin
-        if size(val,/tname) ne 'STRING' then begin
-        val=n_elements(val) eq 1?arr2str(val):'['+arr2str(val)+']'
-        endif else val="'"+val+"'"
-        val=strcompress(val)
-        exec+=', '+par.kw_args[i]+'='+val   
-      end
-    endif
+    if par.kw_args[i] ne 'WCONSOLE' then begin
+      dummy=execute('set=keyword_set('+par.kw_args[i]+')')
+      if set eq 1 then begin
+        dummy=execute('val='+par.kw_args[i])
+        if size(val,/tname) ne 'STRUCT' then begin
+          if size(val,/tname) ne 'STRING' then begin
+          val=n_elements(val) eq 1?arr2str(val):'['+arr2str(val)+']'
+          endif else val="'"+val+"'"
+          val=strcompress(val)
+          exec+=', '+par.kw_args[i]+'='+val   
+        end
+      endif
+    end
   endfor
   if size(_extra,/tname) eq 'STRUCT' then begin
     tnames=tag_names(_extra)
@@ -75,7 +77,7 @@ pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km
   endif
   t0=systime(/seconds)
   t_start=t0
-  gx_message,'Downloading data',wConsole,/over
+  gx_message,'Downloading data...',wConsole
   if not keyword_set(tmp_dir) then tmp_dir = filepath('jsoc_cache',root = GETENV('IDL_TMPDIR'))
   if not file_test(tmp_dir) then file_mkdir, tmp_dir
   if not keyword_set(out_dir) then cd, current = out_dir
@@ -97,7 +99,7 @@ pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km
   if size(aia_files,/tname) eq 'STRUCT' then files = create_struct(files,aia_files)
   gx_message, strcompress(string(systime(/seconds)-t0,format="('Data already found in the local repository or downloaded in ',g0,' seconds')")), wConsole
   t0=systime(/seconds)
-  gx_message,'Creating the box structure', wConsole
+  gx_message,'Creating the box structure...', wConsole
   ;for backward compatibility with deprecated "centre" input
   if n_elements(center_arcsec) ne 2 then if n_elements(centre) eq 2 then center_arcsec=centre
   if n_elements(center_arcsec) ne 2 then begin
@@ -214,5 +216,5 @@ pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km
   gx_message,'', wConsole
   gx_message,out_files, wConsole
   gx_message,'', wConsole
-  gx_message,'You may use "Import Model Data" file menu option in GX_Simulator to import any of these models.', wConsole
+  gx_message,'You may use "Import Model Data" file menu option to import any of these models in GX_Simulator.', wConsole
 end

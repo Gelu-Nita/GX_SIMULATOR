@@ -148,7 +148,7 @@ if tag_exist(box,'refmaps') then begin
         if ~match then refmaps->setmap,count,rmap->get(k,/map)
        endfor
       endif
-    endfor
+    endfor    
 
 endif
  
@@ -156,5 +156,7 @@ endif
  model->SetProperty,NS=NS,EW=EW,$
    XCOORD_CONV=XCOORD_CONV,YCOORD_CONV=YCOORD_CONV,ZCOORD_CONV=ZCOORD_CONV,$
    XRANGE=XRANGE,YRANGE=YRANGE,ZRANGE=ZRANGE,size=size,volume=volume,refmaps=refmaps
+ if tag_exist(box,'id') then model->SetName,box.id
+ if tag_exist(box,'execute') then model->SetId,box.execute 
  return,model
 end

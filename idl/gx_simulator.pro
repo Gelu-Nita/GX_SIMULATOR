@@ -164,7 +164,6 @@ pro gx_simulator_event,event
         widget_control,widget_info(event.top,find_by_uname='ViewTab'),set_tab_current=0
         widget_control,widget_info(event.top,find_by_uname='ControlTab'),set_tab_current=0
         model=event.model
-        if tag_exist(event,'file') then file=event.file
         goto,UploadModel
       endif
     end             
@@ -277,7 +276,7 @@ pro gx_simulator_event,event
                         if n_elements(file) gt 0 then begin
                           break_file,file, disk_log, dir, name, ext, fversion, node, /last_dot
                         endif else name=string(state.ModelCount,format="('Model',i2)")
-                        model->SetProperty,name=name
+                        model->SetName,name
                        endif 
                        
                        wParent=WIDGET_BASE(state.wModelsTab,/Align_Center,UNAME=name,Title=name)

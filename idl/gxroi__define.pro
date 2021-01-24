@@ -72,7 +72,6 @@ pro gxROI::DisplayMap,select
   end  
  endif else begin
   map=gx_remap(map,self.fovmap->get(/xrange),self.fovmap->get(/yrange),[self.nx,self.ny],time=ref_map.time)
-  ;map=extract_map(map,xrange=self.fovmap->get(/xrange),yrange=self.fovmap->get(/yrange),/exact)
   display=self.fovimage
  (self->GetFOVscreen())->SetProperty,hide=0
  (self->GetBaseScreen())->SetProperty,ALPHA_CHANNEL=0,BLEND_FUNCTION = [3, 4]

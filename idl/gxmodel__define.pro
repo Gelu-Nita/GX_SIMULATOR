@@ -1751,8 +1751,20 @@ function gxModel::IsRoi
 end
 
 function gxModel::GetName
-self->GetProperty,id=name
- return,name
+ return,self.name
+end
+
+pro gxModel::SetName, name
+  self->SetProperty,name=name
+end
+
+function gxModel::GetID
+  self->GetProperty,id=id
+  return,id
+end
+
+pro gxModel::SetID, id
+  self->SetProperty,id=id
 end
 
 pro gxModel::upgrade_combo_model,verbose=verbose
@@ -1882,7 +1894,6 @@ pro gxModel::upgrade_combo_model,verbose=verbose
   self->add,self.volume
   self->UpdateRoi,/replace
 end
-
 
 pro gxModel__define
 self={gxModel,inherits gxComponent,$
