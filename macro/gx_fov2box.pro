@@ -50,7 +50,7 @@ pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km
                         entry_box=entry_box,jump2potential=jump2potential,jump2nlfff=jump2nlfff,jump2lines=jump2lines,jump2chromo=jump2chromo,info=info,_extra=_extra
    CATCH, Error_status
    IF Error_status NE 0 THEN BEGIN
-      if widget_valid(wConsole) then begin
+      if widget_valid(long(wConsole)) then begin
         widget_control,wConsole,get_value=txt
         widget_control,wConsole,set_value=[txt,'% '+!ERROR_STATE.MSG,'% ABORTED!']
       endif else print,[['% '+!ERROR_STATE.MSG],['% GX_FOV2BOX: ABORTED!']]
@@ -228,8 +228,7 @@ pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km
   
   compute_nlfff:
   t0=systime(/seconds)
-  dirpath=file_dirname((ROUTINE_INFO('gx_box_make_potential_field',/source)).path,/mark)
-  path=dirpath+'\Magnetic-Field_Library\WWNLFFFReconstruction.dll'
+  path= gx_findfile(folder='gxbox')+'\Magnetic-Field_Library\WWNLFFFReconstruction.dll'
   gx_message,'Performing NLFFF extrapolation', wConsole
   return_code = gx_box_make_nlfff_wwas_field(path, box,_extra=_extra)
   gx_message,strcompress(string(systime(/seconds)-t0,format="('NLFFF extrapolation performed in ',g0,' seconds')")), wConsole

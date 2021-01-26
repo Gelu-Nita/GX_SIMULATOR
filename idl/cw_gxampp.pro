@@ -6,9 +6,8 @@ function gxampp::INIT,wBase,uname=uname,_extra=_extra
       MESSAGE, /INFO, !ERROR_STATE.MSG
       return, 0
   end
-  
-  void=self->gxWidget::Init(wBase,self,KILL_NOTIFY='objgxamppKill',_extra=_extra)
   self.WinOS=!version.os_family eq 'Windows'
+  void=self->gxWidget::Init(wBase,self,KILL_NOTIFY='objgxamppKill',_extra=_extra)
   self->CheckOS
   return,1
 end
@@ -99,11 +98,7 @@ pro gxampp::CreatePanel,xsize=xsize,ysize=ysize
     names=['X: ','Y: ','Z: '],units='',xtextsize=6,/static,xlabelsize=4,font=font,/show,uname='size_pix',increment=1,type=1l)  
    
    wResolution=cw_objField(wBox,label=' Resolution ',value=1400.0,unit='km',xtextsize=10,uname='dx_km')
-   wBufferBase=widget_base(wInputBase,/row)
-   wBufferZone=cw_objField(wBufferBase,label='Buffer Zone Size',value=10.0,unit='%',$
-                           scr_labelsize=label.scr_xsize,xtextsize=10,increment=1,$
-                           uname='weight_bound_size',tooltip='Blah',min=0,max=50)
-   buffer_tip=widget_label(wBufferBase,value='(default, 10% of the box dimensions recommended)')
+
    wProjectionBase=widget_base(wInputBase,/row)
    wlabel=widget_label(wProjectionBase,value='Geometrical Projection',scr_xsize=label.scr_xsize)
    wProjection=cw_bgroup(wProjectionBase,['CEA','TOP'],/row,/exclusive,/frame,uname='projection',set_value=0)
@@ -111,8 +106,14 @@ pro gxampp::CreatePanel,xsize=xsize,ysize=ysize
    wSFQBase=widget_base(wInputBase,/row)
    wlabel=widget_label(wSFQBase,value='Pi-disambiguation',scr_xsize=label.scr_xsize)
    wSFQ=cw_bgroup(wSFQBase,['HMI','SFQ'],/row,/exclusive,/frame,uname='/sfq',set_value=0) 
-   keywords1=['Download AIA/UV contextual maps','Download AIA/EUV contextual maps','Save Empty Box','Save Potential Box','Save Bounds Box']  
+  
+   wBufferBase=widget_base(wControlBase,/row)
+   wBufferZone=cw_objField(wBufferBase,label='Buffer Zone Size',value=10.0,unit='%',$
+     scr_labelsize=label.scr_xsize,xtextsize=10,increment=1,$
+     uname='weight_bound_size',tooltip='Blah',min=0,max=50)
+   buffer_tip=widget_label(wBufferBase,value='(default, 10% of the box dimensions recommended)',font=font)  
    
+   keywords1=['Download AIA/UV contextual maps','Download AIA/EUV contextual maps','Save Empty Box','Save Potential Box','Save Bounds Box']  
    wKeywordsBase=widget_base(wControlBase,/row,/frame)
    wbase1=widget_base(wKeywordsBase,/nonexclusive,/column)
    wbase2=widget_base(wKeywordsBase,/nonexclusive,/column)
@@ -208,9 +209,9 @@ function gxampp::HandleEvent, event
               endcase
               self->CopyBox,/nokeys
               for i=0,up2 do widget_control,widget_info(self.wIDBase,find_by_uname=keywords[i]),set_button=0,sensitive=0
-              self.jump2=jump2 ne ''?jump2:''
-              widget_control,widget_info(self.wIDBase,find_by_uname='entrybox_copy'),sensitive=self.jump2 eq '/'
-              widget_control,widget_info(self.wIDBase,find_by_uname='box_base'),sensitive=self.jump2 eq '/'
+              self.jump2=jump2 ne '/'?jump2:''
+              widget_control,widget_info(self.wIDBase,find_by_uname='entrybox_copy'),sensitive=self.jump2 eq ''
+              widget_control,widget_info(self.wIDBase,find_by_uname='box_base'),sensitive=self.jump2 eq ''
              endif
             end                                                
     'model2gx':begin    
@@ -342,7 +343,10 @@ pro gxampp::GenerateScript
    widget_control,widget_info(self.wBase,find_by_uname='weight_bound_size'),get_value=buffer
    if buffer ne 10 then script+=string(buffer/100., format="(', weight_bound_size=',g0)")
  endif else begin
-   script+=", entry_box= '"+self.entry_box+"', "+self.jump2
+   script+=", entry_box= '"+self.entry_box+"'"
+   widget_control,widget_info(self.wBase,find_by_uname='weight_bound_size'),get_value=buffer
+   if buffer ne 10 then script+=string(buffer/100., format="(', weight_bound_size=',g0)")
+   script+=', '+self.jump2
  endelse
    wScript=widget_info(self.wIDBase,find_by_uname='script')
    widget_control,wScript,get_uvalue=keywords
