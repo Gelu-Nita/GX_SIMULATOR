@@ -488,7 +488,7 @@ end
 
 pro gxModel::UpdateDef
   ;Here we upgrade combo_bodel if necessary
-  self.upgrade_combo_model
+  self->upgrade_combo_model
   
   ;Here we update the WinOS flag depending on the platform on which the model is restored 
   ;the repurposed lock property is used to store this flag

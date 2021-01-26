@@ -38,7 +38,7 @@ function gx_box2model,box
   dz=box.dr[2]
  endelse
  
-; ;!!! changed by Sergey Anfinogentov!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+ ;!!! changed by Sergey Anfinogentov!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
  ;creating Earth view WCS structure
  wcs_earth = wcs_2d_simulate(2048,2048, date_obs = wcs_get_time(wcs))
 
@@ -57,13 +57,6 @@ function gx_box2model,box
  
  ; "-1" is needed because in FITS standard left bottom pixel is [1,1], while in IDL it is [0,0]
  delta_xy=[dx,dy]*size[1:2]*(wcs.crpix-1)/osize[1:2]
- 
-; xr=[-sx/2.,sx/2.]*dx
-; yr=[-sy/2.,sy/2.]*dy
-; 
-; xrange=[-delta_xy[0],-delta_xy[0]+(sx-1)*dx]
-; yrange=[-delta_xy[1],-delta_xy[1]+(sx-1)*dy]
-; zrange=[0,sz-1]*dz
  
  xrange=[-delta_xy[0],-delta_xy[0]+sz*dx]
  yrange=[-delta_xy[1],-delta_xy[1]+sy*dy]

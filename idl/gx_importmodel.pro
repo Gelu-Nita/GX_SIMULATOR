@@ -46,7 +46,7 @@ function gx_ImportModel,source,box=box
       validB=tag_exist(box,'bcube')
      end  
     endelse 
-     valid=(validBxByBz eq 1) or (validB eq 1)
+    valid=(validBxByBz eq 1) or (validB eq 1)
     if ~valid then begin
      answ=dialog_message('Invalid datacube file:'+string(10b)+$
      'No structure having the required Bx,By and Bz or Bcube tags has been found!')
