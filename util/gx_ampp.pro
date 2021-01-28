@@ -8,8 +8,8 @@ pro gx_ampp_event,event
   endcase
 end
 
-pro gx_ampp,wgxampp
-  gx_defparms
+pro gx_ampp,wgxampp,font=font
+  gx_setfonts,font=font
   device, get_screen_size=scr
   if !version.os_family eq 'Windows' then begin
     if scr[0] lt 3200 then !defaults.font='lucida console*12' else !defaults.font='lucida console*24'

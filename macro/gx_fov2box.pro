@@ -228,9 +228,9 @@ pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km
   
   compute_nlfff:
   t0=systime(/seconds)
-  path= gx_findfile(folder='gxbox')+'\Magnetic-Field_Library\WWNLFFFReconstruction.dll'
+  default,dll_path,gx_findfile('WWNLFFFReconstruction.dll',folder='gxbox\Magnetic-Field_Library')
   gx_message,'Performing NLFFF extrapolation', wConsole
-  return_code = gx_box_make_nlfff_wwas_field(path, box,_extra=_extra)
+  return_code = gx_box_make_nlfff_wwas_field(dll_path, box,_extra=_extra)
   gx_message,strcompress(string(systime(/seconds)-t0,format="('NLFFF extrapolation performed in ',g0,' seconds')")), wConsole
   file=out_dir+path_sep()+box.id+'.sav'
   save,box,file=file
@@ -257,7 +257,8 @@ pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km
         reduce_passed=~keyword_set(_extra.center_vox)
       endif else if tag_exist(_extra,'reduce_passed') then reduce_passed=_extra.reduce_passed
     end  
-    gx_addlines2box, box,tr_height_km,reduce_passed=reduce_passed
+    default,dll_path,gx_findfile('WWNLFFFReconstruction.dll',folder='gxbox\Magnetic-Field_Library')
+    gx_addlines2box, box,tr_height_km,reduce_passed=reduce_passed,dll_path=dll_path
   endelse
   
   box.id=box.id+'.GEN'

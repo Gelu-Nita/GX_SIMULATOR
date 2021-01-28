@@ -23,7 +23,6 @@ end
 
 pro gxampp::CreatePanel,xsize=xsize,ysize=ysize
   device, get_screen_size=scr
-  font=!defaults.font
   if not exist(xsize) then xsize = fix (scr[0] * .35)
   if not exist(ysize) then ysize = xsize *1.1
    
@@ -36,39 +35,39 @@ pro gxampp::CreatePanel,xsize=xsize,ysize=ysize
    
    wTmpDirBase=widget_base(wControlBase,/row,scr_xsize=scr_xsize)
    wTmpBase=widget_base(wTmpDirBase,/row)
-   wlabel=widget_label(wTmpBase,font=font,value='SDO Data Repository    ')
+   wlabel=widget_label(wTmpBase,value='SDO Data Repository    ')
    label=widget_info(wlabel,/geometry)
    label_scr_xsize=label.scr_xsize
-   wSelectTmpDir= widget_button(font=font,wTmpBase, $
+   wSelectTmpDir= widget_button(wTmpBase, $
      value=gx_bitmap(filepath('open.bmp', subdirectory=['resource', 'bitmaps'])), $
      /bitmap,tooltip='Select directory where HMI data will be downloaded or looked for',uname='tmp_dir_select')
    geom = widget_info (wTmpBase, /geom)
-   wTmpDirPath=widget_text(font=font,wTmpDirBase,scr_xsize=scr_xsize-geom.scr_xsize,uname='tmp_dir',/editable,$
+   wTmpDirPath=widget_text(wTmpDirBase,scr_xsize=scr_xsize-geom.scr_xsize,uname='tmp_dir',/editable,$
                            value=self.WinOS?'C:\jsoc_cache':(getenv('HOME')+'\jsoc_cache'))
    
   
    wOutDirBase=widget_base(wControlBase,/row,scr_xsize=scr_xsize)
    wOutBase=widget_base(wOutDirBase,/row)
-   wlabel=widget_label(wOutBase,font=font,scr_xsize=label.scr_xsize,value='GX Model Repository')
-   wSelectOutDir= widget_button(font=font,wOutBase, $
+   wlabel=widget_label(wOutBase,scr_xsize=label.scr_xsize,value='GX Model Repository')
+   wSelectOutDir= widget_button(wOutBase, $
      value=gx_bitmap(filepath('open.bmp', subdirectory=['resource', 'bitmaps'])), $
      /bitmap,tooltip='Select directory where the output models will be stored',uname='out_dir_select')
      
    self.model_dir=self.WinOS?'C:\gx_models':(getenv('HOME')+'\gx_models')
    wOutDirPath=widget_text(wOutDirBase,scr_xsize=scr_xsize-geom.scr_xsize,uname='out_dir',/editable,$
-                           value=self.model_dir,font=font)
+                           value=self.model_dir)
    
    
    wEntryBoxBlockBase=widget_base(wControlBase,/column,scr_xsize=scr_xsize,/frame)
    wEntryBoxBase=widget_base(wEntryBoxBlockBase,/row,scr_xsize=scr_xsize)
    wEntryBoxBase=widget_base(wEntryBoxBase,/row)
-   wlabel=widget_label(wEntryBoxBase,font=font,value='External Box path',scr_xsize=label.scr_xsize)
+   wlabel=widget_label(wEntryBoxBase,value='External Box path',scr_xsize=label.scr_xsize)
    label=widget_info(wlabel,/geometry)
-   wSelectEntryBox= widget_button(font=font,wEntryBoxBase, $
+   wSelectEntryBox= widget_button(wEntryBoxBase, $
      value=gx_bitmap(filepath('open.bmp', subdirectory=['resource', 'bitmaps'])), $
      /bitmap,tooltip='Select an existg box structure to start the AMPP script with',uname='entrybox_select')
    geom = widget_info (wEntryBoxBase, /geom)
-   wEntryBoxPath=widget_text(font=font,wEntryBoxBase,scr_xsize=scr_xsize-geom.scr_xsize,uname='entrybox_path',/editable,$
+   wEntryBoxPath=widget_text(wEntryBoxBase,scr_xsize=scr_xsize-geom.scr_xsize,uname='entrybox_path',/editable,$
      value='')
      
    wEntryBoxActionBase=widget_base(wEntryBoxBlockBase,/row,uname='jump2base',sensitive=0)
@@ -76,7 +75,7 @@ pro gxampp::CreatePanel,xsize=xsize,ysize=ysize
    wEntryBoxAction=cw_bgroup( wEntryBoxActionBase,['none','potential','nlff','lines','chromo'], $
                     /row,/exclusive,/frame,uname='jump2',set_value=0,$
                     button_uvalue=['','jump2potential','jump2nlff','jump2lines','jump2chromo'])  
-   wCopyParms= widget_button(font=font,wEntryBoxActionBase, $
+   wCopyParms= widget_button(wEntryBoxActionBase, $
                     value=gx_bitmap(filepath('copy.bmp', subdirectory=['resource', 'bitmaps'])), $
                     /bitmap,tooltip='Copy external box parameters to AMPP',uname='entrybox_copy')
 
@@ -87,15 +86,16 @@ pro gxampp::CreatePanel,xsize=xsize,ysize=ysize
    wTimeBase=widget_base(wInputBase,/row)
    wlabel=widget_label(wTimeBase,value='Model Time',scr_xsize=label.scr_xsize)
    wTime= widget_text(wTimeBase,scr_xsize=scr_xsize-label.scr_xsize,$
-                      value='2016-02-20 17:00:00.000',uvalue='2016-02-20 17:00:00',font=font,/editable,uname='time')
+                      value='2016-02-20 17:00:00.000',uvalue='2016-02-20 17:00:00',/editable,uname='time')
    wCenterBase=widget_base(wInputBase,/row)
-   wCenter=cw_objArray(wCenterBase,label='Model Coordinates ', value=[-15,185],scr_arraylabelsize=label.scr_xsize,$
-    names=['Xc: ','Yc: '],units='"',xtextsize=10,/static,xlabelsize=4,font=font,/show,uname='center')
+   wCenter=cw_objArray(wCenterBase,label='Model Coordinates ', value=[-15,185],$
+    scr_arraylabelsize=label.scr_xsize,$
+    names=['Xc: ','Yc: '],units='"',xtextsize=10,/static,xlabelsize=4,/show,uname='center')
    wCarrington=cw_bgroup(wCenterbase,['Heliocentric','Carrington'],/exclusive,/row,uname='/carrington',set_value=0)
    
    wBox=widget_base(wInputBase,/row)
    wDimensions=cw_objArray(wBox, label='Model Gridpoints', value=[64,64,64],scr_arraylabelsize=label.scr_xsize,$
-    names=['X: ','Y: ','Z: '],units='',xtextsize=6,/static,xlabelsize=4,font=font,/show,uname='size_pix',increment=1,type=1l)  
+    names=['X: ','Y: ','Z: '],units='',xtextsize=6,/static,xlabelsize=4,/show,uname='size_pix',increment=1,type=1l)  
    
    wResolution=cw_objField(wBox,label=' Resolution ',value=1400.0,unit='km',xtextsize=10,uname='dx_km')
 
@@ -111,7 +111,7 @@ pro gxampp::CreatePanel,xsize=xsize,ysize=ysize
    wBufferZone=cw_objField(wBufferBase,label='Buffer Zone Size',value=10.0,unit='%',$
      scr_labelsize=label.scr_xsize,xtextsize=10,increment=1,$
      uname='weight_bound_size',tooltip='Blah',min=0,max=50)
-   buffer_tip=widget_label(wBufferBase,value='(default, 10% of the box dimensions recommended)',font=font)  
+   buffer_tip=widget_label(wBufferBase,value='(default, 10% of the box dimensions recommended)')  
    
    keywords1=['Download AIA/UV contextual maps','Download AIA/EUV contextual maps','Save Empty Box','Save Potential Box','Save Bounds Box']  
    wKeywordsBase=widget_base(wControlBase,/row,/frame)
@@ -130,20 +130,20 @@ pro gxampp::CreatePanel,xsize=xsize,ysize=ysize
      wKeyword=widget_button(wbase2,value=keywords2[i],uname=keys2[i])
    endfor                
    wScript=widget_text(wControlBase,scr_xsize=scr_xsize,ysize=3,$
-    value='',uvalue=[keys1,keys2],/scroll,uname='script',font=font,/wrap)
+    value='',uvalue=[keys1,keys2],/scroll,uname='script',/wrap)
    toolbar= widget_base(wControlBase, /row,/toolbar) 
-   wExecute=widget_button(font=font,toolbar,value=gx_bitmap(gx_findfile('play.bmp')),tooltip='Execute Script',/bitmap,uname='execute')
-   wModel2gx=widget_button(font=font,toolbar,value=gx_bitmap(filepath('importf.bmp', subdirectory=['resource', 'bitmaps'])), $
+   wExecute=widget_button(toolbar,value=gx_bitmap(gx_findfile('play.bmp')),tooltip='Execute Script',/bitmap,uname='execute')
+   wModel2gx=widget_button(toolbar,value=gx_bitmap(filepath('importf.bmp', subdirectory=['resource', 'bitmaps'])), $
     /bitmap,tooltip='Import Model Data',uname='model2gx',sensitive=0)
-   wExecute=widget_button(font=font,toolbar,value=gx_bitmap(filepath('save.bmp', subdirectory=['resource', 'bitmaps'])),tooltip='Save execution log',/bitmap,uname='savelog') 
-   wClearLog=widget_button(font=font,toolbar,value=gx_bitmap(filepath('delete.bmp', subdirectory=['resource', 'bitmaps'])),tooltip='Clear execution log',/bitmap,uname='clearlog')
+   wExecute=widget_button(toolbar,value=gx_bitmap(filepath('save.bmp', subdirectory=['resource', 'bitmaps'])),tooltip='Save execution log',/bitmap,uname='savelog') 
+   wClearLog=widget_button(toolbar,value=gx_bitmap(filepath('delete.bmp', subdirectory=['resource', 'bitmaps'])),tooltip='Clear execution log',/bitmap,uname='clearlog')
    
    
    
    geom = widget_info (wControlBase, /geom)                              
    wConsoleBase=widget_base(wControlPanel)  
    wConsole=widget_text(wConsoleBase,scr_xsize=scr_xsize,$
-                 scr_ysize=scr_ysize-geom.scr_ysize,value='',/scroll,uname='console',font=font,/wrap)
+                 scr_ysize=scr_ysize-geom.scr_ysize,value='',/scroll,uname='console',/wrap)
 end
 
 pro gxampp::message,msg,_extra=_extra

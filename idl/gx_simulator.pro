@@ -364,17 +364,12 @@ if isa(nthreads_or_model,/number) then nthreads=nthreads_or_model
 if isa(nthreads_or_model,'gxmodel') then model=nthreads_or_model
 setenv, 'WCS_RSUN=6.96d8'
 if !version.os_family eq 'Windows' then set_plot,'win' else set_plot,'x'
-defsysv,'!DEFAULTS',EXISTS=exists
-if not exists then gx_defparms
+gx_setfonts,_extra=_extra
 device, get_screen_size=scr
-if !version.os_family eq 'Windows' then begin
-if scr[0] lt 3200 then !defaults.font='lucida console*12' else !defaults.font='lucida console*24'
-endif else begin
-if scr[0] lt 3200 then !defaults.font='' else !defaults.font=''  
-endelse
 if scr[0] lt 3200 then nb=16 else nb=32
-Widget_Control, DEFAULT_FONT=!defaults.font
-;@gx_startup
+if not exist(xsize) then xsize = fix (scr[0] * .4)
+if not exist(ysize) then ysize = xsize
+
 subdirectory=['resource', 'bitmaps']
 state={oObjviewWid:obj_new(),sun:obj_new(),$
 wModelsTab:0l,wUploadModelIcon:0l,wUploadModel:0l,wImportModelIcon:0l,$
@@ -403,9 +398,7 @@ wControlTab=WIDGET_TAB(Right_Base,/Align_top,UNAME='ControlTab',UVALUE='ControlT
 
 wModels=Widget_Base(wControlTab,Title='MODELS')   
 state.wModelsTab=WIDGET_TAB(wModels,/Align_Center,UNAME='ModelsTab',LOCATION=0)
-device, get_screen_size=scr
-if not exist(xsize) then xsize = fix (scr[0] * .4)
-if not exist(ysize) then ysize = xsize
+
 objview_base=WIDGET_BASE(ViewTab,/Align_Center,UNAME='VOLUME VIEW',Title='VOLUME VIEW',/column)
 
 wToolbarBase=widget_base(objview_base, /row,/frame,UNAME='TOOLBAR',/toolbar)

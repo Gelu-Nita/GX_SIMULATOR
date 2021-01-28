@@ -18,8 +18,7 @@ pro gx_addlines2box, box,tr_height_km, status=status, physLength=physLength, avF
   default,tr_height_km,1000
   chromo_level=tr_height_km
   if n_elements(dll_path) eq 0 then begin
-    dirpath=file_dirname((ROUTINE_INFO('gx_box_make_potential_field',/source)).path,/mark)
-    dll_path=dirpath+'\Magnetic-Field_Library\WWNLFFFReconstruction.dll'
+    dll_path= gx_findfile('WWNLFFFReconstruction.dll',folder='gxbox\Magnetic-Field_Library')
   end
   rc=gx_box_calculate_lines(dll_path, box, status=status, physLength=physLength, avField=avField, startIdx=startIdx, endIdx=endIdx,chromo_level=chromo_level,_extra = _extra) 
   elapsed_time=systime(/seconds)-t0
