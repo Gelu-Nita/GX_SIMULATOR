@@ -90,7 +90,6 @@ pro gs_transfer_slice_arr_ana,parms,rowdata,path,parmin,datain,freqlist,info=inf
     E=dblarr(N_dat(2))
     mu_s=dblarr(N_dat(3))
     f_sVP=dblarr(N_dat(0),N_dat(1),N_dat(2),N_dat(3))
-  ;test_call=call_external(lib, 'GET_MW_SLICE', N_dat, parmin, E, mu_s, f_sVP(*,*,*,*), s_slice,/d_value, /unload)
    test_call=call_external(path, 'GET_MW_SLICE', N_dat, parmin,  E, mu_s, f_sVP,datain,/d_value, /unload)
    rowdata[*,*,0,0]=transpose(datain[5,*,*]);eL
    rowdata[*,*,1,0]=transpose(datain[6,*,*]);eR

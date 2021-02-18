@@ -1781,7 +1781,13 @@ pro gxModel::upgrade_combo_model,verbose=verbose
   if chromo_layers eq 0 then begin
     if keyword_set(verbose) then message,'This is a not a combo model, nothing to be upgraded!',/cont
     return
-  endif
+  endif else begin
+    dz=self->GetVertexData('dz')
+    if n_elements(dz) eq 0 then begin
+      if keyword_set(verbose) then message,'This is a not a combo model, nothing to be upgraded!',/cont
+      return
+    endif
+  endelse
   answ=dialog_message(['This combo model has an outdated format!', $
   'In order to take advantage of all current GX Simulator combo models functionalities, you must choose to convert it to the newst format.'+$
   'However, the conversion might result in slighly modified volume properties or in missing some previously defined properties, ' +$
