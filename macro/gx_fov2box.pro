@@ -48,15 +48,16 @@ pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km
                         nlfff_only=nlfff_only, generic_only=generic_only,centre=centre,euv=euv,uv=uv,hmifiles=hmifiles,$
                         tr_height_km=tr_height_km,old_combo_format=old_combo_format,out_files=out_files,wConsole=wConsole,$
                         entry_box=entry_box,jump2potential=jump2potential,jump2nlfff=jump2nlfff,jump2lines=jump2lines,jump2chromo=jump2chromo,info=info,_extra=_extra
-   CATCH, Error_status
-   IF Error_status NE 0 THEN BEGIN
-      if widget_valid(long(wConsole)) then begin
-        widget_control,wConsole,get_value=txt
-        widget_control,wConsole,set_value=[txt,'% '+!ERROR_STATE.MSG,'% ABORTED!']
-      endif else print,[['% '+!ERROR_STATE.MSG],['% GX_FOV2BOX: ABORTED!']]
-      CATCH, /CANCEL
-      return
-   ENDIF
+ CATCH, Error_status
+ IF Error_status NE 0 THEN BEGIN
+    if n_elements(wConsole) ne 0 then console= long(wConsole)
+    if widget_valid(wConsole) then begin
+      widget_control,wConsole,get_value=txt
+      widget_control,wConsole,set_value=[txt,'% '+!ERROR_STATE.MSG,'% ABORTED!']
+    endif else print,[['% '+!ERROR_STATE.MSG],['% GX_FOV2BOX: ABORTED!']]
+    CATCH, /CANCEL
+    return
+ ENDIF
  
  par=ROUTINE_INFO('gx_fov2box',/par)
  exec=''
@@ -109,11 +110,11 @@ pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km
         validbox=1
       endif
     endelse
-    if ~validbox then message, 'the entry_box argument provided is not a compatible AMPP box structure!
+    if ~validbox then gx_message, 'the entry_box argument provided is not a compatible AMPP box structure!',wConsole
   endif else validbox=0  
   
-  if n_elements(time) eq 0 then message,'Required time input is missing!'
-  if ~valid_time(time,err) then message,err 
+  if n_elements(time) eq 0 then gx_message,'Required time input is missing!',wConsole
+  if ~valid_time(time,err) then gx_message,err,wConsole 
   
   if not keyword_set(tmp_dir) then tmp_dir = filepath('jsoc_cache',root = GETENV('IDL_TMPDIR'))
   if not file_test(tmp_dir) then file_mkdir, tmp_dir
@@ -127,7 +128,7 @@ pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km
   ;for backward compatibility with deprecated "centre" input
   if n_elements(center_arcsec) ne 2 then if n_elements(centre) eq 2 then center_arcsec=centre
   if n_elements(center_arcsec) ne 2 then begin
-    message,'Required center_arcsec input is missing or incorrect!'
+    gx_message,'Required center_arcsec input is missing or incorrect!',wConsole
   endif
   
   setenv, 'WCS_RSUN=6.96d8'
@@ -285,7 +286,6 @@ pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km
   gx_message,'Box structure saved to '+file, wConsole
   exit_point:
   gx_message,[string(systime(/seconds)-t_start,format="('This AMPP script has been executed in ',g0,' seconds and generated the following files:')"),'',out_files], wConsole
-  ;gx_message,out_files, wConsole
   if n_elements(wConsole) ne 0 then gx_message,'', wConsole else print,' '
   gx_message,'You may use "Import Model Data" file menu option to import any of these models in GX_Simulator.', wConsole
 end
