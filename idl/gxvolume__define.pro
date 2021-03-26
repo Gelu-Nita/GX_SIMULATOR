@@ -587,7 +587,8 @@ function gxVolume::GetVertexData,var
 end
 
 pro gxVolume::Update,select,data=data,plot_model_attributes=plot_model_attributes,getdata=getdata,$
-              force=force,update=update,chromo_view=chromo_view,range=range,pwr_idx=pwr_idx,nt_update=nt_update
+              force=force,update=update,chromo_view=chromo_view,range=range,pwr_idx=pwr_idx,$
+              nt_update=nt_update,use_dem=use_dem,has_used_ddm=has_used_ddm
   compile_opt hidden
   catch, error_stat
  if error_stat ne 0 then begin
@@ -597,7 +598,7 @@ pro gxVolume::Update,select,data=data,plot_model_attributes=plot_model_attribute
  end
   if ~obj_valid(self.parent) then return
   if keyword_set(nt_update) then  begin
-    self->ComputeNT,/force
+    self->ComputeNT,/force,use_dem=use_dem,has_used_ddm=has_used_ddm
     self->UpdateVoxelId
     return
   endif
@@ -809,15 +810,15 @@ pro gxVolume::Update,select,data=data,plot_model_attributes=plot_model_attribute
             data=data[box2vol] 
            end  
       'Q0': begin
-             data=self.parent->box2volume('Q0')
+             data=self.parent->box2volume('Q0',/corona)
              if self->undefined(data) then goto,undefined    
             end 
       'Q': begin
-             data=self.parent->box2volume('Q0')
+             data=self.parent->box2volume('Q',/corona)
              if self->undefined(data) then goto,undefined   
             end     
       'Length': begin
-             data=self.parent->box2volume('length')
+             data=self.parent->box2volume('length',/corona)
              if self->undefined(data) then goto,undefined 
             end          
    else: begin      
@@ -928,7 +929,7 @@ function gxVolume::NewNT,newkey,oldkey
   return,flags.newNT
 end
 
-pro gxVolume::ComputeNT,question=question,quiet=quiet,force=force,NTDEM=NTDEM,NTSS=NTSS
+pro gxVolume::ComputeNT,question=question,quiet=quiet,force=force,NTDEM=NTDEM,NTSS=NTSS,use_dem=use_dem,has_used_ddm=has_used_ddm
   if keyword_set(force) then goto, compute
   if ~self.flags.newNT and keyword_set(question) then begin
     answ=dialog_message('The N-T pairs have been already computed using current settings. Do you want to recompute them  anyway?',/question)
@@ -1128,7 +1129,7 @@ pro gxVolume::ComputeN0T0,tube_id=tube_id
       tr=(array_indices(r,max(chromo_owned)))[2]+1
       self->setvertexattributedata,'chromo_layers',tr
     endif else begin
-      ;provision for becakward compatibility with old format combo models
+      ;provision for beckward compatibility with old format combo models
       chromo_idx=self->GetVertexData('chromo_idx')
       if isa(chromo_idx,/number,/array) then begin
         self->GetVertexAttributeData,'chromo_n',chromo_n

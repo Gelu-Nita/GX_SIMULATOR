@@ -1,5 +1,6 @@
 ;this macro may be used to compute MW emission from adjustable EBTEL models programatically, outside the GX_Simulator GUI
-function gx_mwrender_ebtel,model,renderer,ebtel_path=ebtel_path,ss=ss,q_parms=q_parms,q0_formula=q0_formula,q_formula=q_formula,gxcube=gxcube,map=map,_extra=_extra
+function gx_mwrender_ebtel,model,renderer,ebtel_path=ebtel_path,ss=ss,q_parms=q_parms,$
+  q0_formula=q0_formula,q_formula=q_formula,gxcube=gxcube,map=map,use_dem=use_dem,has_used_ddm=has_used_ddm,_extra=_extra
   if ~isa(model) then begin
     message,'None or nvalid model provided! Operation aborted!',/cont
     goto,skip
@@ -28,7 +29,7 @@ function gx_mwrender_ebtel,model,renderer,ebtel_path=ebtel_path,ss=ss,q_parms=q_
   default, q_formula, 'q[0]*(B/q[1])^q[3](L/q[2])^q[4]'
   q_formula=volume->SetQ(q_formula,/quiet)
   message,'EBTEL heating rate formula in use: '+q_formula,/cont
-  volume->Update,/nt
+  volume->Update,/nt,use_dem=use_dem,has_used_ddm=has_used_ddm
   volume->Update,/force
   fovmap=(model->GetFovMap())->get(/map)
   add_prop,fovmap,gx_key=string(model->GetVertexData('NTkey')),/replace

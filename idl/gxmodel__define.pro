@@ -1049,6 +1049,7 @@ pro gxModel::Slice,parms,row,scanner=scanner
   sz=self->Size()
   vol=fltarr(sz[1],sz[2],sz[3])
   volume=self->GetVolume()
+  
   ;n_0
   idx=gx_name2idx(parms,'n_0')
   if (size(idx))[0] ne 0 then begin
@@ -1081,7 +1082,6 @@ pro gxModel::Slice,parms,row,scanner=scanner
   if (size(idx))[0] ne 0 then begin
     vol=self->Box2Volume('length',/corona)
     if isa(vol)then begin
-      ;vol[*]=1e11
       vol=gx_rsun()*vol/2
       (*scanner).parms[*,*,idx]=interpolate(vol,vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
       assigned[idx]=1
@@ -1328,7 +1328,7 @@ pro gxModel::Slice,parms,row,scanner=scanner
     ;ez is the box z-axis versor (normal to TR) in the observer coordinate system, where LOS is the z axis
     ;So, phi is the angle betwen the TR normal and LOS, so cosphi is the z component of the ez versor
     ez=btm[*,2]
-    dr=model->GetFovPixSize(unit='cm')
+    dr=self->GetFovPixSize(unit='cm')
     dz=dr[0]
     r=gx_rsun(unit='cm')
     mincosphi=sin(0.5*acos(1-dz/R))
@@ -1501,7 +1501,7 @@ pro gxModel::RemoveBlines
   endif else message,'No field lines found in this model, nothing to delete!',/info
 end
 
-pro gxModel::ResetPosition, unlock=unlock,n=n
+pro gxModel::ResetPosition, unlock=unlock,top=top
  self->Reset
  maps=*(self->Refmaps())
  time=maps->get(2,/time)
@@ -1509,13 +1509,15 @@ pro gxModel::ResetPosition, unlock=unlock,n=n
  b0=pb0r[1]
  rsun=pb0r[2]*60
  self->Translate,self.xrange[0],self.yrange[0],1
+ if ~keyword_set(top) then begin
  if widget_valid(self.wparent) then begin
    wTopView=widget_info(self.wparent,find_by_uname='GXMODEL:TopView')
    if widget_valid(wTopView) then begin
-    lock=widget_info(wTopView,/button_set)
-   endif else lock=0
- endif else lock=0
- if (~lock) or keyword_set(unlock) then begin
+    topview=widget_info(wTopView,/button_set)
+   endif else topview=0
+ endif else topview=0
+ endif else topview=1
+ if (~topview) or keyword_set(unlock) then begin
    self->GetProperty,gyro=gyro
    if n_elements(gyro) ne 1 then gyro=0
    if gyro ne 0 then begin

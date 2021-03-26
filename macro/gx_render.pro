@@ -50,7 +50,9 @@ function gx_render,model,renderer,logfile=logfile,_extra=_extra
       MULTI_SAVE,log,{row:long(row),parms:parms,data:data[*,row,*,*,*],grid:transpose(reform((*(*scanner).grid)[*,*,row,*]),[1,2,0])},file=logfile, header=info
     endif
   endfor
-  if size(logfile,/tname) eq 'STRING' then close,log
+  if size(logfile,/tname) eq 'STRING' then begin
+    free_lun,log,/force
+  endif
   model->getproperty,xcoord_conv=dx,ycoord_conv=dy
   dx=dx[1]
   dy=dy[1]

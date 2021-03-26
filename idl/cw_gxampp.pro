@@ -132,6 +132,8 @@ pro gxampp::CreatePanel,xsize=xsize,ysize=ysize
    wScript=widget_text(wControlBase,scr_xsize=scr_xsize,ysize=3,$
     value='',uvalue=[keys1,keys2],/scroll,uname='script',/wrap)
    toolbar= widget_base(wControlBase, /row,/toolbar) 
+   wGenerate=widget_button(toolbar,value=gx_bitmap(filepath('gears.bmp', subdirectory=['resource', 'bitmaps'])), $
+     /bitmap,tooltip='Update Script',uname='update_script',sensitive=1)
    wExecute=widget_button(toolbar,value=gx_bitmap(gx_findfile('play.bmp')),tooltip='Execute Script',/bitmap,uname='execute')
    wModel2gx=widget_button(toolbar,value=gx_bitmap(filepath('importf.bmp', subdirectory=['resource', 'bitmaps'])), $
     /bitmap,tooltip='Import Model Data',uname='model2gx',sensitive=0)
@@ -166,6 +168,8 @@ function gxampp::HandleEvent, event
     return, self->Rewrite(event)
   endif
   case widget_info(event.id,/uname) of                                         
+    'update_script':begin
+    end
     'clearlog':begin
                 widget_control,widget_info(self.wIDBase,find_by_uname='console'),set_value=''
                end
@@ -233,9 +237,15 @@ function gxampp::HandleEvent, event
                end
              end
     'execute':begin
+               self->CheckOS
+               self->GenerateScript,script=test_script,/test
+               widget_control,widget_info(self.wIDBase,find_by_uname='script'),get_value=script
+               if script ne test_script then begin
+                answ=dialog_message(['Selected seetings do not match the current script!', 'Use "Update Script" button to update the script and try again!'],/info)
+                return, self->Rewrite(event)
+               endif
                widget_control,widget_info(self.wIDBase,find_by_uname='control_base'),sensitive=0
                widget_control,/hourglass
-               widget_control,widget_info(self.wIDBase,find_by_uname='script'),get_value=script
                script=script[0]+string(widget_info(self.wIDBase,find_by_uname='console'),format="(', wConsole=',i6)")
                script+=', out_files=out_files'
                success=execute(script)
@@ -322,7 +332,7 @@ pro gxampp::CopyBox,nokeys=nokeys
               endif  
             end  
 
-pro gxampp::GenerateScript
+pro gxampp::GenerateScript,script=script,test=test
  script='gx_fov2box'
  if self.jump2 eq '' then begin
    widget_control,widget_info(self.wBase,find_by_uname='time'),get_value=time
@@ -361,7 +371,7 @@ pro gxampp::GenerateScript
  widget_control,widget_info(self.wBase,find_by_uname='out_dir'),get_value=out_dir
  script+=", out_dir= '"+out_dir+"'"
  
- widget_control,wScript,set_value=script
+ if ~keyword_set(test) then widget_control,wScript,set_value=script
 end
 
 function cw_gxampp,Base,_extra=_extra
