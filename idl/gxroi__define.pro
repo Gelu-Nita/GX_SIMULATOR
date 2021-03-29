@@ -62,7 +62,7 @@ pro gxROI::DisplayMap,select
  if select le 2 or CEA then begin
   ;map=drot_map(map,ref_map=ref_map)
   sz=size(ref_map.data)
-  map=rebin_map(map,sz[1],sz[2],/congrid)
+  map=gx_rebin_map(map,sz[1],sz[2],/congrid)
   display=self->GetBaseScreen()
   display->SetProperty,ALPHA_CHANNEL=1,BLEND_FUNCTION = [3, 4],hide=0
   (self->GetFOVscreen())->SetProperty,hide=1

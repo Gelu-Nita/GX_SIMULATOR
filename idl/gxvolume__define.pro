@@ -581,7 +581,7 @@ function gxVolume::VoxelId
 end  
 
 function gxVolume::GetVertexData,var
-  if isa(var,/string) and ~isa(var,/array) then $
+  if (size(var,/tname) eq 'STRING') and ~isa(var,/array) then $
     self->GetVertexAttributeData,var,data
   return,isa(data,/number)?data:!null
 end

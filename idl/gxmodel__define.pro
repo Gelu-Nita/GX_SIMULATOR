@@ -870,13 +870,13 @@ function gxModel::Box2Volume,data,idx,box2vol=box2vol,bsize=bsize,csize=csize,co
     box2vol[*,*,chromo_layers:*]=box_idx[*,*,corona_base:*]
   endif else box2vol=box_idx
   
-  if isa(data,/string) then data=self.GetVertexData(data)
+  if (size(data,/tname) eq 'STRING') then data=self.GetVertexData(data)
   if isa(data,/number,/array) then begin
    data_size=size(data)
    if array_equal(data_size[1:3],csize[1:3]) then return,data
   endif
   if ~isa(idx) then idx=self.GetVertexData('idx')
-  if isa(idx,/string) then idx=self.GetVertexData(idx)
+  if (size(idx,/tname) eq 'STRING') then idx=self.GetVertexData(idx)
   if isa(idx,/number) and isa(data,/number) and (n_elements(idx) eq n_elements(data)) then begin
     vol=replicate(data[0]*0,bsize[1],bsize[2],bsize[3])
     vol[idx]=data
