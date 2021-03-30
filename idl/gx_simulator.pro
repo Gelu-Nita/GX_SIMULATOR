@@ -483,7 +483,7 @@ state.oObjviewWid = obj_new('gxObjviewWid', $
   ;create gxMapVieWid object
   state.MapView=obj_new('gxMapViewWid',wMapControl,mbar,wMapBase=wMapBase,frame=frame,wxsize=xsize,wysize=ysize)
   ; create gx2data object
-  wGX2DataControl=Widget_Base(wControlTab,Title='Data To Model Image Comparison',UNAME='gx2data')
+  wGX2DataControl=Widget_Base(wControlTab,Title='DATA T0 MODEL IMAGE COMPARISON',UNAME='gx2data')
   wgx2data=cw_gx2data(wGX2DataControl,plotman=state.MapView->GetPlotmanObj())          
   widget_control,state_base,set_uvalue=state
   widget_control,widget_info(state_base,find_by_uname='ControlTab'),set_tab_current=4

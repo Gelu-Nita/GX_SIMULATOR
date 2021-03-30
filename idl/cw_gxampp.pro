@@ -27,13 +27,14 @@ pro gxampp::CreatePanel,xsize=xsize,ysize=ysize
   if not exist(ysize) then ysize = xsize *1.1
    
    wgxamppControl=self.wBase
-   wControlPanel=widget_base(wgxamppControl,/column,xsize=xsize,ysize=ysize*1.1)
+   wControlPanel=widget_base(wgxamppControl,/column,xsize=scr[0],ysize=scr[1],$
+    x_scroll_size=xsize,y_scroll_size=ysize,/scroll)
    geom = widget_info (wControlPanel, /geom)
    scr_xsize=0.98*geom.scr_xsize
    scr_ysize=0.98*geom.scr_ysize
    wControlBase=widget_base(wControlPanel,/column,uname='control_base')
    
-   wTmpDirBase=widget_base(wControlBase,/row,scr_xsize=scr_xsize)
+   wTmpDirBase=widget_base(wControlBase,/row,scr_xsize=scr_xsize,/frame)
    wTmpBase=widget_base(wTmpDirBase,/row)
    wlabel=widget_label(wTmpBase,value='SDO Data Repository    ')
    label=widget_info(wlabel,/geometry)
@@ -46,7 +47,7 @@ pro gxampp::CreatePanel,xsize=xsize,ysize=ysize
                            value=self.WinOS?'C:\jsoc_cache':(getenv('HOME')+'\jsoc_cache'))
    
   
-   wOutDirBase=widget_base(wControlBase,/row,scr_xsize=scr_xsize)
+   wOutDirBase=widget_base(wControlBase,/row,scr_xsize=scr_xsize,/frame)
    wOutBase=widget_base(wOutDirBase,/row)
    wlabel=widget_label(wOutBase,scr_xsize=label.scr_xsize,value='GX Model Repository')
    wSelectOutDir= widget_button(wOutBase, $
@@ -58,18 +59,16 @@ pro gxampp::CreatePanel,xsize=xsize,ysize=ysize
                            value=self.model_dir)
    
    
-   wEntryBoxBlockBase=widget_base(wControlBase,/column,scr_xsize=scr_xsize,/frame)
-   wEntryBoxBase=widget_base(wEntryBoxBlockBase,/row,scr_xsize=scr_xsize)
-   wEntryBoxBase=widget_base(wEntryBoxBase,/row)
-   wlabel=widget_label(wEntryBoxBase,value='External Box path',scr_xsize=label.scr_xsize)
-   label=widget_info(wlabel,/geometry)
-   wSelectEntryBox= widget_button(wEntryBoxBase, $
+   wEntryBoxBase=widget_base(wControlBase,/row,scr_xsize=scr_xsize,/frame)
+   wEntryBase=widget_base(wEntryBoxBase,/row)
+   wlabel=widget_label(wEntryBase,value='External Box path',scr_xsize=label.scr_xsize)
+   wSelectEntryBox= widget_button(wEntryBase, $
      value=gx_bitmap(filepath('open.bmp', subdirectory=['resource', 'bitmaps'])), $
      /bitmap,tooltip='Select an existg box structure to start the AMPP script with',uname='entrybox_select')
-   geom = widget_info (wEntryBoxBase, /geom)
    wEntryBoxPath=widget_text(wEntryBoxBase,scr_xsize=scr_xsize-geom.scr_xsize,uname='entrybox_path',/editable,$
      value='')
-     
+   
+   wEntryBoxBlockBase=widget_base(wControlBase,/row,scr_xsize=scr_xsize,/frame)  
    wEntryBoxActionBase=widget_base(wEntryBoxBlockBase,/row,uname='jump2base',sensitive=0)
    wlabel=widget_label(wEntryBoxActionBase,value='Jump-to Action',scr_xsize=label.scr_xsize)
    wEntryBoxAction=cw_bgroup( wEntryBoxActionBase,['none','potential','nlff','lines','chromo'], $
@@ -107,7 +106,7 @@ pro gxampp::CreatePanel,xsize=xsize,ysize=ysize
    wlabel=widget_label(wSFQBase,value='Pi-disambiguation',scr_xsize=label.scr_xsize)
    wSFQ=cw_bgroup(wSFQBase,['HMI','SFQ'],/row,/exclusive,/frame,uname='/sfq',set_value=0) 
   
-   wBufferBase=widget_base(wControlBase,/row)
+   wBufferBase=widget_base(wControlBase,/row,/frame)
    wBufferZone=cw_objField(wBufferBase,label='Buffer Zone Size',value=10.0,unit='%',$
      scr_labelsize=label.scr_xsize,xtextsize=10,increment=1,$
      uname='weight_bound_size',tooltip='Blah',min=0,max=50)
@@ -145,7 +144,8 @@ pro gxampp::CreatePanel,xsize=xsize,ysize=ysize
    geom = widget_info (wControlBase, /geom)                              
    wConsoleBase=widget_base(wControlPanel)  
    wConsole=widget_text(wConsoleBase,scr_xsize=scr_xsize,$
-                 scr_ysize=scr_ysize-geom.scr_ysize,value='',/scroll,uname='console',/wrap)
+                 scr_ysize=0.95*(scr[1]-geom.scr_ysize),$
+                 value='',/scroll,uname='console',/wrap)
 end
 
 pro gxampp::message,msg,_extra=_extra

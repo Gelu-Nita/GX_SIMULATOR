@@ -68,8 +68,10 @@ pro gx2data::CreatePanel,xsize=xsize,ysize=ysize
    wGX2DataControl=self.wBase
   endelse
    ;font=!defaults.font
-   wControlPanel=widget_base(wGX2DataControl,/column)
-   wControlBase=widget_base(wControlPanel,/column,xsize=xsize,ysize=ysize*1.1)
+   ;wControlPanel=widget_base(wGX2DataControl,/column)
+   wControlPanel=widget_base(wGX2DataControl,/column,xsize=scr[0],ysize=scr[1],$
+     x_scroll_size=xsize,y_scroll_size=ysize*1.1,/scroll)
+   wControlBase=widget_base(wControlPanel,/column,xsize=xsize)
    toolbar= widget_base(wControlBase, /row,/toolbar)
    geom = widget_info (wControlPanel, /geom)
    wBeam=Widget_Button(toolbar,/menu,value='PSF')
@@ -78,11 +80,9 @@ pro gx2data::CreatePanel,xsize=xsize,ysize=ysize
    wConvolve=WIDGET_BUTTON(wBeam, VALUE='Convolve Selected Map', uname='CONVOLVE',font=font)
    wMetrics=Widget_Button(toolbar,/menu,value='Metrics')
    wCompute=WIDGET_BUTTON(wMetrics, VALUE='Compute Metrics', uname='COMPUTE',font=font)
-   ;wCompute=WIDGET_BUTTON(wMetrics, VALUE='Save Metrics', uname='SAVE',font=font)
    
    wlabel=widget_label(wControlBase,value=' ',font=font,/align_left)
    wlabel=widget_label(wControlBase,value='INPUT DATA SELECTION:',font=font,/align_left)
-  ; wlabel=widget_label(wControlBase,value=' ',font=font,/align_left)
    wSelectBase=widget_base(wControlBase,/row,/frame)
    wButtonBase=widget_base(wSelectBase,/column,/frame)
    button=widget_button(wButtonBase,VALUE='SELECT MODEL MAP',uname='MODEL:SELECT',font=font,/align_left,/frame)
@@ -158,7 +158,8 @@ pro gx2data::CreatePanel,xsize=xsize,ysize=ysize
      'chi2_img=chi_img^2',$
      'chi2=total(chi2_img[mask_pix])/(n_mask_pix-n_free)-chi^2']
      ;'',$
-   wMetrics=widget_text(wControlBase,scr_xsize=scr_xsize,ysize=15,value=info,/scroll)
+   wMetrics=widget_text(wControlBase,scr_xsize=scr_xsize,value=info,/scroll,$
+   ysize=16)
 end
 
 function gx2data::select_map
