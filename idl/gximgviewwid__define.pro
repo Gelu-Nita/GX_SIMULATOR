@@ -102,11 +102,7 @@ if ~keyword_set(uploadbttn) then self.wMap2Plotman=widget_button( ExecBase, $
 self.wSaveTb=widget_button( ExecBase, $
             value=gx_bitmap(filepath('bulb.bmp', subdirectory=subdirectory)), $
             /bitmap,tooltip='Save Tb Maps to File') 
-widget_control, self.wSaveTb,sensitive=0           
-self.wUploadFreqList=widget_button(self.wToolbarbase, $
-            value=gx_bitmap(filepath('open.bmp', subdirectory=subdirectory)), $
-            /bitmap,tooltip='Upload frequency list from IDL sav file')           
-widget_control, self.wUploadFreqList,sensitive=0                                          
+widget_control, self.wSaveTb,sensitive=0                                                    
 
 row_base=widget_base(self.wBase,/row)
 self.wDrawImg = widget_draw( $
@@ -347,11 +343,6 @@ function gxImgViewWid::SaveLog
  return,saved
 end
 
-function gxImgViewWid::UploadFreqListButton,fmin=fmin,use_switch=use_switch
-  fmin=where(strcompress(strupcase(((*self.info).parms).name),/rem) eq strcompress(strupcase('f_min'),/rem),count1)
-  use_switch=where(strcompress(strupcase(((*self.info).parms).name),/rem) eq strcompress(strupcase('TBD'),/rem),count2)
-  return, ((count1 gt 0) or (count2 gt 0))
-end
 
 function gxImgViewWid::SaveTbButton
   lookup=where(strcompress(strupcase(((*self.info).parms).name),/rem) eq strcompress(strupcase('f_min'),/rem),count)
@@ -369,7 +360,6 @@ pro gxImgViewWid::NewRenderer
  if widget_valid(self.wChannels[4])  then widget_control,self.wChannels[4],/destroy
  if tag_exist((*self.info),'channels') then  self.wChannels[4]=widget_combobox(self.wChannbase,value=(*self.info).channels)
  widget_control,self.wSaveTb,sensitive=self->SaveTbButton()
- widget_control,self.wUploadFreqList,sensitive=self->UploadFreqListButton()
  self.newPSF=1
  widget_control,self.wPSF[3],set_value=0
 end
@@ -743,7 +733,7 @@ pro gxImgViewWid::SelectChannel
     if strcompress(chanid,/rem) eq '' then chanid =((*self.info).spectrum).y.label[idx]
     if widget_valid(self.wChannels[2]) then widget_control,self.wChannels[2],set_value=value
     self.oLabel->SetProperty,strings=(*self.info).pixdim[0] gt 1?$
-      strcompress(string(chanid, ((*self.info).spectrum).y.unit[idx],value,((*self.info).spectrum).x.unit,format="(a,'[',a,']',' ','@',' ',f12.1,' ',a)")):$
+      strcompress(string(chanid, ((*self.info).spectrum).y.unit[idx],value,((*self.info).spectrum).x.unit,format="(a,'[',a,']',' ','@',' ',f0.2,' ',a)")):$
       strcompress(string(chanid, ((*self.info).spectrum).y.unit[idx],format="(a,'[',a,']')"))
     if ptr_valid(self.info) then begin
       if tag_exist((*self.info),'rgb') then self.oPalette->SetProperty, RED_VALUES = ((*self.info).rgb)[*,0,row], GREEN_VALUES = ((*self.info).rgb)[*,1,row], BLUE_VALUES = ((*self.info).rgb)[*,2,row]
@@ -923,44 +913,7 @@ pro gxImgViewWid::GetMapParms,xc=xc,yc=yc,time=time,dx=dx,dy=dy
     time=self.fovmap->get(/time)
   end
 end
-;--------------------------------------------------------------------
 
-pro gxImgViewWid::UploadFreqList,tlb
-  widget_control,widget_info(tlb,find_by_uname='Scanbox'),get_uvalue=scanbox
-  ; Select a text file and open for reading
-    file = DIALOG_PICKFILE(FILTER='*.txt',TITLE='Please select an instrumet specific frequency list file',path=gx_findfile(folder='freqlists'))
-    if file eq '' then return
-    OPENR, lun, file, /GET_LUN
-    
-    ; Read one line at a time, saving the result into array
-    line = ''
-    k=0
-    WHILE NOT EOF(lun) DO BEGIN
-      READF, lun, line & $
-      freqlist = (k eq 0)?line:[freqlist, line]
-      k+=1
-    ENDWHILE
-    ; Close the file and free the file unit
-    FREE_LUN, lun
-  freqlist=double(freqlist)  
-  nfreq=n_elements(freqlist)
-  fmin=0
-  scanbox->ReplaceParmValue,'f_min',fmin
-  scanbox->ReplaceParmValue,'N_freq',nfreq
-  (*self.info).parms[where((*self.info).parms.name eq 'f_min')].value=fmin
-  (*self.info).parms[where((*self.info).parms.name eq 'N_freq')].value=nfreq
-  info=*self.info
-  spectrum=info.spectrum
-  x=spectrum.x
-  x=rep_tag_value(x,freqlist,'axis')
-  spectrum=rep_tag_value(spectrum,x,'x')
-  info=rep_tag_value(info,spectrum,'spectrum')
-  ptr_free,self.info
-  self.info=ptr_new(info)
-  scanbox->UpdateParmsTable,(*self.info)
-end
-
-;----------------------------------------
 pro gxImgViewWid::SaveTbMaps,tlb
   compile_opt hidden
   if self->ValidData() and obj_valid(self.fovmap) then begin
@@ -1409,7 +1362,6 @@ case event.id of
   self.wLog2File:result=self->SaveLog()
   self.wSave:self->SaveMaps,event.top
   self.wSaveTb:self->SaveTbMaps,event.top
-  self.wUploadFreqList:self->UploadFreqList,event.top
   self.wMap2Plotman:self->Map2Plotman,event.top
   self.wExportImgCube:self->ImgCube2File,event.top
   self.wImportImgCube:self->ImgCubeFile2Renderer,event.top
@@ -1474,7 +1426,6 @@ pro gxImgViewWid__define
     wPlotSelection:0L,$
     wSave:0L,$
     wSaveTb:0L,$
-    wUploadFreqList:0l,$
     wLog2File:0L,$
     wMap2Plotman:0L,$
     wSpec2Plotman:0L,$

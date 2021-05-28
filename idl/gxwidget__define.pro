@@ -244,12 +244,12 @@ pro gxWidget::CreatePanel,_extra=_extra
     self.subject->add,corona
    endif
    if obj_valid(corona) then begin
-     wCoronaPage=Widget_Base(wComponentTab, title='Volume Fillout')
+     wCoronaPage=Widget_Base(wComponentTab, title='Volume Fillout',uname=prefix+'Volume Fillout')
      void=obj_new('gxWidget',wCoronaPage,corona)
      corona->UpdateVolume
    endif
 
-   wControlPage=Widget_Base(wComponentTab, title='Volume Attributes')  
+   wControlPage=Widget_Base(wComponentTab, title='Volume Attributes',uname=prefix+'Volume Attributes')  
    wBase=widget_base(wControlPage,/column)
    wLabel=widget_label(font=font,widget_base(wBase,/row),value='Scaling Factors for Numerically Defined Coronal Parameters:')
    wScaleBase=widget_base(wBase,/row)
@@ -316,7 +316,7 @@ pro gxWidget::CreatePanel,_extra=_extra
     
     wPlotBase=widget_base(wbase,/row,uname=prefix+'ATTRIBUTEPLOTBASE')
     device, get_screen_size=scr
-    ysize = fix (scr[0] * .25)
+    ysize = fix(scr[0] * .25)
     xsize = ysize*(5./4)
     wAttributeplot=widget_draw( wPlotBase, $
         xsize=xsize, $
@@ -379,7 +379,7 @@ pro gxWidget::CreatePanel,_extra=_extra
    wTRPage=Widget_Base(wComponentTab, title='Transition Region Attributes')
    if !version.os_family eq 'Windows' then set_plot,'win' else set_plot,'x'
    device, get_screen_size=scr
-   xsize = fix (scr[0] * .3)
+   xsize = fix(scr[0] * .3)
    ysize = xsize
    frame=1
    wTRbase=Widget_Base(wTRPage,/row)
@@ -419,7 +419,7 @@ pro gxWidget::CreatePanel,_extra=_extra
             all[i]->SetProperty,name=name
             wParent=Widget_Base(wComponentTab, title=name)
             void=obj_new('gxWidget',wParent,all[i],name=name)
-            all[i]->DisplayB2B0ratio
+            all[i]->UpdateDisplays,/B2B0
             widget_control,wComponentTab,SET_TAB_CURRENT=widget_info(wComponentTab,/N_CHILDREN)-1
           end    
      else:        
@@ -429,7 +429,6 @@ pro gxWidget::CreatePanel,_extra=_extra
   
   obj_isa(self.subject,'gxfluxtube'):begin
     prefix='GXFLUXTUBE:'
-    
     wToolbarBase = widget_base(self.wBase, /row, /frame,/TOOLBAR)
     self.subject->GetProperty,centerline=centerline,centerindex=centerindex,nrho=nrho,nphi=nphi,$
                              lock=lock,p_nth=p_nth,nr_nth=nr_nth,q_nth=q_nth,ns_nth=ns_nth,$
@@ -449,8 +448,7 @@ pro gxWidget::CreatePanel,_extra=_extra
     widget_control,wLockFluxTube,set_button=lock
            
     wTab=widget_tab(font=font,self.wBase)
-    wGeometry=widget_base(wTab,/column, title='Geometry')
-    ;xlabelsize=200
+    wGeometry=widget_base(wTab,/column, title='Geometry',uname=prefix+'Gbase')
     centerline->GetProperty,data=line,parent=parent
     p=line[*,centerindex] 
     centerline->GetVertexAttributeData,'s',s
@@ -502,7 +500,20 @@ pro gxWidget::CreatePanel,_extra=_extra
               value=~top_hide?gx_bitmap(filepath('image.bmp', subdirectory=subdirectory)):$
               gx_bitmap(filepath('eye_closed.bmp', subdirectory=subdirectory)), $
               /bitmap,tooltip=tooltip,uname=prefix+'TOP')
-    widget_control,wTop,set_button=1-top_hide                    
+    widget_control,wTop,set_button=1-top_hide 
+    
+    
+    wExportAparms=widget_button(font=font, wButtonBase, $
+      value=gx_bitmap(filepath('export.bmp', subdirectory=subdirectory)), $
+      /bitmap,tooltip='Export spine parameters',uname=prefix+'EXPORT APARMS')
+
+    wImportAparms=widget_button(font=font, wButtonBase, $
+      value=gx_bitmap(filepath('importf.bmp', subdirectory=subdirectory)), $
+      /bitmap,tooltip='Import array-defined non-thermal electrons distributions',uname=prefix+'IMPORT APARMS')
+    
+    wCleanAparms= widget_button(font=font, wButtonBase, $
+      value=gx_bitmap(gx_findfile('clean.bmp')), $
+      /bitmap,tooltip='Remove array-defined non-thermal electrons distributions',uname=prefix+'REMOVE APARMS')        
    
     xtextsize=7
    
@@ -524,7 +535,6 @@ pro gxWidget::CreatePanel,_extra=_extra
         INCREMENT=1, $
         UNITS='', $
         VALUE=nphi,Sensitive=1)
-    ;xlabelsize=150
     wa=cw_objfield(wCrossBaseC2, UNAME=prefix+'a', LABEL='Cross section a semiaxis',$
         XTEXTSIZE=XTEXTSIZE, XLABELSIZE=XLABELSIZE,$
         INCREMENT=ra/10, $
@@ -540,20 +550,20 @@ pro gxWidget::CreatePanel,_extra=_extra
         INCREMENT=1, $
         UNITS=STRING(176b), $
         VALUE=phi,map=1) 
-   xsize=fix(550*xscale)
-   ysize=2*fix(220*xscale)     
+   xsize=fix(800*xscale)
+   ysize=fix(300*xscale)    
    wDraw=widget_draw(wGeometry,xsize=xsize,ysize=ysize,uname=prefix+'draw_clg') 
    label=widget_label(font=font,/dynamic_resize,wGeometry,UNAME =prefix+ 's0value',value=string(s0,format='(g0)'))
    ws0= Widget_SLIDER(wGeometry, MINIMUM = 0, $
       MAXIMUM =sz[2]-1, VALUE = centerindex,  UNAME =prefix+ 's0',/SUPPRESS_VALUE,font=font)
        
-  ;THERMAL ELECTRON DISTRIBUTION      
-      wThermalTab=widget_base(wTab,/column,title='Thermal electron distribution',uname=prefix+'TH')  
+ ;THERMAL ELECTRON DISTRIBUTION      
+      wThermalTab=widget_base(wTab,/column,title='Thermal electron distribution',uname=prefix+'THbase')  
       self.subject->SelectThermalModel
        
              
  ;NONTHERMAL ELECTRON DISTRIBUTION         
-      wNdistribution=widget_base(wTab,/column,title='Nonthermal electron distribution')  
+      wNdistribution=widget_base(wTab,/column,title='Nonthermal electron distribution', uname=prefix+'NTHbase')  
       wParmBase=widget_base(wNdistribution,/column,/frame)
       wp=cw_objArray(wParmBase,uname=prefix+'p_nth',xtextsize=5,format='(g0)',units='',$
       value=p_nth,label='p',/frame)
@@ -571,11 +581,31 @@ pro gxWidget::CreatePanel,_extra=_extra
       text=widget_label(font=font,wbase,value='         n(x,y,s)=nb*nr(x,y)*ns(s)')   
       wnr=cw_field(wNdistribution,/string,value=nr_nth,title='nr=',/return,xsize=73,uname=prefix+'nr_nth',/frame,font=font,fieldfont=font)
       wns=cw_field(wNdistribution,/string,value=ns_nth,title='ns=',/return,xsize=73,uname=prefix+'ns_nth',/frame,font=font,fieldfont=font)
-      g=widget_info(wns,/geometry)
-      xsize=g.xsize
-      ysize=xsize*200/550
+      xsize=fix(800*xscale)
+      ysize=fix(300*xscale)
       wDraw=widget_draw(wNdistribution,xsize=xsize,ysize=ysize,uname=prefix+'draw_nth')
       xtextsize=18
+      self.subject->GetProperty,ftime_idx=ftime_idx,fparms=fparms,nb_arr=nb_arr
+      wbase=widget_base(wNDistribution,/row)
+      if isa(fparms) then begin
+        fsz=size(fparms.f_arr)
+        max_ftime_idx=fsz[0] ge 4? fsz[4]-1:0
+        time_value=string(fparms.t_arr[ftime_idx],format="('f_arr_time=',f0.2,' s')")
+      endif else begin
+        max_ftime_idx=0
+        ftime_idx=0
+        time_value='0'
+      endelse
+      wn_nth_arr=cw_objfield(wbase, UNAME=prefix+'nb_arr', LABEL='nb_arr=',$
+        INCREMENT=1e7, $
+        UNITS='cm^-3', $
+        xtextsize=18, $
+        VALUE=nb_arr,map=1,/frame)
+      text=widget_label(font=font,wbase,value='         n_arr(x,y,s)=nb_arr*nr(x,y)*ns(s)')
+      wftime_label=widget_label(font=font,/dynamic_resize,wNDistribution,UNAME =prefix+ 'FTIME',value=time_value)
+      wftime_idx=WIDGET_SLIDER(wNDistribution, MINIMUM = 0, $
+        MAXIMUM =max_ftime_idx, VALUE = ftime_idx,  UNAME =prefix+ 'FTIME_IDX',/SUPPRESS_VALUE,font=font)
+
       wn_chromo=widget_base(wNDistribution,/row,/frame)
       wlabel=widget_label(wn_chromo,font=font,value='Chromo Volume: ')
       wn_nth_total_chromo=cw_objfield(wn_chromo, font=font,UNAME=prefix+'nb_total_chromo', LABEL='Sum(nbdv)=',$
@@ -612,7 +642,7 @@ pro gxWidget::CreatePanel,_extra=_extra
         UNITS='cm^-3', $
         xtextsize=xtextsize,$
         VALUE=0,/frame,/indicator)
-      
+  
   ;ELECTRON DISTRIBUTION OVER ENERGY      
       wEdistributionBase=widget_base(wTab,/column,title='Electron energy distribution')
       wEdistribution=widget_base(wEdistributionBase,/column,uname=prefix+'Ebase')   
@@ -632,12 +662,27 @@ pro gxWidget::CreatePanel,_extra=_extra
       wEnergySelectBase=widget_base(wEdistribution,/row)   
       wEnergySelect=widget_combobox(font=font,wEnergySelectBase,value=select_str,/dynamic_resize,uname=prefix+'E_Select')
       
-      xsize=fix(550*xscale)
-      ysize=fix(220*xscale)
+      xsize=fix(800*xscale)
+      ysize=fix(300*xscale)
       
       wDraw=widget_draw(wEdistribution,xsize=xsize,ysize=ysize,uname=prefix+'draw_e')  
       wParmBase=widget_base(wEdistribution,/column,uname=prefix+'parm_e')   
+     
+      wn_nth_arr=cw_objfield(widget_base(wEdistribution), UNAME=prefix+'nb_arr', LABEL='nb_arr=',$
+        INCREMENT=1e7, $
+        UNITS='cm^-3', $
+        xtextsize=18, $
+        VALUE=nb_arr,map=1,/frame)
+      
+      label=widget_label(font=font,/dynamic_resize,wEdistribution,UNAME =prefix+ 'svalue',value=string(s0/l,format='("s/l=",g0)'))
+      ws= Widget_SLIDER(wEdistribution, MINIMUM = 0, $
+        MAXIMUM =sz[2]-1, VALUE = centerindex,  UNAME =prefix+ 's',/SUPPRESS_VALUE,font=font) 
+      
+      wftime_label=widget_label(font=font,/dynamic_resize,wEdistribution,UNAME =prefix+ 'FTIME',value=time_value)
+      wftime_idx=WIDGET_SLIDER(wEdistribution, MINIMUM = 0, $
+        MAXIMUM =max_ftime_idx, VALUE = ftime_idx,  UNAME =prefix+ 'FTIME_IDX',/SUPPRESS_VALUE,font=font)
       self.subject->SelectEnergyDistribution
+   
    ;ELECTRON DISTRIBUTION OVER PITCH-ANGLE     
       wPAdistributionBase=widget_base(wTab,/column,title='Pitch-angle distribution')
       wPAdistribution=widget_base(wPAdistributionBase,/column,uname=prefix+'PAbase')   
@@ -651,18 +696,27 @@ pro gxWidget::CreatePanel,_extra=_extra
       wPASelectBase=widget_base(wPAdistribution,/row)   
       wPASelect=widget_combobox(font=font,wPASelectBase,value=select_str,/dynamic_resize,uname=prefix+'PA_Select')
       
-      xsize=fix(550*xscale)
-      ysize=fix(220*xscale)
+      xsize=fix(800*xscale)
+      ysize=fix(300*xscale)
+      
       wDraw=widget_draw(wPAdistribution,xsize=xsize,ysize=ysize,uname=prefix+'draw_pa')  
+      
+      label=widget_label(font=font,/dynamic_resize,wPAdistribution,UNAME =prefix+ 's0value',value=string(s0/l,format='("s0/l=",g0)'))
+      ws0= Widget_SLIDER(wPAdistribution, MINIMUM = 0, $
+        MAXIMUM =sz[2]-1, VALUE = centerindex,  UNAME =prefix+ 's0',/SUPPRESS_VALUE,font=font)
+
       label=widget_label(font=font,/dynamic_resize,wPAdistribution,UNAME =prefix+ 'svalue',value=string(s0/l,format='("s/l=",g0)'))
       ws= Widget_SLIDER(wPAdistribution, MINIMUM = 0, $
       MAXIMUM =sz[2]-1, VALUE = centerindex,  UNAME =prefix+ 's',/SUPPRESS_VALUE,font=font)
-      label=widget_label(font=font,/dynamic_resize,wPAdistribution,UNAME =prefix+ 's0value_duplicate',value=string(s0/l,format='("s0/l=",g0)'))
-      ws0= Widget_SLIDER(wPAdistribution, MINIMUM = 0, $
-      MAXIMUM =sz[2]-1, VALUE = centerindex,  UNAME =prefix+ 's0_duplicate',/SUPPRESS_VALUE,font=font)
+      
+      wftime_label=widget_label(font=font,/dynamic_resize,wPAdistribution,UNAME =prefix+ 'FTIME',value=time_value)
+      wftime_idx=WIDGET_SLIDER(wPAdistribution, MINIMUM = 0, $
+      MAXIMUM =max_ftime_idx, VALUE = ftime_idx,  UNAME =prefix+ 'FTIME_IDX',/SUPPRESS_VALUE,font=font)
       wParmBase=widget_base(wPAdistribution,/column,uname=prefix+'parm_pa')   
       self.subject->SelectPADistribution  
+      self.subject->UpdateDisplays,/all
    end
+   
    obj_isa(self.subject,'gxCORONA'):begin
     prefix='GXCORONA:'
     xtextsize=12
@@ -686,10 +740,8 @@ pro gxWidget::CreatePanel,_extra=_extra
       wp=cw_objArray(wParmBase,uname=prefix+'p',xtextsize=5,format='(g0)',units='',$
       value=parm_p,label='p',lfont=lfont,/frame)   
       wn_th=cw_field(wNdistribution,/string,value=n_th,title='n(z)=',/return,xsize=60,uname=prefix+'n_th',font=font,fieldfont=font,/frame)
-;      xsize=fix(450*xscale)
-;      ysize=fix(450*xscale)
       xsize=fix(800*xscale)
-      ysize=fix(400*xscale)
+      ysize=fix(300*xscale)
       wdraw=widget_draw(wNdistribution,xsize=xsize,ysize=ysize,uname=prefix+'draw')  
       wEnergySelectBase=widget_base(wNdistribution,/row,/toolbar)
       wEnergySelect=widget_combobox(font=font,wEnergySelectBase,value=['free-free only (FFO)','thermal (THM)','kappa (KAP)'],/dynamic_resize,uname=prefix+'E_Select') 
@@ -982,8 +1034,8 @@ end
                  WIDGET_CONTROL, event.id, SET_BUTTON=event.select
                  self.subject->SetProperty,FullROI=event.select
                  self.subject->SetRoi
-                 return,{GXSCANBOXEVENT,id: self.wIDBase, top: event.top, handler:0L,$
-                  auto:widget_info(widget_info(event.top,find_by_uname='Auto FOV'),/button_set)}
+                 ;return,{GXSCANBOXEVENT,id: self.wIDBase, top: event.top, handler:0L,$
+                 ; auto:widget_info(widget_info(event.top,find_by_uname='Auto FOV'),/button_set)}
                END
      'GXMODEL:MODELVIEW':BEGIN
                      widget_control,widget_info(event.handler,find_by_uname='GXMODEL:REMOVE'),sensitive=1-event.select
@@ -1221,7 +1273,7 @@ end
                                  widget_control,widget_info(wParent,find_by_uname='GXFLUXTUBE:CENTERVALUE'),set_value=$
                                  strcompress(string(p[0],p[1],p[2],s,s*gx_rsun(),b,alpha,$
                                  format="('grid:[',f6.2,',',f6.2,',',f6.2,']; s=',f8.5,'R=',g11.4,'cm; B=',f10.3,'G ','alpha=',g10.3,'/cm')" ))
-                                 all[i]->DisplayB2B0ratio
+                                 all[i]->UpdateDisplays,/B2B0
                                 end    
                            else:        
                           endcase
@@ -1501,22 +1553,14 @@ end
                self.subject->SetProperty,Centerindex=value
                show=widget_info(widget_info(self.wbase,find_by_uname='GXFLUXTUBE:TOP'),/button_set)
                (self.subject->GetByName('Top'))->SetProperty,hide=1-show
-               self.subject->DisplayB2B0ratio
+               self.subject->UpdateDisplays,/B2B0
               END
      'GXFLUXTUBE:S0': BEGIN
                widget_control,event.id,get_value=index
-               self.subject->GetProperty,centerline=centerline 
-               centerline->GetVertexAttributeData,'s',s
+               s=self.subject->GetVertexData('s')
                self.subject->SetProperty,s0=s[index]
                self.subject->UpdateAll
-              END  
-     'GXFLUXTUBE:S0_DUPLICATE': BEGIN
-               widget_control,event.id,get_value=index
-               self.subject->GetProperty,centerline=centerline 
-               centerline->GetVertexAttributeData,'s',s
-               self.subject->SetProperty,s0=s[index]
-               self.subject->UpdateAll
-              END                
+              END                 
      'GXFLUXTUBE:PHI': BEGIN
                widget_control,event.id,get_value=value
                self.subject->SetProperty,PHI=value
@@ -1595,45 +1639,46 @@ end
      'GXFLUXTUBE:N_NTH':Begin
                          widget_control,event.id,get_value=n_nth
                          self.subject->SetProperty,n_nth=n_nth
-                         widget_control,widget_info(event.handler,Find_By_Uname='GXFLUXTUBE:n_nth_duplicate'),Set_Value=n_nth
                          self.subject->Update_N_nth
+                         self.subject->UpdateDisplays,/n_nth
                         End 
      'GXFLUXTUBE:S0/L':Begin
                          widget_control,event.id,get_value=s0
-                         self.subject->GetProperty,centerline=centerline
-                         centerline->GetVertexAttributeData,'s',s 
-                         l=abs(s[0]-s[n_elements(s)-1])
-                         self.subject->SetProperty,s0=s0*l
+                         s=self.subject->GetVertexData('s')
+                         l=delta(s)
+                         m=min(abs(s-s0*l),imin)
+                         s0=s[imin]
+                         self.subject->SetProperty,s0=s0
+                         widget_control,event.id,set_value=s0/l
                          self.subject->UpdateAll
                         End                    
      'GXFLUXTUBE:N_TH':Begin
                          widget_control,event.id,get_value=n_th
                          self.subject->SetProperty,n_th=n_th
-                         dup=widget_info(event.handler,Find_By_Uname='GXFLUXTUBE:n_th_duplicate')
-                         if widget_valid(dup) then widget_control,dup,Set_Value=n_th
                          self.subject->UpdateAll
                         End      
      'GXFLUXTUBE:T0':Begin
                          widget_control,event.id,get_value=T0
                          self.subject->SetProperty,T0=T0
-                         dup=widget_info(event.handler,Find_By_Uname='GXFLUXTUBE:T0_duplicate')
-                         if widget_valid(dup) then widget_control,dup,Set_Value=T0
                          self.subject->UpdateAll
                         End                                          
      'GXFLUXTUBE:P_NTH':Begin
                      widget_control,event.id,get_value=p_nth
                      self.subject->SetProperty,p_nth=p_nth
                      self.subject->Update_N_nth
+                     self.subject->UpdateDisplays,/n_nth
                     End
      'GXFLUXTUBE:P_TH':Begin
                      widget_control,event.id,get_value=p_th
                      self.subject->SetProperty,p_th=p_th
-                     self.subject->UpdateAll
+                     self.subject->Update_N_nth
+                     self.subject->UpdateDisplays,/n_nth
                     End               
      'GXFLUXTUBE:Q_NTH':Begin
                      widget_control,event.id,get_value=q_nth
                      self.subject->SetProperty,q_nth=q_nth
                      self.subject->Update_N_nth
+                     self.subject->UpdateDisplays,/n_nth
                     End
      'GXFLUXTUBE:Q_TH':Begin
                      widget_control,event.id,get_value=q_th
@@ -1645,6 +1690,7 @@ end
                      if self.subject->CheckSyntax(nr_nth=nr_nth) then begin
                       self.subject->SetProperty,nr_nth=nr_nth
                       self.subject->Update_N_nth
+                      self.subject->UpdateDisplays,/n_nth
                      end
                     End
      'GXFLUXTUBE:NR_TH':Begin
@@ -1658,7 +1704,8 @@ end
                      widget_control,event.id,get_value=ns_nth
                      if self.subject->CheckSyntax(ns_nth=ns_nth) then begin
                       self.subject->SetProperty,ns_nth=ns_nth
-                      self.subject->UpdateAll
+                      self.subject->Update_N_nth
+                      self.subject->UpdateDisplays,/n_nth
                      end 
                     End  
      'GXFLUXTUBE:NZ_TH':Begin
@@ -1670,100 +1717,81 @@ end
                     End   
      'GXFLUXTUBE:E_SELECT':Begin
                       self.subject->SelectEnergyDistribution,event.index
+                      self.subject->UpdateDisplays,/energy
                       self.subject->RequestVolumeUpdate,condition='dist_E'
-                    End   
-     'GXFLUXTUBE:T0_DUPLICATE':Begin
-                         widget_control,event.id,get_value=T0
-                         self.subject->SetProperty,T0=T0
-                         self.subject->UpdateEnergyDistribution
-                         widget_control,widget_info(event.handler,Find_By_Uname='GXFLUXTUBE:T0'),Set_Value=T0
-                         self.subject->UpdateAll
-                        End 
-     'GXFLUXTUBE:N_TH_DUPLICATE':Begin
-                         widget_control,event.id,get_value=n_th
-                         self.subject->SetProperty,n_th=n_th
-                         self.subject->UpdateEnergyDistribution
-                         widget_control,widget_info(event.handler,Find_By_Uname='GXFLUXTUBE:n_th'),Set_Value=n_th
-                         self.subject->UpdateAll
-                        End 
-     'GXFLUXTUBE:N_NTH_DUPLICATE':Begin
-                         widget_control,event.id,get_value=n_nth
-                         self.subject->SetProperty,n_nth=n_nth
-                         widget_control,widget_info(event.handler,Find_By_Uname='GXFLUXTUBE:n_nth'),Set_Value=n_nth
-                         self.subject->Update_N_nth
-                        End                                                                                                                          
+                    End                                                                                                                          
      'GXFLUXTUBE:EMIN':Begin
                        self.subject->RequestVolumeUpdate,condition='Emin'
                        widget_control,event.id,get_value=emin
                        self.subject->SetProperty,emin=emin
-                       self.subject->UpdateEnergyDistribution
+                       self.subject->UpdateDisplays,/energy
                     End
      'GXFLUXTUBE:EMAX':Begin
                        self.subject->RequestVolumeUpdate,condition='Emax'
                        widget_control,event.id,get_value=emax
                        self.subject->SetProperty,emax=emax
-                       self.subject->UpdateEnergyDistribution
+                       self.subject->UpdateDisplays,/energy
                     End
      'GXFLUXTUBE:EBREAK':Begin
                        self.subject->RequestVolumeUpdate,condition='Ebreak'
                        widget_control,event.id,get_value=ebreak
                        self.subject->SetProperty,ebreak=ebreak
-                       self.subject->UpdateEnergyDistribution
+                       self.subject->UpdateDisplays,/energy
                     End       
      'GXFLUXTUBE:DELTA1':Begin
                        widget_control,event.id,get_value=delta1
                        self.subject->SetProperty,delta1=delta1
-                       self.subject->UpdateEnergyDistribution
+                       self.subject->UpdateDisplays,/energy
                        self.subject->RequestVolumeUpdate,condition='delta1'
                     End
      'GXFLUXTUBE:DELTA2':Begin
                        widget_control,event.id,get_value=delta2
                        self.subject->SetProperty,delta2=delta2
-                       self.subject->UpdateEnergyDistribution
+                       self.subject->UpdateDisplays,/energy
                        self.subject->RequestVolumeUpdate,condition='delta2'
                     End 
      'GXFLUXTUBE:KAPPA':Begin
                        widget_control,event.id,get_value=kappa
                        self.subject->SetProperty,kappa=kappa
-                       self.subject->UpdateEnergyDistribution
+                       self.subject->UpdateDisplays,/energy
                        self.subject->RequestVolumeUpdate,condition='kappa'
                     End   
      'GXFLUXTUBE:EPS':Begin
                        widget_control,event.id,get_value=eps
                        self.subject->SetProperty,eps=eps
-                       self.subject->UpdateEnergyDistribution
+                       self.subject->UpdateDisplays,/energy
                        self.subject->RequestVolumeUpdate,condition='eps'
                     End   
      'GXFLUXTUBE:PA_SELECT':Begin
                       self.subject->SelectPADistribution,event.index
-   
+                      self.subject->UpdateDisplays,/mu
                     End 
      'GXFLUXTUBE:THETA_C0':Begin
                        widget_control,event.id,get_value=theta_c0
                        self.subject->SetProperty,theta_c0=theta_c0
                        self.subject->Update_Theta_c
-                       self.subject->UpdatePADistribution
+                       self.subject->UpdateDisplays,/mu
                        self.subject->RequestVolumeUpdate,condition='THETA_C0'
                     End 
      'GXFLUXTUBE:THETA_B0':Begin
                        widget_control,event.id,get_value=theta_b0
                        self.subject->SetProperty,theta_b0=theta_b0
                        self.subject->Update_Theta_b
-                       self.subject->UpdatePADistribution
+                       self.subject->UpdateDisplays,/mu
                        self.subject->RequestVolumeUpdate,condition='THETA_B0'
                     End  
      'GXFLUXTUBE:DMU0':Begin
                        widget_control,event.id,get_value=dMu0
                        self.subject->SetProperty,dMu0=dMu0
                        self.subject->Update_dMu
-                       self.subject->UpdatePADistribution
+                       self.subject->UpdateDisplays,/mu
                        self.subject->RequestVolumeUpdate,condition='dMu'
                     End 
      'GXFLUXTUBE:A_40':Begin
                        widget_control,event.id,get_value=a_40
                        self.subject->SetProperty,parm_a4_0=a_40
                        self.subject->Update_a4
-                       self.subject->UpdatePADistribution
+                       self.subject->UpdateDisplays,/mu
                        self.subject->RequestVolumeUpdate,condition='A_40'
                     End  
      'GXFLUXTUBE:USE_CLG':Begin
@@ -1772,19 +1800,35 @@ end
                        self.subject->Update_Theta_b
                        self.subject->Update_dMu
                        self.subject->Update_a4
-                       self.subject->UpdatePADistribution
+                       self.subject->UpdateDisplays,/mu
                        self.subject->RequestVolumeUpdate,condition='USE_CLG'
                     End    
      'GXFLUXTUBE:S':Begin
-                      widget_control,event.id,get_value=index
-                      self.subject->GetProperty,centerline=centerline
-                      centerline->GetVertexAttributeData,'s',s
-                      l=abs(s[0]-s[n_elements(s)-1])
-                      s=s[index]
-                      widget_control,widget_info(event.handler,find_by_uname='GXFLUXTUBE:svalue'),set_value=string(s/l,format='("s/l=",g0)')
-                      self.subject->UpdatePADistribution
+                      widget_control,event.id,get_value=spine_idx
+                      self.subject->SetProperty,spine_idx=spine_idx
+                      self.subject->UpdateDisplays,/mu,/en
                       self.subject->RequestVolumeUpdate,condition='S'
-                    End                                                                                                                                                                                             
+                    End 
+     'GXFLUXTUBE:IMPORT APARMS':begin
+                                 self.subject->upload_fparms   
+                                 self.subject->UpdateDisplays,/n_nth,/en,/mu,/em
+                                end  
+     'GXFLUXTUBE:EXPORT APARMS':self.subject->export_spine_parms      
+     'GXFLUXTUBE:REMOVE APARMS':begin 
+                                 self.subject->remove_fparms
+                                 self.subject->UpdateDisplays,/n_nth,/en,/mu,/em
+                                end                                   
+     'GXFLUXTUBE:FTIME_IDX':begin 
+                              self.subject->SetProperty,ftime_idx=event.value
+                              self.subject->UpdateDisplays,/n_nth,/en,/mu,/em
+                              self.subject->RequestVolumeUpdate,condition='n_b'
+                            end  
+     'GXFLUXTUBE:NB_ARR':begin
+                              widget_control,event.id,get_value=nb_arr
+                              self.subject->SetProperty,nb_arr=nb_arr
+                              self.subject->UpdateDisplays,/n_nth,/energy,/mu,/em
+                              self.subject->RequestVolumeUpdate,condition='n_b'
+                            end                                                                                                                                                                                                                                
     else:
    endcase
  end

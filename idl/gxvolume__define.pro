@@ -715,7 +715,7 @@ pro gxVolume::Update,select,data=data,plot_model_attributes=plot_model_attribute
             dz=box.dr[2]/m
             curl,box.bx,box.by,box.bz,cx,cy,cz,order=3, dx=dx, dy=dy, dz=dz
             ;curl computed
-            data=bx*cx+by*cy+bz*cz
+            data=box.bx*cx+box.by*cy+box.bz*cz
             data=data/(box.bx^2+box.by^2+box.bz^2)
             data=data[box2vol]
           endif
@@ -735,7 +735,7 @@ pro gxVolume::Update,select,data=data,plot_model_attributes=plot_model_attribute
                 if n_elements(owned) gt 1 then begin
                  base->GetVertexAttributeData,'n_nth',n_nth
                  base->GetVertexAttributeData,'N_IDX',n_idx
-                 ndata[n_idx]=n_nth
+                 ndata[n_idx]=n_nth+tubes[j]->get_nb_arr()
                  data[owned]=ndata[owned]
                 end 
               end 

@@ -11,13 +11,14 @@ ny=header.ny
 rowdata=make_array([nx,(info).pixdim],/float)
 dim=[nx,ny,info.pixdim]
 data=make_array(dim,/float)
+if tag_exist(info,'nparms') then nparms=info.nparms.value
+if tag_exist(info,'rparms') then rparms=info.rparms.value
+freqlist=info.spectrum.x.axis
 t0=systime(/s)
 for row=0, ny-1 do begin
  print,strcompress(string(row+1,ny,format="('computing image row ', i5,' out of', i5)"))
  rowdata[*]=0
  parms=reform(parms_cube[*,row,*,*])
- if tag_exist(info,'nparms') then nparms=info.nparms.value
- if tag_exist(info,'rparms') then rparms=info.rparms.value
  result=execute(info.execute)
  data[*,row,*,*,*]=rowdata
 endfor

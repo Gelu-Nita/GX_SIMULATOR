@@ -116,7 +116,8 @@ pro gx_simulator_event,event
                              widget_control,widget_info(event.id,/child),get_uvalue=gxWidget
                              obj_destroy, gxWidget
                              state.ModelCount-=1
-                             state.scanbox->SetRefModel,model
+                             state.scanbox->SetRefModel, model
+                             state.scanbox->UpdateAllParms
                              if ~obj_isa(model,'GXMODEL') then state.Sun->SetTime,''
                              state.oObjviewWid->Draw
                            end
@@ -203,7 +204,7 @@ pro gx_simulator_event,event
                                   'New Jersey Institute of Technology'+string(10b)+$
                                   'Newark, NJ, 07102, U.S.A.',/info,title='About GX_Simulator')
  state.wHelp: begin
-               spawn,gx_findfile('GX_Simulator.chm',folder='Help'),unit=unit
+               spawn,gx_findfile('GX_Simulator.chm',folder='doc'),unit=unit
                wait,0.5
                free_lun,unit 
               end                             
@@ -291,7 +292,7 @@ pro gx_simulator_event,event
                        ;widget_control,event.top,redraw=0 
                        t0=systime(/s)               
                        void=obj_new('gxwidget',wParent,model)
-                       print,systime(/s)-t0
+                       message,string(systime(/s)-t0,format="('Model uploaded in' , f0.2 ,' seconds')"),/cont
                        ;widget_control,event.top,redraw=1  
                        if ~obj_isa(void,'gxwidget') then begin
                         answ=dialog_message('GX model initialization failed. Operation aborted!')
@@ -329,6 +330,8 @@ pro gx_simulator_event,event
                              endif
                            endfor
                          state.Sun->SetTime,model->GetTime()
+                         state.scanbox->SetRefModel,model
+                         state.scanbox->UpdateAllParms
                        endif  
                      endif else answ=dialog_message('Invalid GX model!')
                      state.scanbox->DrawSlicer

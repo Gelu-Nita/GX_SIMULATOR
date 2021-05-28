@@ -234,6 +234,17 @@ end
    self.base->SetVertexAttributeData,'ey',ey
 END
 
+FUNCTION gxFluxTube::GetVertexData,key
+  self.base->GetVertexAttributeData,key,var
+  if n_elements(var) eq 0 then self.centerline->GetVertexAttributeData,key,var
+  return,n_elements(var) gt 0?var:!null
+END
+
+PRO gxFluxTube::SetVertexData,key,var,centerline=centerline
+  obj=keyword_set(centerline)?self.centerline:self.base
+  if obj_valid(obj) then obj->SetVertexAttributeData,key,var
+END
+
 PRO gxFluxTube::ComputeDistance,cutoff=cutoff
  ; self.base->GetVertexAttributeData,'cutoff',cutoff
   default,cutoff,3*max([self.a,self.b])>36
@@ -322,7 +333,7 @@ PRO gxFluxTube::SelectThermalModel,usedem=usedem
       xscale=scr[0]/1920.
       font=!defaults.font
       prefix='GXFLUXTUBE:'
-      wThermalTab=widget_info(self.wparent,find_by_uname='GXFLUXTUBE:TH')
+      wThermalTab=widget_info(self.wparent,find_by_uname='GXFLUXTUBE:THbase')
       child =widget_info(wThermalTab,/child)
       if widget_valid(child) then widget_control,child,/destroy
       if ~keyword_set(usedem) then begin
@@ -347,8 +358,8 @@ PRO gxFluxTube::SelectThermalModel,usedem=usedem
         wnr=cw_field(wNdistribution,/string,value=self.nr_th,title='nr=',/return,xsize=73,uname=prefix+'nr_th',font=font,fieldfont=font,/frame)
         wnh=cw_field(wNdistribution,/string,value=self.nz_th,title='nh=',/return,xsize=73,uname=prefix+'nz_th',font=font,fieldfont=font,/frame)
         g=widget_info(wnh,/geometry)
-        xsize=g.xsize
-        ysize=xsize*200/550
+        xsize=fix(700*xscale)
+        ysize=fix(300*xscale)
         xtextsize=18
         wDraw=widget_draw(wNdistribution,xsize=xsize,ysize=ysize,uname=prefix+'draw_th')  
         wn_chromo=widget_base(wNDistribution,/row,/frame)
@@ -496,7 +507,7 @@ PRO gxFluxTube::SelectThermalModel,usedem=usedem
        wPlotOptions=cw_objPlotOptions(wOptionBase,uname=prefix+'AttributePlotOptions',/ylog,/xlog)
      endelse
 END
-
+  
 PRO gxFluxTube::Update_N_th,no_volume_update=no_volume_update
   if ~keyword_set(no_volume_update) then self->RequestVolumeUpdate, /newID
   widget_control,/hourglass
@@ -537,17 +548,23 @@ PRO gxFluxTube::Update_N_th,no_volume_update=no_volume_update
     answ=dialog_message('Invalid height distribution:'+STRING(10b)+self.nz_th+STRING(10b)+'Check syntax!',/error)
     return
   end
-
   n_th=self.n_th*nr_th*nz_th
   self.base->SetVertexAttributeData,'n_th',n_th
+END
+
+PRO gxFluxTube::Draw_N_th
   if ~widget_valid(self.wparent) then return
-  wdraw=widget_info(self.wparent,find_by_uname='GXFLUXTUBE:draw_th')
   p=self.p_th
   q=self.q_th
   rad=self.nr_th
   long=self.nz_th
   a=self.a
   b=self.b
+  self.centerline->getvertexattributedata,'s',ss
+  l=abs(ss[0]-ss[n_elements(ss)-1])
+  s0=l*self.s0
+  self.centerline->GetProperty,XCOORD_CONV=XCOORD_CONV,YCOORD_CONV=YCOORD_CONV,ZCOORD_CONV=ZCOORD_CONV,data=line
+  wdraw=widget_info(self.wparent,find_by_uname='GXFLUXTUBE:draw_th')
   widget_control,wdraw,get_value=window
   wset,window
   tvlct,rgb_curr,/get
@@ -581,22 +598,22 @@ PRO gxFluxTube::Update_N_th,no_volume_update=no_volume_update
   z=ZCOORD_CONV[1]*reform(line[2,*])
   R=1
   T0=self.T0
-  s=ss;added January 25 2016
+  s=ss
   success=execute('nz_th='+self.nz_th)
   if ~success then begin
     answ=dialog_message('Invalid longitudinal distribution:'+STRING(10b)+self.nz_th+STRING(10b)+'Check syntax!',/error)
     return
   end
   p={nx:nx,ny:ny,nz:nz_th,x:axis/a,y:axis/b,z:z,s:ss/l}
-  xmargin=[3,3]
+  xmargin=[8,3]
   xticks=3
   plot,p.x,p.nx,xmargin=xmargin,xticks=xticks,back=255,/nodata,color=0,/xsty,/ysty,xtitle='x/a; y/b'
-  oplot,p.x,p.nx,color=50
-  xyouts,0.09,0.8,/norm,'n!Dr!N(x,0)',color=50
-  oplot,p.y,p.ny,color=250
-  xyouts,0.09,0.7,/norm,'n!Dr!N(0,y)',color=250
-  plot,p.s,p.nz,xmargin=xmargin,xticks=xticks,color=0,/xsty,/ysty,xtitle='s/l'
-  xyouts,0.6,0.8,/norm,'n!Ds!N',color=0
+  oplot,p.x,p.nx,color=50,thick=3,linesty=1
+  gx_plot_label,0.1,0.8,'n!Dr!N(x,0)',color=50,charthick=2
+  oplot,p.y,p.ny,color=250,thick=3,linesty=2
+  gx_plot_label,0.1,0.7,'n!Dr!N(0,y)',color=250,charthick=2
+  plot,p.s,p.nz*self.n_th,xmargin=xmargin,xticks=xticks,color=0,/xsty,xtitle='s/l',thick=3,/ysty
+  gx_plot_label,0.1,0.8,'n!Ds!N',color=0,charthick=2
   !p.multi=pmulti
   tvlct,rgb_curr
 END
@@ -609,12 +626,11 @@ PRO gxFluxTube::UpdateAll
  widget_control,/hourglass
  self->Update_N_th
  self->Update_n_nth
- self->DisplayB2B0ratio
  self->Update_Theta_c,c_idx,B2B0=B2B0
  self->Update_Theta_b,c_idx,B2B0=B2B0
  self->Update_dMu,c_idx,B2B0=B2B0
  self->Update_a4,c_idx,B2B0=B2B0
- self->UpdatePADistribution
+ self->UpdateDisplays,/all
 END
 
 PRO gxFluxTube::Compute_EM,key,n_total,n2_total
@@ -639,8 +655,9 @@ end
 PRO gxFluxTube::Display_EM
   if ~widget_valid(self.wparent) then return
   self.base->GetVertexAttributeData,'owned',owned
-  self.base->GetVertexAttributeData,'n_nth',n_nth
   self.base->GetVertexAttributeData,'N_IDX',n_idx
+  self.base->GetVertexAttributeData,'n_nth',n_nth
+  n_nth+=self->get_nb_arr()
   volume=(self.parent->GetVolume())
   volume->GetVertexAttributeData,'n0',n0
   key='n_0'
@@ -693,6 +710,108 @@ PRO gxFluxTube::Display_EM
   if widget_valid(wid) then widget_control,wid,set_value=total(n2_total,/double)
 end
 
+function gxFluxtube::spine_n_nth,s=s,l=l,onepervox=onepervox
+  error=execute('p='+self.p_nth)
+  error=execute('q='+self.q_nth)
+  self.centerline->GetProperty,data=line
+  self.centerline->getvertexattributedata,'s',s
+  l=delta(s)
+  s0=self.s0
+  success=execute('ns_nth='+self.ns_nth)
+  n_nth=self.n_nth*ns_nth
+  if keyword_set(onepervox) then begin
+    sz=(self.parent)->Size()
+    vol=bytarr(sz[1],sz[2],sz[3])
+    vol[line[0,*],line[1,*],line[2,*]]=1
+    idx=where(vol eq 1)
+    vol=float(vol)
+    vol[line[0,*],line[1,*],line[2,*]]=n_nth
+    n_nth=n_nth(idx)
+    vol[line[0,*],line[1,*],line[2,*]]=s
+    s=s[idx]
+  endif
+  return,n_nth
+end
+
+function gxFluxtube::spine_n_nth,s=s,l=l,onepervox=onepervox
+  error=execute('p='+self.p_nth)
+  error=execute('q='+self.q_nth)
+  self.centerline->GetProperty,data=line
+  self.centerline->getvertexattributedata,'s',s
+  l=delta(s)
+  s0=self.s0
+  success=execute('ns_nth='+self.ns_nth)
+  n_nth=self.n_nth*ns_nth
+  if keyword_set(onepervox) then begin
+    sz=(self.parent)->Size()
+    vol=bytarr(sz[1],sz[2],sz[3])
+    vol[line[0,*],line[1,*],line[2,*]]=1
+    idx=where(vol eq 1)
+    vol=float(vol)
+    vol[line[0,*],line[1,*],line[2,*]]=n_nth
+    n_nth=vol(idx)
+    vol[line[0,*],line[1,*],line[2,*]]=s
+    s=vol[idx]
+    idx=sort(s)
+    n_nth=n_nth[idx]
+    s=s[idx]
+  endif
+  return,n_nth
+end
+
+function gxFluxtube::spine_b,s=s,l=l,onepervox=onepervox
+  self.centerline->GetProperty,data=line
+  self.centerline->getvertexattributedata,'B',b
+  b=sqrt(total(b^2,1))
+  self.centerline->getvertexattributedata,'s',s
+  l=delta(s)
+
+  if keyword_set(onepervox) then begin
+    sz=(self.parent)->Size()
+    vol=bytarr(sz[1],sz[2],sz[3])
+    vol[line[0,*],line[1,*],line[2,*]]=1
+    idx=where(vol eq 1)
+    vol=float(vol)
+    vol[line[0,*],line[1,*],line[2,*]]=b
+    b=vol(idx)
+    vol[line[0,*],line[1,*],line[2,*]]=s
+    s=vol[idx]
+    idx=sort(s)
+    b=b[idx]
+    s=s[idx]
+  endif
+  return,b
+end
+
+function gxFluxTube::spine_n_th,s=s,l=l,onepervox=onepervox
+  error=execute('p='+self.p_th)
+  error=execute('q='+self.q_th)
+  self.centerline->GetProperty,ZCOORD_CONV=ZCOORD_CONV,data=line
+  self.centerline->getvertexattributedata,'s',s
+  l=delta(s)
+  s0=l*self.s0
+  T0=self.T0
+  n0=self.n_th
+  z=ZCOORD_CONV[1]*reform(line[2,*])
+  success=execute('nz_th='+self.nz_th)
+  n_th=self.n_th*nz_th
+  if keyword_set(onepervox) then begin
+    sz=(self.parent)->Size()
+    vol=bytarr(sz[1],sz[2],sz[3])
+    vol[line[0,*],line[1,*],line[2,*]]=1
+    idx=where(vol eq 1)
+    vol=float(vol)
+    vol[line[0,*],line[1,*],line[2,*]]=n_th
+    n_th=vol(idx)
+    vol[line[0,*],line[1,*],line[2,*]]=s
+    s=vol[idx]
+    idx=sort(s)
+    n_th=n_th[idx]
+    s=s[idx]
+  endif
+  return,n_th
+end
+
 PRO gxFluxTube::Update_N_nth
  self->RequestVolumeUpdate, condition='n_b'
  widget_control,/hourglass
@@ -735,71 +854,249 @@ PRO gxFluxTube::Update_N_nth
  end 
  n_nth=self.n_nth*nr_nth*ns_nth
  self.base->SetVertexAttributeData,'n_nth',n_nth
- 
- if ~widget_valid(self.wparent) then return
- wdraw=widget_info(self.wparent,find_by_uname='GXFLUXTUBE:draw_nth')
- a=self.a
- b=self.b
- p=self.p_nth
- q=self.q_nth
- rad=self.nr_nth
- long=self.ns_nth
- widget_control,wdraw,get_value=window
- wset,window
- tvlct,rgb_curr,/get
- pmulti=!p.multi
- loadct,39
- erase,window
- !p.multi=[0,2,1]
- nx=30
- self.centerline->GetVertexAttributedata,'s',ss
- self.centerline->GetProperty,XCOORD_CONV=XCOORD_CONV
- self.base->GetVertexAttributeData,'cutoff',rho
- if n_elements(rho) eq 0 then rho=5*max([a,b])
- error=execute('p='+self.p_nth)
- error=execute('q='+self.q_nth)
- axis=[rho*(findgen(nx)/(nx-1))-rho/2,0]
- axis=axis[sort(axis)]
- x=axis
- y=0
- success=execute('nx='+self.nr_nth)
- if ~success then begin
-  answ=dialog_message('Invalid radial distribution:'+STRING(10b)+self.nr_nth+STRING(10b)+'Check syntax!',/error)
-  return
- end 
- y=axis
- x=0
- success=execute('ny='+self.nr_nth)
- if ~success then begin
-  answ=dialog_message('Invalid radial distribution:'+STRING(10b)+self.nr_nth+STRING(10b)+'Check syntax!',/error)
-  return
- end 
- l=abs(ss[0]-ss[n_elements(ss)-1])
- s=ss
- x=0
- y=0
- success=execute('ns_nth='+self.ns_nth)
- if ~success then begin
-  answ=dialog_message('Invalid longitudinal distribution:'+STRING(10b)+self.ns_nth+STRING(10b)+'Check syntax!',/error)
-  return
- end 
- p={nx:nx,ny:ny,ns:ns_nth,x:axis/a,y:axis/b,s:s/l}
- xmargin=[3,3]
- xticks=3
- plot,p.x,p.nx,xmargin=xmargin,xticks=xticks,back=255,/nodata,color=0,/xsty,/ysty,xtitle='x/a; y/b'
- oplot,p.x,p.nx,color=50
- xyouts,0.09,0.8,/norm,'n!Dr!N(x,0)',color=50
- oplot,p.y,p.ny,color=250
- xyouts,0.09,0.7,/norm,'n!Dr!N(0,y)',color=250
- plot,p.s,p.ns,xmargin=xmargin,xticks=xticks,color=0,/xsty,/ysty,xtitle='s/l'
- oplot,[1,1]*s0/l,!y.crange,color=0
- xyouts,0.6,0.8,/norm,'n!Ds!N',color=0
- !p.multi=pmulti
- tvlct,rgb_curr
- self->UpdateEnergyDistribution
- flags=(self.parent->GetVolume())->getflags()
- if ~flags.newID then self->Display_EM
+ self.base->SetVertexAttributeData,'nr_nth',nr_nth
 END
+
+Function gxFluxTube::get_nb_arr
+ nb_arr=(self->integrate_f_arr(/pa,/energy))
+ if ~isa(nb_arr) then return,0
+ self.base->GetVertexAttributeData,'C_IDX',c_idx
+ self.base->GetVertexAttributeData,'nr_nth',nr_nth
+ return,nr_nth*nb_arr[c_idx,self.ftime_idx]
+End
+
+
+pro gxFluxtube::UpdateDisplays,n_th=n_th,n_nth=n_nth,energy=energy,mu=mu,b2b0=b2B0,em=em,all=all
+  self->SynchronizeDuplicateFields
+  if keyword_set(B2B0) or keyword_set(all) then self->DisplayB2B0ratio
+  if keyword_set(n_th) or keyword_set(all) then self->Draw_N_TH
+  if keyword_set(n_nth) or keyword_set(all) then self->Draw_N_NTH
+  if keyword_set(mu) or keyword_set(all) then self->UpdatePADistribution
+  if keyword_set(energy) or keyword_set(n_nth) or keyword_set(all) then self->UpdateEnergyDistribution
+  if keyword_set(em) or keyword_set(n_nth) or keyword_set(all) then self->Display_EM
+end
+
+pro gxFluxtube::SynchronizeDuplicateFields
+ if ~widget_valid(self.wparent) then return
+  base_arr='GXFLUXTUBE:'+['Gbase','THbase','NTHbase','PAbase','Ebase']
+  self->GetProperty,fparms=fparms,n_th=n_th,T0=T0,n_nth=n_nth
+  if isa(fparms) then begin
+    fsz=size(fparms.f_arr)
+    max_ftime_idx=fsz[0] ge 4? fsz[4]-1:0
+    time_value=string(self.ftime_idx,fparms.t_arr[self.ftime_idx],format="('f_arr_time[',i0,']=',f0.2,' s')")
+  endif else begin
+    max_ftime_idx=0
+    self.ftime_idx=0
+    time_value='0'
+    self.nb_arr=0
+  endelse
+    self.centerline->GetVertexAttributeData,'s',s
+    l=delta(s)
+    m=min(abs(s-self.s0),s0_idx)
+    self.s0=s[s0_idx]
+  for k=0,n_elements(base_arr)-1 do begin
+   base=widget_info(self.wparent,find_by_uname=base_arr[k])
+   if widget_valid(base) then begin
+   
+     ws02l=widget_info(base,find_by_uname='GXFLUXTUBE:s0/l')
+     if widget_valid(ws02l) then widget_control,ws02l,set_value=self.s0/l
+     
+     ws0value=widget_info(base,find_by_uname='GXFLUXTUBE:s0value')
+     if widget_valid(ws0value) then widget_control,ws0value,set_value=string(s0_idx,self.s0/l,format="('s0[',i0,']/l=',g0)")
+     
+     ws0=widget_info(base,find_by_uname='GXFLUXTUBE:s0')
+     if widget_valid(ws0) then widget_control,ws0,set_value=s0_idx
+     
+     wsvalue=widget_info(base,find_by_uname='GXFLUXTUBE:svalue')
+     if widget_valid(wsvalue) then  widget_control,wsvalue,set_value=string(self.spine_idx,s[self.spine_idx]/l,format="('s[',i0,']/l=',g0)")
+     
+     ws=widget_info(base,find_by_uname='GXFLUXTUBE:s')
+     if widget_valid(ws) then widget_control,ws,set_value=self.spine_idx
+     
+     wftime_idx=widget_info(base,find_by_uname='GXFLUXTUBE:FTIME_IDX')
+     if widget_valid(wftime_idx) then widget_control,wftime_idx,set_value=self.ftime_idx,set_slider_max=max_ftime_idx
+     
+     wftime=widget_info(base,find_by_uname='GXFLUXTUBE:FTIME')
+     if widget_valid(wftime) then widget_control,wftime,set_value=time_value
+     
+     wnb_arr=widget_info(base,find_by_uname='GXFLUXTUBE:nb_arr')
+     if widget_valid(wnb_arr) then widget_control,wnb_arr,set_value=self.nb_arr
+     
+     wn_th=widget_info(base,find_by_uname='GXFLUXTUBE:n_th')
+     if widget_valid(wn_th) then widget_control,wn_th,set_value=self.n_th
+     
+     wn_nth=widget_info(base,find_by_uname='GXFLUXTUBE:n_nth')
+     if widget_valid(wn_nth) then widget_control,wn_nth,set_value=self.n_nth
+     
+     wT0=widget_info(base,find_by_uname='GXFLUXTUBE:T0')
+     if widget_valid(wT0) then widget_control,wT0,set_value=self.T0
+     
+   end
+  end
+end
+
+pro gxFluxtube::Draw_N_NTH
+  if ~widget_valid(self.wparent) then return
+  wdraw=widget_info(self.wparent,find_by_uname='GXFLUXTUBE:draw_nth')
+  a=self.a
+  b=self.b
+  p=self.p_nth
+  q=self.q_nth
+  rad=self.nr_nth
+  long=self.ns_nth
+  s0=self.s0
+  widget_control,wdraw,get_value=window
+  wset,window
+  tvlct,rgb_curr,/get
+  pmulti=!p.multi
+  loadct,39
+  erase,window
+  !p.multi=[0,2,1]
+  nx=30
+  self.centerline->GetVertexAttributedata,'s',s
+  self.centerline->GetProperty,XCOORD_CONV=XCOORD_CONV
+  self.base->GetVertexAttributeData,'cutoff',rho
+  if n_elements(rho) eq 0 then rho=5*max([a,b])
+  error=execute('p='+self.p_nth)
+  error=execute('q='+self.q_nth)
+  axis=[rho*(findgen(nx)/(nx-1))-rho/2,0]
+  axis=axis[sort(axis)]
+  x=axis
+  y=0
+  success=execute('nx='+self.nr_nth)
+  if ~success then begin
+    answ=dialog_message('Invalid radial distribution:'+STRING(10b)+self.nr_nth+STRING(10b)+'Check syntax!',/error)
+    return
+  end
+  y=axis
+  x=0
+  success=execute('ny='+self.nr_nth)
+  if ~success then begin
+    answ=dialog_message('Invalid radial distribution:'+STRING(10b)+self.nr_nth+STRING(10b)+'Check syntax!',/error)
+    return
+  end
+  l=delta(s)
+  x=0
+  y=0
+  success=execute('ns_nth='+self.ns_nth)
+  if ~success then begin
+    answ=dialog_message('Invalid longitudinal distribution:'+STRING(10b)+self.ns_nth+STRING(10b)+'Check syntax!',/error)
+    return
+  end
+  p={nx:nx,ny:ny,ns:ns_nth,x:axis/a,y:axis/b,s:s/l}
+  xticks=3
+  plot,p.x,p.nx,xmargin=[8,1],xticks=xticks,back=255,/nodata,color=0,/xsty,/ysty,xtitle='x/a; y/b',ytitle='n!Dr(x,y)',yrange=[0,1]
+  oplot,p.x,p.nx,color=50,thick=4,linesty=1
+  gx_plot_label,0.09,0.8,'n!Dr!N(x,0)',color=50,charthick=3,charsize=2
+  oplot,p.y,p.ny,color=250,thick=4,linesty=2
+  gx_plot_label,0.09,0.6,'n!Dr!N(0,y)',color=250,charthick=3,charsize=2
+  
+ 
+  f_arr=self->integrate_f_arr(/pa,/en,s_arr=s_arr)
+  if isa(f_arr) then begin
+   plot,p.s,p.ns*self.n_nth,xmargin=[8,1],xticks=xticks,color=0,$
+        /xsty,/ysty,xtitle='s/l',ytitle='nb(s)',$
+        yrange=minmax(p.ns*self.n_nth+f_arr[*,self.ftime_idx]),thick=2
+   oplot,p.s,p.ns*self.n_nth,color=50,thick=3
+   oplot,s_arr,f_arr[*,self.ftime_idx],color=160,thick=3
+   oplot,s_arr,p.ns*self.n_nth+f_arr[*,self.ftime_idx],color=250,thick=3
+  endif else begin
+    plot,p.s,p.ns*self.n_nth,xmargin=xmargin,xticks=xticks,$
+          color=0,/xsty,/ysty,xtitle='s/l',ytitle='nb(s)',thick=2
+  endelse
+  oplot,[1,1]*s0/l,!y.crange,color=0
+  gx_plot_label,0.6,0.9,'n!Dtot!N',color=250,charthick=3,charsize=2
+  gx_plot_label,0.6,0.7,'n!Dana!N',color=50,charthick=3,charsize=2
+  gx_plot_label,0.6,0.5,'n!Darr!N',color=160,charthick=3,charsize=2
+  !p.multi=pmulti
+  tvlct,rgb_curr
+end
+
+function gxFluxtube::f_arr_norm, f_arr,e_arr,mu_arr
+if N_PARAMS() ne 3 then return,0d
+ dMu=mu_arr[1]-mu_arr[0]
+ loge=alog10(e_arr)
+ dloge=loge[1]-loge[0]
+ f=2*!pi*total(f_arr,2)*dMu; integration over pitch angle
+ sz=size(f)
+ e=array_replicate(e_arr,sz[2],sz[3])
+ f=alog(10.)*dloge*total(f*e,1)
+ return,max(f)
+end
+
+Function gxFluxTube::integrate_f_arr,pa=pa,energy=energy,e_arr=e_arr,mu_arr=mu_arr,s_arr=s_arr,t_arr=t_arr
+  if ~ptr_valid(self.fparms) then return,!null
+  s_arr=self->GetVertexData('s')
+  s_arr=s_arr/delta(s_arr)
+  f_arr=(*self.fparms).f_arr*self.nb_arr
+  mu_arr=(*self.fparms).mu_arr
+  e_arr=(*self.fparms).e_arr
+  s_arr0=(*self.fparms).s_arr
+  t_arr=(*self.fparms).t_arr
+  dMu=mu_arr[1]-mu_arr[0]
+  loge=alog10(e_arr)
+  dloge=loge[1]-loge[0]
+  if keyword_set(pa) then f_arr=2*!pi*total(f_arr,2)*dMu;ap integration
+  if keyword_set(energy) then begin
+    dim=size(f_arr,/dim)
+    e_arr=array_replicate(e_arr,dim[1:*])
+    f_arr=alog(10.)*dloge*total(f_arr*e_arr,1)
+  endif
+  dim=size(f_arr,/dim)
+  if n_elements(dim) eq 3 then begin
+    dim[1]=n_elements(s_arr)
+    f_arr_int=dblarr(dim)
+    for i=0,dim[0]-1 do begin
+      for j=0,dim[2]-1 do begin
+        f_arr_int[i,*,j]=interpol(reform(f_arr[i,*,j]),s_arr0,s_arr)>0
+      endfor
+    endfor
+  endif else begin
+    dim[0]=n_elements(s_arr)
+    f_arr_int=dblarr(dim)
+    for i=0,dim[1]-1 do begin
+     f_arr_int[*,i]=interpol(reform(f_arr[*,i]),s_arr0,s_arr)>0
+    endfor
+  endelse
+  return,f_arr_int
+end
+
+Function gxFluxTube::colapse_f_arr,dimension_,axis=axis
+ f_arr=!null
+ if ~ptr_valid(self.fparms) then return,f_arr
+ dimension=(size(dimension_,/tname) eq 'STRING')?strlowcase(dimension_):'none'
+ f_arr=(*self.fparms).f_arr
+ mu_arr=(*self.fparms).mu_arr
+ e_arr=(*self.fparms).e_arr
+ dMu=mu_arr[1]-mu_arr[0]
+ loge=alog10(e_arr)
+ dloge=loge[1]-loge[0]
+ case dimension of
+  'spine': begin 
+             f_arr=2*!pi*total(f_arr,2)*dMu;mu integration
+             axis=(*self.fparms).s_arr
+           end  
+  'mu': begin 
+          f_arr=total(f_arr,3);spine integration
+          axis=(*self.fparms).mu_arr
+        end        
+  else: begin
+         f_arr=total(total(f_arr,2),2); mu & spine integration
+         axis=(*self.fparms).e_arr
+        end 
+ endcase
+ if dimension ne 'energy' then begin
+  loge=alog10((*self.fparms).e_arr)
+  dloge=loge[1]-loge[0]
+  sz=size(f_arr)
+  e_arr=array_replicate((*self.fparms).e_arr,sz[2])
+  f_arr=alog(10.)*dloge*total(f_arr*e_arr,1)
+ endif
+ if (size(reform(f_arr)))[0] eq 0 then axis=!null
+ f_arr*=self.nb_arr
+ return,f_arr
+end
+
 
 PRO gxFluxTube::Update_Theta_c,c_idx,B2B0=B2B0
  widget_control,/hourglass
@@ -890,11 +1187,11 @@ PRO gxFluxTube::SelectEnergyDistribution,index
       ;xlabelsize=50
       ;lfont=font
       base=widget_base(ParmSubBase,/row)
-      wn_th=cw_objfield(base, UNAME=prefix+'n_th_duplicate', LABEL='n0=',$
+      wn_th=cw_objfield(base, UNAME=prefix+'n_th', LABEL='n0=',$
         INCREMENT=1e7, $
         UNITS='cm^-3', $
         VALUE=self.n_th,map=1,/frame,XTEXTSIZE=XTEXTSIZE,xlabelsize=xlabelsize,lfont=lfont)
-      wT0=cw_objfield(base, UNAME=prefix+'T0_duplicate', LABEL='T0=',$
+      wT0=cw_objfield(base, UNAME=prefix+'T0', LABEL='T0=',$
         INCREMENT=1, $
         UNITS='K', $
         VALUE=self.T0,map=1,/frame,XTEXTSIZE=XTEXTSIZE,xlabelsize=xlabelsize,lfont=lfont)  
@@ -914,17 +1211,17 @@ PRO gxFluxTube::SelectEnergyDistribution,index
      ; xlabelsize=50
       ;lfont=font
       base=widget_base(ParmSubBase,/row)
-      wn_th=cw_objfield(base, UNAME=prefix+'n_th_duplicate', LABEL='n0=',$
+      wn_th=cw_objfield(base, UNAME=prefix+'n_th', LABEL='n0=',$
         INCREMENT=1e7, $
         UNITS='cm^-3', $
         VALUE=self.n_th,map=1,/frame,XTEXTSIZE=XTEXTSIZE,xlabelsize=xlabelsize,lfont=lfont)
-      wT0=cw_objfield(base, UNAME=prefix+'T0_duplicate', LABEL='T0=',$
+      wT0=cw_objfield(base, UNAME=prefix+'T0', LABEL='T0=',$
         INCREMENT=1, $
         UNITS='K', $
         VALUE=self.T0,map=1,/frame,XTEXTSIZE=XTEXTSIZE,xlabelsize=xlabelsize,lfont=lfont)  
      ;single power law over kinetic energy (PLW)
      base=widget_base(ParmSubBase,/row)
-      wn_nth=cw_objfield(base, UNAME=prefix+'n_nth_duplicate', LABEL='nb=',$
+      wn_nth=cw_objfield(base, UNAME=prefix+'n_nth', LABEL='nb=',$
         INCREMENT=1e7, $
         UNITS='cm^-3', $
         VALUE=self.n_nth,map=1,/frame,XTEXTSIZE=XTEXTSIZE,xlabelsize=xlabelsize,lfont=lfont)
@@ -948,11 +1245,11 @@ PRO gxFluxTube::SelectEnergyDistribution,index
       ;xlabelsize=50
       ;lfont=font
       base=widget_base(ParmSubBase,/row)
-      wn_th=cw_objfield(base, UNAME=prefix+'n_th_duplicate', LABEL='n0=',$
+      wn_th=cw_objfield(base, UNAME=prefix+'n_th', LABEL='n0=',$
         INCREMENT=1e7, $
         UNITS='cm^-3', $
         VALUE=self.n_th,map=1,/frame,XTEXTSIZE=XTEXTSIZE,xlabelsize=xlabelsize,lfont=lfont)
-      wT0=cw_objfield(base, UNAME=prefix+'T0_duplicate', LABEL='T0=',$
+      wT0=cw_objfield(base, UNAME=prefix+'T0', LABEL='T0=',$
         INCREMENT=1, $
         UNITS='K', $
         VALUE=self.T0,map=1,/frame,XTEXTSIZE=XTEXTSIZE,xlabelsize=xlabelsize,lfont=lfont)  
@@ -961,7 +1258,7 @@ PRO gxFluxTube::SelectEnergyDistribution,index
       ;xlabelsize=50
       ;lfont=font
       base=widget_base(ParmSubBase,/row)
-      wn_nth=cw_objfield(base, UNAME=prefix+'n_nth_duplicate', LABEL='nb=',$
+      wn_nth=cw_objfield(base, UNAME=prefix+'n_nth', LABEL='nb=',$
         INCREMENT=1e7, $
         UNITS='cm^-3', $
         VALUE=self.n_nth,map=1,/frame,XTEXTSIZE=XTEXTSIZE,xlabelsize=xlabelsize,lfont=lfont) 
@@ -993,7 +1290,7 @@ PRO gxFluxTube::SelectEnergyDistribution,index
       ;xlabelsize=50
       ;lfont=font
       base=widget_base(ParmSubBase,/row)
-      wn_nth=cw_objfield(base, UNAME=prefix+'n_nth_duplicate', LABEL='nb=',$
+      wn_nth=cw_objfield(base, UNAME=prefix+'n_nth', LABEL='nb=',$
         INCREMENT=1e7, $
         UNITS='cm^-3', $
         VALUE=self.n_nth,map=1,/frame,XTEXTSIZE=XTEXTSIZE,xlabelsize=xlabelsize,lfont=lfont)
@@ -1017,7 +1314,7 @@ PRO gxFluxTube::SelectEnergyDistribution,index
 ;      xlabelsize=50
       ;lfont=font
       base=widget_base(ParmSubBase,/row)
-      wn_nth=cw_objfield(base, UNAME=prefix+'n_nth_duplicate', LABEL='nb=',$
+      wn_nth=cw_objfield(base, UNAME=prefix+'n_nth', LABEL='nb=',$
         INCREMENT=1e7, $
         UNITS='cm^-3', $
         VALUE=self.n_nth,map=1,/frame,XTEXTSIZE=XTEXTSIZE,xlabelsize=xlabelsize,lfont=lfont) 
@@ -1049,11 +1346,11 @@ PRO gxFluxTube::SelectEnergyDistribution,index
      ; xlabelsize=50
       ;lfont=font
       base=widget_base(ParmSubBase,/row)
-      wn_th=cw_objfield(base, UNAME=prefix+'n_th_duplicate', LABEL='n0=',$
+      wn_th=cw_objfield(base, UNAME=prefix+'n_th', LABEL='n0=',$
         INCREMENT=1e7, $
         UNITS='cm^-3', $
         VALUE=self.n_nth,map=1,/frame,XTEXTSIZE=XTEXTSIZE,xlabelsize=xlabelsize,lfont=lfont) 
-      wT0=cw_objfield(base, UNAME=prefix+'T0_duplicate', LABEL='T0=',$
+      wT0=cw_objfield(base, UNAME=prefix+'T0', LABEL='T0=',$
         INCREMENT=1, $
         UNITS='K', $
         VALUE=self.T0,map=1,/frame,XTEXTSIZE=2+XTEXTSIZE/2,xlabelsize=xlabelsize,lfont=lfont)   
@@ -1081,11 +1378,11 @@ PRO gxFluxTube::SelectEnergyDistribution,index
      ; xlabelsize=50
       ;lfont=font
       base=widget_base(ParmSubBase,/row)
-      wn_th=cw_objfield(base, UNAME=prefix+'n_th_duplicate', LABEL='n0=',$
+      wn_th=cw_objfield(base, UNAME=prefix+'n_th', LABEL='n0=',$
         INCREMENT=1e7, $
         UNITS='cm^-3', $
         VALUE=self.n_nth,map=1,/frame,XTEXTSIZE=XTEXTSIZE,xlabelsize=xlabelsize,lfont=lfont) 
-      wT0=cw_objfield(base, UNAME=prefix+'T0_duplicate', LABEL='T0=',$
+      wT0=cw_objfield(base, UNAME=prefix+'T0', LABEL='T0=',$
         INCREMENT=1, $
         UNITS='K', $
         VALUE=self.T0,map=1,/frame,XTEXTSIZE=2+XTEXTSIZE/2,xlabelsize=xlabelsize,lfont=lfont)   
@@ -1109,7 +1406,7 @@ PRO gxFluxTube::SelectEnergyDistribution,index
      ; xlabelsize=50
       ;lfont=font
       base=widget_base(ParmSubBase,/row)
-      wn_nth=cw_objfield(base, UNAME=prefix+'n_nth_duplicate', LABEL='nb=',$
+      wn_nth=cw_objfield(base, UNAME=prefix+'n_nth', LABEL='nb=',$
         INCREMENT=1e7, $
         UNITS='cm^-3', $
         VALUE=self.n_nth,map=1,/frame,XTEXTSIZE=XTEXTSIZE,xlabelsize=xlabelsize,lfont=lfont)
@@ -1133,7 +1430,7 @@ PRO gxFluxTube::SelectEnergyDistribution,index
       ;xlabelsize=50
       ;lfont=font
       base=widget_base(ParmSubBase,/row)
-      wn_nth=cw_objfield(base, UNAME=prefix+'n_nth_duplicate', LABEL='nb=',$
+      wn_nth=cw_objfield(base, UNAME=prefix+'n_nth', LABEL='nb=',$
         INCREMENT=1e7, $
         UNITS='cm^-3', $
         VALUE=self.n_nth,map=1,/frame,XTEXTSIZE=XTEXTSIZE,xlabelsize=xlabelsize,lfont=lfont)
@@ -1157,11 +1454,11 @@ PRO gxFluxTube::SelectEnergyDistribution,index
       ;xlabelsize=50
       ;lfont=font
       base=widget_base(ParmSubBase,/row)
-      wn_th=cw_objfield(base, UNAME=prefix+'n_th_duplicate', LABEL='n0=',$
+      wn_th=cw_objfield(base, UNAME=prefix+'n_th', LABEL='n0=',$
         INCREMENT=1e7, $
         UNITS='cm^-3', $
         VALUE=self.n_nth,map=1,/frame,XTEXTSIZE=XTEXTSIZE,xlabelsize=xlabelsize,lfont=lfont) 
-      wT0=cw_objfield(base, UNAME=prefix+'T0_duplicate', LABEL='T0=',$
+      wT0=cw_objfield(base, UNAME=prefix+'T0', LABEL='T0=',$
         INCREMENT=1, $
         UNITS='K', $
         VALUE=self.T0,map=1,/frame,XTEXTSIZE=2+XTEXTSIZE/2,xlabelsize=xlabelsize,lfont=lfont)   
@@ -1189,11 +1486,11 @@ PRO gxFluxTube::SelectEnergyDistribution,index
       ;xlabelsize=50
       ;lfont=font
       base=widget_base(ParmSubBase,/row)
-      wn_th=cw_objfield(base, UNAME=prefix+'n_th_duplicate', LABEL='n0=',$
+      wn_th=cw_objfield(base, UNAME=prefix+'n_th', LABEL='n0=',$
         INCREMENT=1e7, $
         UNITS='cm^-3', $
         VALUE=self.n_nth,map=1,/frame,XTEXTSIZE=XTEXTSIZE,xlabelsize=xlabelsize,lfont=lfont) 
-      wT0=cw_objfield(base, UNAME=prefix+'T0_duplicate', LABEL='T0=',$
+      wT0=cw_objfield(base, UNAME=prefix+'T0', LABEL='T0=',$
         INCREMENT=1, $
         UNITS='K', $
         VALUE=self.T0,map=1,/frame,XTEXTSIZE=2+XTEXTSIZE/2,xlabelsize=xlabelsize,lfont=lfont)   
@@ -1218,7 +1515,6 @@ PRO gxFluxTube::SelectEnergyDistribution,index
  else:
  endcase
  widget_control,EBase,Map=1
- self->UpdateEnergyDistribution
 END
 
 FUNCTION gxFluxTube::THM,E
@@ -1422,7 +1718,6 @@ FUNCTION gxFluxTube::TDP,E
  if count gt 0 then N[range1]=A*E[range1]^(-delta1)
  if ncomp gt 0 then N[range2]=A*(Ebr^(delta2-delta1))*E[range2]^(-delta2)
  return,thm+N
- 
 END
 
 PRO gxFluxTube::UpdateEnergyDistribution
@@ -1488,7 +1783,17 @@ PRO gxFluxTube::UpdateEnergyDistribution
       end       
    else:
    endcase
-   plot,E,N,back=255,color=0,/ylog,/xlog,xtitle='E(MeV)',ytitle='n(cm^-3)',/xsty,xticks=4,yticks=4,xmargin=[13,1]
+   if ptr_valid(self.fparms) then begin
+     f_arr=self->integrate_f_arr(/pa,e_arr=e_arr)
+     f_arr=f_arr[*,self.spine_idx,self.ftime_idx]
+     f_arr=interpol(f_arr,e_arr,E)>1
+     plot,E,N,back=255,color=0,/ylog,/xlog,$
+      xtitle='E(MeV)',ytitle='n(cm^-3)',/xsty,xticks=4,yticks=4,xmargin=[13,1],$
+      xrange=minmax([e_arr,E]),yrange=minmax([N,f_arr]),/ysty
+     oplot,E,f_arr,color=150,thick=3
+   endif else begin
+     plot,E,N,back=255,color=0,/ylog,/xlog,xtitle='E(MeV)',ytitle='n(cm^-3)',/xsty,xticks=4,yticks=4,xmargin=[13,1]
+   endelse
    !p.multi=pmulti
  endif
 END
@@ -1700,35 +2005,22 @@ PRO gxFluxTube::SelectPADistribution,index
  else:
  endcase
  widget_control,PABase,Map=1
- self->UpdatePADistribution
 END
 
 PRO gxFluxtube::DisplayB2B0ratio
   self.centerline->GetVertexAttributeData,'B',Bvec
   self.centerline->GetVertexAttributeData,'s',s
-  l=abs(s[0]-s[n_elements(s)-1])
+  l=delta(s)
   B=dblarr(n_elements(s))
   for i=0,n_elements(B)-1 do B[i]=norm(Bvec[*,i])
-  m=min(abs(s-self.s0),imin)
-  self.s0=s[imin]
-  ws02l=widget_info(self.wparent,find_by_uname='GXFLUXTUBE:s0/l')
-  widget_control,ws02l,set_value=self.s0/l
-  ws0value=widget_info(self.wparent,find_by_uname='GXFLUXTUBE:s0value')
-  widget_control,ws0value,set_value=string(self.s0/l,format="('s0/l=',g0)")
-  ws0=widget_info(self.wparent,find_by_uname='GXFLUXTUBE:s0')
-  widget_control,ws0,set_value=imin
-  ws0value_duplicate=widget_info(self.wparent,find_by_uname='GXFLUXTUBE:s0value_duplicate')
-  widget_control,ws0value_duplicate,set_value=string(self.s0/l,format="('s0/l=',g0)")
-  ws0_duplicate=widget_info(self.wparent,find_by_uname='GXFLUXTUBE:s0_duplicate')
-  widget_control,ws0_duplicate,set_value=imin
-  B0=B[imin]
+  m=min(abs(self.s0-s),s0_idx)
+  B0=B[s0_idx]
   B2B0=B/B0
-  if ~widget_valid(self.wparent) then return
   wdraw=widget_info(self.wparent,find_by_uname='GXFLUXTUBE:draw_clg')
   widget_control,wdraw,Get_Value=window
   wset,window
   pmulti=!p.multi
-  !p.multi=[0,1,2]
+  !p.multi=[0,2,1]
     alpha=self.centerline->GetAlpha()
     plot,s/l,alpha,back=255,color=0,xtitle='s/l',ytitle='alpha',/xsty,thick=2
     oplot,[1,1]*s[self.centerindex]/l,!y.crange,color=0
@@ -1756,8 +2048,7 @@ PRO gxFluxTube::UpdatePADistribution
  np=101
  deltamu=(mu2-mu1)/(np-1)
  mu=mu1+deltamu*findgen(np)
- ws=widget_info(self.wparent,find_by_uname='GXFLUXTUBE:s')
- widget_control,ws,get_value=c_idx
+ c_idx=self.spine_idx
  case self.dist_ang of
   0:begin
     ;isotropic* (ISO)'
@@ -1782,7 +2073,7 @@ PRO gxFluxTube::UpdatePADistribution
      A=1/(2*(muc+dMu-dMu*exp((muc-1)/dmu)))
      if nr1 gt 0 then g[range1]=A
      if nr2 gt 0 then g[range2]=A*exp(-(abs(mu[range2])-muc)/dmu)
-     plot,mu,g,back=255,color=0,xtitle='!4l!3',ytitle='g(!4l!3)',/xsty,thick=2
+     plot,mu,g,back=255,color=0,xtitle='!4l!3',ytitle='g(!4l!3)',/xsty,thick=2,yrange=[0,max(g)>1]
     end
   3:begin
     ;Gaussian loss-cone (GLC) 
@@ -1798,7 +2089,7 @@ PRO gxFluxTube::UpdatePADistribution
      if nr1 gt 0 then g[range1]=A
      exp_arg=Alog(A)-((abs(mu[range2])-muc)/dmu)^2
      if nr2 gt 0 then g[range2]=exp(exp_arg)
-     plot,mu,g,back=255,color=0,xtitle='!4l!3',ytitle='g(!4l!3)',/xsty,thick=2
+     plot,mu,g,back=255,color=0,xtitle='!4l!3',ytitle='g(!4l!3)',/xsty,thick=2,yrange=[0,max(g)>1]
     end
   4:begin
     ;Gaussian (GAU)
@@ -1811,7 +2102,7 @@ PRO gxFluxTube::UpdatePADistribution
      mu0=cos(!dtor*self.theta_b0)
      A=1/(sqrt(!pi)*(erf((1-mu0)/dmu)+erf((1+mu0)/dmu))/2)
      g=A*exp(-((mu-mu0)/dmu)^2)
-     plot,mu,g,back=255,color=0,xtitle='!4l!3',ytitle='g(!4l!3)',/xsty,thick=2
+     plot,mu,g,back=255,color=0,xtitle='!4l!3',ytitle='g(!4l!3)',/xsty,thick=2,yrange=[0,max(g)>1]
     
     end
   5:begin  
@@ -1826,10 +2117,17 @@ PRO gxFluxTube::UpdatePADistribution
      mu0=cos(!dtor*self.theta_b0)
      g=exp(-((mu-mu0)^2+a4*(mu-mu0)^4)/dmu^2)
      g=g/total(g)
-     plot,mu,g,back=255,color=0,xtitle='!4l!3',ytitle='g(!4l!3)',/xsty,thick=2
+     plot,mu,g,back=255,color=0,xtitle='!4l!3',ytitle='g(!4l!3)',/xsty,thick=2,yrange=[0,max(g)>1]
     end
  else:
  endcase
+ if ptr_valid(self.fparms) then begin
+  fparms=self->interpolate_fparms()
+  f_arr=self->integrate_f_arr(/energy,mu_arr=mu_arr)
+  f_arr=interpol(f_arr[*,c_idx,self.ftime_idx]/max(f_arr),mu_arr,mu)>0
+  oplot,mu,f_arr,color=150,thick=3
+ endif
+  
  !p.multi=pmulti
  end
 END
@@ -1848,7 +2146,8 @@ PRO gxFluxTube::GetProperty,wParent=wParent,a=a,b=b,phi=phi,nrho=nrho,nphi=nphi,
                              p_th=p_th,q_th=q_th,nr_th=nr_th,nz_th=nz_th,n_th=n_th,T0=T0,$
                             dist_e=dist_e,dist_ang=dist_ang,eps=eps,kappa=kappa,emin=emin,emax=emax,ebreak=ebreak,$
                             delta1=delta1,delta2=delta2,theta_c0=theta_c0,theta_b0=theta_b0,dMu0=dMu0,parm_a4_0=parm_a4_0,use_clg=use_clg,s0=s0,$
-                            centerbase=centerbase,_ref_extra=extra
+                            centerbase=centerbase,fkey=fkey,fparms=fparms,$
+                            ftime_idx=ftime_idx,spine_idx=spine_idx,nb_arr=nb_arr,_ref_extra=extra
  wParent=self.wParent
  centerline=self.centerline
  centerindex=self.centerindex
@@ -1884,15 +2183,97 @@ PRO gxFluxTube::GetProperty,wParent=wParent,a=a,b=b,phi=phi,nrho=nrho,nphi=nphi,
  parm_a4_0=self.a4_0
  use_clg=self.use_clg
  s0=self.s0
+ fkey=self.fkey
+ ftime_idx=self.ftime_idx
+ nb_arr=self.nb_arr
+ spine_idx=self.spine_idx
+ fparms=ptr_valid(self.fparms)?*(self.fparms):!null
  centerbase=self->GetByName('Base')
  self->IDLgrModel::GetProperty,_extra=extra
+END
+
+PRO gxFLUXTUBE::upload_fparms,filename
+  catch, error_status
+  if error_status ne 0 then begin
+      message, !error_state.msg,/cont
+      return
+  endif
+  if ~file_exist(filename) then begin
+    filename=dialog_pickfile(filter=['*.sav'],$
+    DEFAULT_EXTENSION='sav',$
+    /read,/must_exist,$
+    title='Please select an IDL sav file tu upload a fluxtube numerical solution')
+  endif
+  restore,filename
+  s_arr=exist(s)?s:z
+  self.nb_arr=self->f_arr_norm(distfunc,e,mu)
+  fparms={f_arr:distfunc/self.nb_arr,e_arr:e,mu_arr:mu,s_arr:s_arr,t_arr:t}
+  ptr_free,self.fparms
+  self.fparms=ptr_new(fparms)
+END
+
+PRO gxFLUXTUBE::remove_fparms
+  catch, error_status
+  if error_status ne 0 then begin
+    message, !error_state.msg,/cont
+    return
+  endif
+  ptr_free,self.fparms
+  self.nb_arr=0
+  self.time_idx=0
+END
+
+PRO gxFLUXTUBE::export_spine_parms
+  catch, error_status
+  if error_status ne 0 then begin
+    message, !error_state.msg,/cont
+    return
+  endif
+  answ=dialog_message('Not yet implemented!')
+END
+
+FUNCTION gxFLUXTUBE::interpolate_fparms,time_idx=time_idx
+  default,time_idx,self.ftime_idx
+  if ~ptr_valid(self.fparms) then return,!null
+  fparms=(*self.fparms)
+  sz=size(fparms.f_arr)
+  spine=self->GetVertexData('s')
+  spine=spine/delta(spine)
+  f_arr=fltarr(sz[1],sz[2],n_elements(spine))
+  for i=0,sz[1]-1 do begin
+    for j=0,sz[2]-1 do begin
+        f_arr[i,j,*]=interpol(fparms.f_arr[i,j,*,time_idx],fparms.s_arr,spine)>0
+    endfor
+  endfor
+  fparms=rep_tag_value(fparms,f_arr,'f_arr')
+  fparms=rem_tag(fparms,'s_arr')
+  fparms=add_tag(fparms,fparms.t_arr[time_idx],'time')
+  fparms=rem_tag(fparms,'t_arr')
+  fparms.f_arr*=self.nb_arr
+  return,fparms
+END
+
+PRO gxFLUXTUBE::ExportSpineParms
+  filename=dialog_pickfile(filter=['*.sav'],$
+    DEFAULT_EXTENSION='sav',$
+    /write,$
+  Title='Please select an IDL sav filename, to export fluxtube spine parameters')
+  if filename ne '' then begin
+    n_th=self->spine_n_th(s=s,l=l,/onepervox)
+    b=self->spine_b(s=s,l=l,/onepervox)
+    s=s/l
+    l=l*gx_rsun(unit='cm')
+    save,s,b,n_th,l,file=filename
+  end
 END
 
 PRO gxFluxTube::SetProperty,wParent=wParent,centerindex=centerindex,a=a,b=b,phi=phi,nrho=nrho,nphi=nphi,lock=lock,$
                             p_nth=p_nth,nr_nth=nr_nth,q_nth=q_nth,ns_nth=ns_nth,n_nth=n_nth, $
                             p_th=p_th,q_th=q_th,nr_th=nr_th,nz_th=nz_th,n_th=n_th,T0=T0,$
                             dist_e=dist_e,dist_ang=dist_ang,eps=eps,kappa=kappa,emin=emin,emax=emax,ebreak=ebreak,$
-                            delta1=delta1,delta2=delta2,theta_c0=theta_c0,theta_b0=theta_b0,dMu0=dMu0,parm_a4_0=parm_a4_0,use_clg=use_clg,s0=s0,_extra=_extra
+                            delta1=delta1,delta2=delta2,theta_c0=theta_c0,theta_b0=theta_b0,dMu0=dMu0,$
+                            parm_a4_0=parm_a4_0,use_clg=use_clg,s0=s0,fkey=fkey,$
+                            ftime_idx=ftime_idx,spine_idx=spine_idx,nb_arr=nb_arr,_extra=_extra
  if exist(wParent) then self.wParent=wParent
  if exist(centerindex) then self.centerindex=centerindex
  if exist(nrho) then self.nrho=nrho
@@ -1930,6 +2311,10 @@ PRO gxFluxTube::SetProperty,wParent=wParent,centerindex=centerindex,a=a,b=b,phi=
  if exist(parm_a4_0) then self.a4_0=parm_a4_0
  if exist(use_clg) then self.use_clg=use_clg
  if exist(s0) then self.s0=s0
+ if exist(fkey) then self.fkey=fkey
+ if exist(ftime_idx) then self.ftime_idx=ftime_idx
+ if exist(nb_arr) then self.nb_arr=nb_arr
+ if exist(spine_idx) then self.spine_idx=spine_idx
  self->IDLgrModel::SetProperty,_extra=_extra
 END
 
@@ -1937,5 +2322,6 @@ PRO gxFluxTube__define
 self={gxFluxTube, inherits IDLgrModel, wParent:0l,$
 centerindex:0l,a:0d,b:0d,phi:0d,n:[0d,0,0],ex:[0d,0,0],ey:[0d,0,0],nphi:0l,nrho:0l,centerline:obj_new(),base:obj_new(),lock:0l,$
 p_nth:'',nr_nth:'',q_nth:'',ns_nth:'',p_th:'',q_th:'',nr_th:'',nz_th:'',n_th:0.0,T0:0.0,n_nth:0.0,$
-dist_e:0,dist_ang:0,eps:0.0,kappa:0.0,emin:0.0,emax:0.0,ebreak:0.0,delta1:0.0,delta2:0.0,theta_c0:0.0,theta_b0:0.0,dMu0:0.0,a4_0:0.0,use_clg:0b,s0:0.0} 
+dist_e:0,dist_ang:0,eps:0.0,kappa:0.0,emin:0.0,emax:0.0,ebreak:0.0,delta1:0.0,delta2:0.0,theta_c0:0.0,$
+theta_b0:0.0,dMu0:0.0,a4_0:0.0,use_clg:0b,s0:0.0,fkey:0,ftime_idx:0l,spine_idx:0l,nb_arr:0d,fparms:ptr_new()} 
 END

@@ -578,6 +578,13 @@ pro gxModel::UpdateDef
   
   if min(id) eq 4 then self.volume->UpdateVoxelId,/force
   
+  ;Update fluxtubes properties if needed
+  fluxtubes=self->get(/all,is='gxfluxtube',count=count)
+  for k=0,count-1 do begin
+    if ~isa(fluxtubes[k]->GetVertexData('nr_nth'),/number) then fluxtubes[k]->Update_N_NTH
+  endfor
+  ;
+  
   ;Update maps if needed
   maps=*self.refmaps
   if n_elements(maps) eq 1 then goto,skip
@@ -902,6 +909,10 @@ function gxModel::GetVoxelId
   return,voxel_id
 end
 
+function gxModel::GetTubeId
+  return,(ishft(self->GetVertexData('voxel_id'),-8) and 255b)
+end
+
 pro gxModel::SetRoi
  if self.FullROI then goto, skip
  all=self->Get(/all,isa=['gxFluxtube','gxBline'],count=count)
@@ -970,6 +981,43 @@ function gxModel::MakeScanboxGrid,parms
  return,grid
 end
 
+function gxModel::concatenate_aparms,time_idx=time_idx
+  catch, error_status
+  if error_status ne 0 then begin
+    message, !error_state.msg,/cont
+    return,!null
+  endif
+ fluxtubes=self->get(/all,is='gxfluxtube',count=count)
+ for i=0,count-1 do begin
+  case n_elements(aparms) of
+    0:begin 
+       aparms=fluxtubes[i]->interpolate_fparms(time_idx=time_idx)
+       f_arr=transpose(aparms.f_arr,[2,0,1])
+       e_arr=aparms.e_arr 
+       mu_arr=aparms.mu_arr
+       spine_arr=(size(f_arr))[1]
+       time_arr=aparms.time
+      end 
+    else: begin
+            aparms=fluxtubes[i]->interpolate_fparms()
+            if ~array_equal(aparms.e_arr,e_arr) then begin
+              message,'Energy arrays must be identical for all fluxtubes in a model!'
+              return,!null
+            endif
+            if ~array_equal(aparms.mu_arr,mu_arr) then begin
+              message,'Energy arrays must be identical for all fluxtubes in a model!'
+              return,!null
+            endif
+            f_arr=[f_arr,transpose(aparms.f_arr,[2,0,1])]
+            spine_arr=[spine_arr,(size(f_arr))[1]]
+            time_arr=[time_arr,aparms.time]
+          end
+  endcase 
+ endfor
+ f_arr=transpose(f_arr,[1,2,0])
+ return,{f_arr:f_arr,e_arr:e_arr,mu_arr:mu_arr,spine_arr:spine_arr,time_arr:time_arr}
+end
+
 pro gxModel::Slice,parms,row,scanner=scanner
   if ~ptr_valid(scanner) then scanner=self->MakeScanboxGrid(parms)
   void=self->Box2Volume(box2vol=box2vol)
@@ -992,6 +1040,11 @@ pro gxModel::Slice,parms,row,scanner=scanner
     idx=gx_name2idx(parms,'VoxelID')
     if (size(idx))[0] ne 0 then begin
       (*scanner).parms[*,*,idx]=ulong(var)
+      assigned[idx]=1
+    end
+    idx=gx_name2idx(parms,'TubeID')
+    if (size(idx))[0] ne 0 then begin
+      (*scanner).parms[*,*,idx]=(ishft(ulong(var),-8) and 255b)
       assigned[idx]=1
     end
   endif
@@ -1226,8 +1279,8 @@ pro gxModel::Slice,parms,row,scanner=scanner
   ;______________________________________________________
 
 
-  vertex_parms=['n_nth','THETA_C','THETA_B','dMu','a4']
-  idx_parms=['n_b','THETA_C','THETA_B','dMu','a_4']
+  vertex_parms=['n_nth','THETA_C','THETA_B','dMu','a4','nr_nth','C_IDX']
+  idx_parms=['n_b','THETA_C','THETA_B','dMu','a_4','SpineR','SpineS']
   bsize=self->Size()
   vol=(tmp=dblarr(bsize[1],bsize[2],bsize[3]))
   for k=0,n_elements(idx_parms)-1 do begin
@@ -1240,17 +1293,23 @@ pro gxModel::Slice,parms,row,scanner=scanner
       for j=0,tcount-1 do begin
         tmp[*]=0
         tubes[j]->GetProperty,centerbase=base
-        base->GetVertexAttributeData,vertex_parms[k],data
+        data=tubes[j]->GetVertexData(vertex_parms[k])
         if n_elements(data) gt 0 then begin
-          base->GetVertexAttributeData,'owned',owned
-          base->GetVertexAttributeData,'N_IDX',n_idx
-          if n_elements(owned) gt 1 then begin
+          owned=tubes[j]->GetVertexData('owned')
+          n_idx=tubes[j]->GetVertexData('N_IDX')
+          if idx_parms[k] eq 'SpineS' then begin
+            if j gt 0 then data+=offset
+            offset=n_elements(tubes[j]->GetVertexData('s'))
+          endif
+          if n_elements(owned) gt 0 then begin
             tmp[n_idx]=data
             vol[owned]=tmp[owned]
           end
         end
       end
-      (*scanner).parms[*,*,idx]+=interpolate(vol[box2vol],vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
+      if idx_parms[k] eq 'SpineS' then begin
+        (*scanner).parms[*,*,idx]+=interpolate(vol[box2vol],fix(vol_ind[*,0]),fix(vol_ind[*,1]),fix(vol_ind[*,2]),missing=missing)
+      endif else (*scanner).parms[*,*,idx]+=interpolate(vol[box2vol],vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
     endif
   end
 
@@ -1351,6 +1410,7 @@ pro gxModel::Slice,parms,row,scanner=scanner
   end
 
 end
+
 
 pro gxModel::CreateBline,xyz,any=any
  if ~ keyword_set(any) then xyz[2]=0
