@@ -1,4 +1,4 @@
-pro MW_Transfer_Arr,parms,rowdata,nparms,rparms,path,datain,freqlist,E_arr,mu_arr,f_arr,info=info
+pro MW_TRANSFER_ARR, parms,rowdata,nparms,rparms,path,datain,freqlist,E_arr,mu_arr,f_arr,info=info
 
  if n_elements(path) eq 0 then begin
   dirpath=file_dirname((ROUTINE_INFO('mw_transfer_arr',/source)).path,/mark)+'binaries\'

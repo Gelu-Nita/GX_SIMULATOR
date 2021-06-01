@@ -39,6 +39,13 @@ function gx_render,model,renderer,logfile=logfile,_extra=_extra
   freqlist=info.spectrum.x.axis
   nfreq=n_elements(freqlist)
   if tag_exist(info,'nparms') then begin
+    if ~ptr_valid(model->GetGrid())then begin
+      xc=fovmap->get(/xc)
+      yc=fovmap->get(/yc)
+      xfov=delta(get_map_xrange(fovmap->get(/map),/edge))
+      yfov=delta(get_map_yrange(fovmap->get(/map),/edge))
+      void=model->SetFov(nx=nx,ny=ny,xfov=xfov,yfov=yfov,/compute_grid)
+    endif
     nvox=(size(*(model->GetGrid()),/dim))[3]
     nparms=long(info.nparms.value)
     nparms[0:2]=[nx,nvox,nfreq]
