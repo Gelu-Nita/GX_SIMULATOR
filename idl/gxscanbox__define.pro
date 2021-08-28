@@ -123,9 +123,9 @@ end
 pro gxScanBox::CreateArrayInputControls
 
   if widget_valid(self.wArrayParmBase) then widget_control,self.wArrayParmBase,/destroy
-  
+  map=1
   if tag_exist((*self.info),'nparms') then begin
-    if ~widget_valid(self.wArrayParmBase) then self.wArrayParmBase=widget_base(self.wParmBase,/row)
+    if ~widget_valid(self.wArrayParmBase) then self.wArrayParmBase=widget_base(self.wParmBase,/row,map=map)
     wNbase=widget_base(self.wArrayParmBase,/column)
     self.wNparms=cw_objarray(wNbase,value=(*self.info).nparms.value,items=strcompress((*self.info).nparms.name,/rem),names=strcompress((*self.info).nparms.name+'; '+$
     (*self.info).nparms.unit+'; '+(*self.info).nparms.hint),/frame,inc=1,/static,$
@@ -138,7 +138,7 @@ pro gxScanBox::CreateArrayInputControls
   endif
 
   if tag_exist((*self.info),'rparms') then begin
-    if ~widget_valid(self.wArrayParmBase) then self.wArrayParmBase=widget_base(self.wParmBase,/row)
+    if ~widget_valid(self.wArrayParmBase) then self.wArrayParmBase=widget_base(self.wParmBase,/row,map=map)
     wRbase=widget_base(self.wArrayParmBase,/column)
     self.wRparms=cw_objarray(wRbase,value=(*self.info).rparms.value,items=strcompress((*self.info).rparms.name,/rem),names=strcompress((*self.info).rparms.name+'; '+$
     (*self.info).rparms.unit+'; '+(*self.info).rparms.hint),/frame,inc=1,/static,$
@@ -147,7 +147,7 @@ pro gxScanBox::CreateArrayInputControls
   endif
 
   if self->AcceptFreqList() then begin
-    if ~widget_valid(self.wArrayParmBase) then self.wArrayParmBase=widget_base(self.wParmBase,/row)
+    if ~widget_valid(self.wArrayParmBase) then self.wArrayParmBase=widget_base(self.wParmBase,/row,map=map)
     
     if ~widget_valid(wRbase) then wRbase=widget_base(self.wArrayParmBase,/column)
     
@@ -185,7 +185,7 @@ pro gxScanBox::CreateArrayInputControls
     wLabel=widget_label(wFbase,value='Comma Separated Frequency List (GHz)', font=!defaults.font,scr_xsize=g.scr_xsize)
     self.wFreqList=widget_text(wFbase,scr_xsize=g.scr_xsize,ysize=5,/scroll,/editable,/wrap,/KBRD_FOCUS_EVENTS)
   endif
-  
+  if widget_valid(self.wArrayParmBase) then widget_control, self.wArrayParmBase,map=1
 end
 
 function gxScanBox::DefaultRenderer

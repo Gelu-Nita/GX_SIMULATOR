@@ -352,7 +352,7 @@ pro gx_simulator_event,event
                 
  state.wScan:state.scanbox->OnStartScan,event
  state.wDebug:state.scanbox->OnStartScan,event,/debug              
- else:
+ else: void=state.scanbox.handleevent(event)
  endcase
  widget_control,widget_info(event.top,Find_By_Uname='STATEBASE'),set_uvalue=state
 end
