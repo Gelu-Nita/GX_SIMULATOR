@@ -591,10 +591,12 @@ pro gxWidget::CreatePanel,_extra=_extra
         fsz=size(fparms.f_arr)
         max_ftime_idx=fsz[0] ge 4? fsz[4]-1:0
         time_value=string(fparms.t_arr[ftime_idx],format="('f_arr_time=',f0.2,' s')")
+        ftime_sensitive=1
       endif else begin
-        max_ftime_idx=0
+        max_ftime_idx=1
         ftime_idx=0
         time_value='0'
+        ftime_sensitive=0
       endelse
       wn_nth_arr=cw_objfield(wbase, UNAME=prefix+'nb_arr', LABEL='nb_arr=',$
         INCREMENT=1e7, $
@@ -604,7 +606,7 @@ pro gxWidget::CreatePanel,_extra=_extra
       text=widget_label(font=font,wbase,value='         n_arr(x,y,s)=nb_arr*nr(x,y)*ns(s)')
       wftime_label=widget_label(font=font,/dynamic_resize,wNDistribution,UNAME =prefix+ 'FTIME',value=time_value)
       wftime_idx=WIDGET_SLIDER(wNDistribution, MINIMUM = 0, $
-        MAXIMUM =max_ftime_idx, VALUE = ftime_idx,  UNAME =prefix+ 'FTIME_IDX',/SUPPRESS_VALUE,font=font)
+        MAXIMUM =max_ftime_idx, VALUE = ftime_idx,  UNAME =prefix+ 'FTIME_IDX',/SUPPRESS_VALUE,font=font,sensitive=ftime_sensitive)
 
       wn_chromo=widget_base(wNDistribution,/row,/frame)
       wlabel=widget_label(wn_chromo,font=font,value='Chromo Volume: ')
@@ -714,7 +716,7 @@ pro gxWidget::CreatePanel,_extra=_extra
       MAXIMUM =max_ftime_idx, VALUE = ftime_idx,  UNAME =prefix+ 'FTIME_IDX',/SUPPRESS_VALUE,font=font)
       wParmBase=widget_base(wPAdistribution,/column,uname=prefix+'parm_pa')   
       self.subject->SelectPADistribution  
-      self.subject->UpdateDisplays,/all
+      self.subject->UpdateAll
    end
    
    obj_isa(self.subject,'gxCORONA'):begin

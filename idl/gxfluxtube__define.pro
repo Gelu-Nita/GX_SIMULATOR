@@ -793,6 +793,7 @@ function gxFluxTube::spine_n_th,s=s,l=l,onepervox=onepervox
   T0=self.T0
   n0=self.n_th
   z=ZCOORD_CONV[1]*reform(line[2,*])
+  R=1
   success=execute('nz_th='+self.nz_th)
   n_th=self.n_th*nz_th
   if keyword_set(onepervox) then begin
@@ -1811,7 +1812,12 @@ FUNCTION gxFluxTube::B2B0,c_idx,s=s,b0=b0
  B=self->Bt()
  if widget_valid(self.wparent) then begin
  ws0=widget_info(self.wparent,find_by_uname='GXFLUXTUBE:s0')
- widget_control,ws0,get_value=i0
+ if widget_valid(ws0) then begin
+  widget_control,ws0,get_value=i0
+ endif else begin
+  self.centerline->GetVertexAttributeData,'s',s
+  m=min(abs(s-self.s0),i0)
+ endelse
  endif else begin
   self.centerline->GetVertexAttributeData,'s',s
   m=min(abs(s-self.s0),i0)
@@ -2229,7 +2235,7 @@ PRO gxFLUXTUBE::export_spine_parms
     message, !error_state.msg,/cont
     return
   endif
-  answ=dialog_message('Not yet implemented!')
+  self->ExportSpineParms
 END
 
 FUNCTION gxFLUXTUBE::interpolate_fparms,time_idx=time_idx
