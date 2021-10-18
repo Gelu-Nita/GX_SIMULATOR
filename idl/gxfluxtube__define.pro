@@ -915,7 +915,7 @@ pro gxFluxtube::SynchronizeDuplicateFields
      if widget_valid(ws) then widget_control,ws,set_value=self.spine_idx
      
      wftime_idx=widget_info(base,find_by_uname='GXFLUXTUBE:FTIME_IDX')
-     if widget_valid(wftime_idx) then widget_control,wftime_idx,set_value=self.ftime_idx,set_slider_max=max_ftime_idx
+     if widget_valid(wftime_idx) then  widget_control,wftime_idx,set_slider_max=max_ftime_idx,set_value=self.ftime_idx,sensitive=1
      
      wftime=widget_info(base,find_by_uname='GXFLUXTUBE:FTIME')
      if widget_valid(wftime) then widget_control,wftime,set_value=time_value
@@ -1126,39 +1126,6 @@ PRO gxFluxTube::Update_A4,c_idx,B2B0=B2B0
  a4=self->A4(c_idx,B2B0=B2B0)
  self.base->SetVertexAttributeData,'a4',a4
 END
-
-;pro gxFluxTube::Box2Volume
-;  
-;  boxsize=self.Parent->Size(/box,chromo_offset=chromo_offset,chromo_bcube_height=chromo_bcube_height,chromo_layers=chromo_layers)
-;  
-;  self.base->GetVertexAttributeData,'N_IDX',n_idx
-;  self.base->GetVertexAttributeData,'n_th',n_th
-;  self.base->GetVertexAttributeData,'n_nth',n_nth
-;  self.base->GetVertexAttributeData,'owned',owned
-;
-;  base->GetVertexAttributeData,'C_IDX',c_idx
-;  self.base->GetVertexAttributeData,'a4',a4
-;  self.base->GetVertexAttributeData,'dMu',dMU
-;  self.base->GetVertexAttributeData,'THETA_B',theta_b
-;  self.base->GetVertexAttributeData,'THETA_C',theta_c
-;  
-;  corona_idx=where(n_idx ge chromo_bcube_height*sz[1]*sz[2],count,comp=chromo_idx,ncomp=ncomp)
-;  if count gt 0 then n_idx[corona_idx]=n_idx[corona_idx]+chromo_offset
-;  if ncomp gt 0 then begin
-;    cidx=array_indices(boxsize[1:3],/dim,n_idx[chromo_idx])
-;    chromo=bytarr(sz[1],sz[2],chromo_layers+1)
-;    nth=dblarr(sz[1],sz[2],chromo_layers+1)
-;    for k =0,ncomp-1 do begin
-;      chromo[cidx[0,k],cidx[1,k],*]=1
-;      nth[cidx[0,k],cidx[1,k],*]=n_th[chromo_idx[k]]
-;    endfor
-;    cidx=where(chromo eq 1,count)
-;    if count gt 0 then begin
-;      n_idx=[cidx,n_idx[corona_idx]]
-;      n_th=[nth[cidx],n_th[corona_idx]]
-;    endif
-;  endif
-;end  
 
 PRO gxFluxTube::SelectEnergyDistribution,index
  if n_elements(index) eq 0 then begin
@@ -2131,7 +2098,8 @@ PRO gxFluxTube::UpdatePADistribution
   fparms=self->interpolate_fparms()
   f_arr=self->integrate_f_arr(/energy,mu_arr=mu_arr)
   f_arr=interpol(f_arr[*,c_idx,self.ftime_idx]/max(f_arr),mu_arr,mu)>0
-  oplot,mu,f_arr,color=150,thick=3
+  dmu=mu[1]-mu[0]
+  oplot,mu,f_arr/total(f_arr*dMu),color=150,thick=3
  endif
   
  !p.multi=pmulti
@@ -2208,7 +2176,7 @@ PRO gxFLUXTUBE::upload_fparms,filename
     filename=dialog_pickfile(filter=['*.sav'],$
     DEFAULT_EXTENSION='sav',$
     /read,/must_exist,$
-    title='Please select an IDL sav file tu upload a fluxtube numerical solution')
+    title='Please select an IDL sav file to upload a fluxtube numerical solution')
   endif
   restore,filename
   s_arr=exist(s)?s:z

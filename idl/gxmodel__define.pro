@@ -981,7 +981,7 @@ function gxModel::MakeScanboxGrid,parms
  return,grid
 end
 
-function gxModel::concatenate_aparms,time_idx=time_idx
+function gxModel::concatenate_aparms
   catch, error_status
   if error_status ne 0 then begin
     message, !error_state.msg,/cont
@@ -991,26 +991,30 @@ function gxModel::concatenate_aparms,time_idx=time_idx
  for i=0,count-1 do begin
   case n_elements(aparms) of
     0:begin 
-       aparms=fluxtubes[i]->interpolate_fparms(time_idx=time_idx)
-       f_arr=transpose(aparms.f_arr,[2,0,1])
-       e_arr=aparms.e_arr 
-       mu_arr=aparms.mu_arr
-       spine_arr=(size(f_arr))[1]
-       time_arr=aparms.time
+       aparms=fluxtubes[i]->interpolate_fparms()
+       if n_elements(aparms) ne 0 then begin
+         f_arr=transpose(aparms.f_arr,[2,0,1])
+         e_arr=aparms.e_arr 
+         mu_arr=aparms.mu_arr
+         spine_arr=(size(f_arr))[1]
+         time_arr=aparms.time
+       end  
       end 
     else: begin
             aparms=fluxtubes[i]->interpolate_fparms()
-            if ~array_equal(aparms.e_arr,e_arr) then begin
-              message,'Energy arrays must be identical for all fluxtubes in a model!'
-              return,!null
-            endif
-            if ~array_equal(aparms.mu_arr,mu_arr) then begin
-              message,'Energy arrays must be identical for all fluxtubes in a model!'
-              return,!null
-            endif
-            f_arr=[f_arr,transpose(aparms.f_arr,[2,0,1])]
-            spine_arr=[spine_arr,(size(f_arr))[1]]
-            time_arr=[time_arr,aparms.time]
+            if n_elements(aparms) ne 0 then begin
+              if ~array_equal(aparms.e_arr,e_arr) then begin
+                message,'Energy arrays must be identical for all fluxtubes in a model!'
+                return,!null
+              endif
+              if ~array_equal(aparms.mu_arr,mu_arr) then begin
+                message,'Energy arrays must be identical for all fluxtubes in a model!'
+                return,!null
+              endif
+              f_arr=[f_arr,transpose(aparms.f_arr,[2,0,1])]
+              spine_arr=[spine_arr,(size(f_arr))[1]]
+              time_arr=[time_arr,aparms.time]
+            end   
           end
   endcase 
  endfor
@@ -1279,8 +1283,8 @@ pro gxModel::Slice,parms,row,scanner=scanner
   ;______________________________________________________
 
 
-  vertex_parms=['n_nth','THETA_C','THETA_B','dMu','a4','nr_nth','C_IDX']
-  idx_parms=['n_b','THETA_C','THETA_B','dMu','a_4','SpineR','SpineS']
+  vertex_parms=['n_nth','THETA_C','THETA_B','dMu','a4','nr_nth','C_IDX','C_IDX']
+  idx_parms=['n_b','THETA_C','THETA_B','dMu','a_4','SpineR','SpineS','HasArr']
   bsize=self->Size()
   vol=(tmp=dblarr(bsize[1],bsize[2],bsize[3]))
   for k=0,n_elements(idx_parms)-1 do begin
@@ -1290,6 +1294,7 @@ pro gxModel::Slice,parms,row,scanner=scanner
       ;LOOP OVER FLUXTUBES
       tubes=self->Get(/all,ISA='gxFluxtube',count=tcount)
       vol[*]=0
+      offset=0
       for j=0,tcount-1 do begin
         tmp[*]=0
         tubes[j]->GetProperty,centerbase=base
@@ -1298,8 +1303,13 @@ pro gxModel::Slice,parms,row,scanner=scanner
           owned=tubes[j]->GetVertexData('owned')
           n_idx=tubes[j]->GetVertexData('N_IDX')
           if idx_parms[k] eq 'SpineS' then begin
-            if j gt 0 then data+=offset
-            offset=n_elements(tubes[j]->GetVertexData('s'))
+            data+=offset
+            aparms=tubes[j]->interpolate_fparms()
+            if n_elements(aparms) gt 0 then offset=n_elements(tubes[j]->GetVertexData('s'))
+          endif
+          if idx_parms[k] eq 'HasArr' then begin
+            aparms=tubes[j]->interpolate_fparms()
+            data[*]=(n_elements(aparms) gt 0 )
           endif
           if n_elements(owned) gt 0 then begin
             tmp[n_idx]=data
@@ -1307,7 +1317,7 @@ pro gxModel::Slice,parms,row,scanner=scanner
           end
         end
       end
-      if idx_parms[k] eq 'SpineS' then begin
+      if (idx_parms[k] eq 'SpineS') or (idx_parms[k] eq 'HasArr') then begin
         (*scanner).parms[*,*,idx]+=interpolate(vol[box2vol],fix(vol_ind[*,0]),fix(vol_ind[*,1]),fix(vol_ind[*,2]),missing=missing)
       endif else (*scanner).parms[*,*,idx]+=interpolate(vol[box2vol],vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
     endif

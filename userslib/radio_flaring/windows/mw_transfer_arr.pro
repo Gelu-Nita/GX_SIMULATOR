@@ -28,7 +28,7 @@ pro MW_TRANSFER_ARR, parms,rowdata,nparms,rparms,path,datain,freqlist,E_arr,mu_a
       ;Start adding LOS parameters needed by the wrapper
       parms=[parms,{Name:'SpineS',Value:0.0,unit:'',Hint:'Fluxtube spine longitudinal coordinate '}]
       parms=[parms,{Name:'SpineR',Value:0.0,unit:'',Hint:'Fluxtube spine radial distance '}]
-      parms=[parms,{Name:'TubeID',Value:0.0,unit:'',Hint:'Fluxtube ID'}]
+      parms=[parms,{Name:'HasArr',Value:0.0,unit:'',Hint:'Fluxtube has array defined distributions'}]
       ;End adding LOS parameters need by the wrapper
       openr,lun,'Long_input.txt',/get,error=err
       line=''
@@ -156,17 +156,16 @@ pro MW_TRANSFER_ARR, parms,rowdata,nparms,rparms,path,datain,freqlist,E_arr,mu_a
         Lparms_M[4]=n_elements(mu_arr)
         E_arr=double(E_arr)
         mu_arr=double(mu_arr)
-        SpineS=parms[*,*,parms_idx+1]
-        SpineR=parms[*,*,parms_idx+2]
-        TubeID=parms[*,*,parms_idx+3]
-        no_tube_idx=where(TubeID lt 1, no_tube_count)
-        if no_tube_count gt 0 then begin
-         arr_key=reform(Parms_M[21,*,*])
-         arr_key[no_tube_idx]=1
-         Parms_M[21,*,*]=arr_key
+        SpineS=transpose(parms[*,*,parms_idx+1])
+        HasArr=transpose(parms[*,*,parms_idx+3])
+        aparms_idx=where(HasArr eq 1, aparms_count,comp=no_aparms_idx, ncomp=no_aparms_count)
+        if no_aparms_count gt 0 then begin
+          arr_key=reform(Parms_M[21,*,*])
+          arr_key[no_aparms_idx]=1
+          Parms_M[21,*,*]=arr_key
         end
         f_arr_M=double(reform(f_arr[*,*,SpineS],Lparms_M[3],Lparms_M[4],Nvox,Npix))*$
-        (transpose(array_replicate(parms[*,*,parms_idx+2],Lparms_M[3],Lparms_M[4]),[2,3,1,0]))>1d-100   
+        (transpose(array_replicate(parms[*,*,parms_idx+2],Lparms_M[3],Lparms_M[4]),[2,3,1,0]))>1d-100  
       endif else no_aparms=1
      endif else no_aparms=1
    endif else no_aparms=1

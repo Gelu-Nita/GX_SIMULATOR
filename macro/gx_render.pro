@@ -53,7 +53,7 @@ function gx_render,model,renderer,logfile=logfile,_extra=_extra
   endif
   if tag_exist(info,'rparms') then rparms=info.rparms.value
   if tag_exist(info,'aparms') then begin
-    info=rep_tag_value(info,model->concatenate_aparms(_extra=_extra),'aparms')
+    info=rep_tag_value(info,model->concatenate_aparms(),'aparms')
     E_arr=info.aparms.E_arr
     mu_arr=info.aparms.mu_arr
     f_arr=info.aparms.f_arr

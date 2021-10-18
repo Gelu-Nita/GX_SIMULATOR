@@ -1,6 +1,6 @@
 ;+
 ; :Description:
-;    This procedure quantitatively compared modeled image with the observed one
+;    This procedure quantitatively compares the modeled image with the observed one
 ;
 ; :Params:
 ;    map - map structure, in,  synthetic MW image to benchmark
