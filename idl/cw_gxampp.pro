@@ -136,7 +136,7 @@ pro gxampp::CreatePanel,xsize=xsize,ysize=ysize
    wExecute=widget_button(toolbar,value=gx_bitmap(gx_findfile('play.bmp')),tooltip='Execute Script',/bitmap,uname='execute')
    wModel2gx=widget_button(toolbar,value=gx_bitmap(filepath('importf.bmp', subdirectory=['resource', 'bitmaps'])), $
     /bitmap,tooltip='Import Model Data',uname='model2gx',sensitive=0)
-   wExecute=widget_button(toolbar,value=gx_bitmap(filepath('save.bmp', subdirectory=['resource', 'bitmaps'])),tooltip='Save execution log',/bitmap,uname='savelog') 
+   wSave=widget_button(toolbar,value=gx_bitmap(filepath('save.bmp', subdirectory=['resource', 'bitmaps'])),tooltip='Save execution log',/bitmap,uname='savelog') 
    wClearLog=widget_button(toolbar,value=gx_bitmap(filepath('delete.bmp', subdirectory=['resource', 'bitmaps'])),tooltip='Clear execution log',/bitmap,uname='clearlog')
    
    

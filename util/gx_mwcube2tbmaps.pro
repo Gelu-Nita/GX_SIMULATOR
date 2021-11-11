@@ -39,8 +39,8 @@ function gx_mwcube2tbmaps,gxcube,map
  add_prop,amap,Stokes=''
  add_prop,amap,datatype='Brightness Temperature'
  add_prop,amap,dataunit='K'
- keys=gx_getEBTELparms(amap.gx_key,a=a,b=b,q0=q0,parms=parms,formula=formula)
- formula=str_replace(formula,'q0',string(parms[0],format='(g0)'))
+ keys=gx_getEBTELparms(amap.gx_key,a,b,q0,formula=formula)
+ formula=str_replace(formula,'q0',string(q0,format='(g0)'))
  i=map->get(/count)
  for k=0,nfreq-1 do begin
   amap.freq=freq[k]

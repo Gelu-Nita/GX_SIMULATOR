@@ -735,7 +735,7 @@ pro gxVolume::Update,select,data=data,plot_model_attributes=plot_model_attribute
                 if n_elements(owned) gt 1 then begin
                  base->GetVertexAttributeData,'n_nth',n_nth
                  base->GetVertexAttributeData,'N_IDX',n_idx
-                 ndata[n_idx]=n_nth+tubes[j]->get_nb_arr()
+                 ndata[n_idx]=n_nth;+tubes[j]->get_nb_arr()
                  data[owned]=ndata[owned]
                 end 
               end 

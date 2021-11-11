@@ -9,7 +9,7 @@ function gx_processmwmodels_ebtel,ab=ab,ref=ref,$
  ;either in a modDir directory, or in an modFiles path array pointing to a subset of selected models
  ;++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++                      
  if ~isa(ref) or ~isa(modDir) or ~isa(psDir) then begin
-  message,'Undefined reference data info structure and/or figure directories!',/cont
+  message,'Undefined reference data info structure and/or figure directories!',/cont,/info
   return, !null
  endif
 
@@ -204,7 +204,7 @@ function gx_processmwmodels_ebtel,ab=ab,ref=ref,$
      q_res_range=Qm[[min(u),max(u)]]
      res_range=Res2[[min(u),max(u)]]
    endif else begin
-     idx=(amin eq Res2[0])?[0,1]:[Res2[n_elements(Res2)-2:*]]
+     idx=(amin eq Res2[0])?[0,1]:[n_elements(Res2)-2,n_elements(Res2)-1]
      lfit=linfit(Qm[idx],Res2[idx])
      q_res_best=-lfit[0]/lfit[1]
      q_res_range=[(-res_thresh-lfit[0])/lfit[1],(res_thresh-lfit[0])/lfit[1]]
@@ -261,7 +261,7 @@ function gx_processmwmodels_ebtel,ab=ab,ref=ref,$
      q_chi_range=Qm[[min(u),max(u)]]
      chi_range=Chi2[[min(u),max(u)]]
    endif else begin
-     idx=(amin eq Chi2[0])?[0,1]:[Chi2[n_elements(Chi2)-2:*]]
+     idx=(amin eq Chi2[0])?[0,1]:[n_elements(Chi2)-2:n_elements(Chi2)-1]
      lfit=linfit(Qm[idx],Chi2[idx])
      q_chi_best=-lfit[0]/lfit[1]
      q_chi_range=[(-chi_thresh-lfit[0])/lfit[1],(chi_thresh-lfit[0])/lfit[1]]

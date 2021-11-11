@@ -11,6 +11,8 @@ function gx_getEBTELparms,gx_key,a,b,q,parms=parms,formula=formula
   formula=keys[2]
   e=execute(str_replace(str_replace(str_replace(str_replace(keys[2],'q=','a=alog10('),'q0*',''),'L/q[2]','1.'),'B/q[1]','10.')+')')
   e=execute(str_replace(str_replace(str_replace(str_replace(keys[2],'q=','b=alog10('),'q0*',''),'B/q[1]','1.'),'L/q[2]','10.')+')')
-  q=q0
+  if n_elements(a) ne 0 then a=float(double(arr2str(a)))
+  if n_elements(b) ne 0 then b=float(double(arr2str(b)))
+  if n_elements(q0) ne 0 then q=float(double(arr2str(q0)))
   return,keys
 end

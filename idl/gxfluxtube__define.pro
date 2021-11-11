@@ -657,7 +657,7 @@ PRO gxFluxTube::Display_EM
   self.base->GetVertexAttributeData,'owned',owned
   self.base->GetVertexAttributeData,'N_IDX',n_idx
   self.base->GetVertexAttributeData,'n_nth',n_nth
-  n_nth+=self->get_nb_arr()
+  n_nth=n_nth+self->get_nb_arr()
   volume=(self.parent->GetVolume())
   volume->GetVertexAttributeData,'n0',n0
   key='n_0'
@@ -822,7 +822,7 @@ PRO gxFluxTube::Update_N_nth
  self.centerline->GetProperty,data=line
  void=self.Parent->GetB(Bx=Bx)
  
- self.centerline->getvertexattributedata,'s',ss
+ self.centerline->GetVertexAttributeData,'s',ss
  self.base->GetVertexAttributeData,'C_IDX',c
  self.base->GetVertexAttributeData,'N_IDX',n_idx
  self.base->GetVertexAttributeData,'ex',ex
@@ -858,12 +858,24 @@ PRO gxFluxTube::Update_N_nth
  self.base->SetVertexAttributeData,'nr_nth',nr_nth
 END
 
-Function gxFluxTube::get_nb_arr
- nb_arr=(self->integrate_f_arr(/pa,/energy))
- if ~isa(nb_arr) then return,0
+Function gxFluxTube::get_nb_arr,s_arr=s_arr,ana=ana
  self.base->GetVertexAttributeData,'C_IDX',c_idx
  self.base->GetVertexAttributeData,'nr_nth',nr_nth
- return,nr_nth*nb_arr[c_idx,self.ftime_idx]
+ if keyword_set(ana) then begin
+   error=execute('p='+self.p_nth)
+   error=execute('q='+self.q_nth)
+   self.centerline->GetVertexAttributeData,'s',s
+   l=delta(s)
+   s0=self.s0
+   s=s[c_idx]
+   success=execute('ns_nth='+self.ns_nth)
+   nb=nr_nth*ns_nth*self.n_nth
+ endif else begin
+   nb_arr=(self->integrate_f_arr(/pa,/energy,s_arr=s_arr))
+   if ~isa(nb_arr) then return,0
+     nb=nr_nth*nb_arr[c_idx,self.ftime_idx]
+   endelse
+ return,nb
 End
 
 
@@ -992,17 +1004,20 @@ pro gxFluxtube::Draw_N_NTH
   oplot,p.y,p.ny,color=250,thick=4,linesty=2
   gx_plot_label,0.09,0.6,'n!Dr!N(0,y)',color=250,charthick=3,charsize=2
   
- 
-  f_arr=self->integrate_f_arr(/pa,/en,s_arr=s_arr)
+  norm=1/(4*!dpi)*(self.delta1-1)/(self.emin^(1-self.delta1)-self.emax^(1-self.delta1))*self.emin^(-self.delta1)
+  ;n_b/(4*pi)*(del-1)/(E_min^(1-del)-E_max^(1-del))*E_min^(-del)
+  ;f_arr=self->integrate_f_arr(/pa,/en,s_arr=s_arr)
+  f_arr=self->integrate_f_arr(s_arr=s_arr)
   if isa(f_arr) then begin
-   plot,p.s,p.ns*self.n_nth,xmargin=[8,1],xticks=xticks,color=0,$
+   f_arr=f_arr[0,0,*,self.ftime_idx]
+   plot,p.s,p.ns*self.n_nth*norm,xmargin=[8,1],xticks=xticks,color=0,$
         /xsty,/ysty,xtitle='s/l',ytitle='nb(s)',$
-        yrange=minmax(p.ns*self.n_nth+f_arr[*,self.ftime_idx]),thick=2
-   oplot,p.s,p.ns*self.n_nth,color=50,thick=3
-   oplot,s_arr,f_arr[*,self.ftime_idx],color=160,thick=3
-   oplot,s_arr,p.ns*self.n_nth+f_arr[*,self.ftime_idx],color=250,thick=3
+        yrange=minmax(p.ns*self.n_nth*norm+f_arr),thick=2
+   oplot,p.s,p.ns*self.n_nth*norm,color=50,thick=3
+   oplot,s_arr,f_arr,color=160,thick=3
+   oplot,s_arr,p.ns*self.n_nth*norm+f_arr,color=250,thick=3
   endif else begin
-    plot,p.s,p.ns*self.n_nth,xmargin=xmargin,xticks=xticks,$
+    plot,p.s,p.ns*self.n_nth*norm,xmargin=xmargin,xticks=xticks,$
           color=0,/xsty,/ysty,xtitle='s/l',ytitle='nb(s)',thick=2
   endelse
   oplot,[1,1]*s0/l,!y.crange,color=0
@@ -1013,54 +1028,119 @@ pro gxFluxtube::Draw_N_NTH
   tvlct,rgb_curr
 end
 
-function gxFluxtube::f_arr_norm, f_arr,e_arr,mu_arr
+function gxFluxtube::f_arr_norm, distfunc,e_arr,mu_arr
 if N_PARAMS() ne 3 then return,0d
- dMu=mu_arr[1]-mu_arr[0]
- loge=alog10(e_arr)
- dloge=loge[1]-loge[0]
- f=2*!pi*total(f_arr,2)*dMu; integration over pitch angle
- sz=size(f)
- e=array_replicate(e_arr,sz[2],sz[3])
- f=alog(10.)*dloge*total(f*e,1)
- return,max(f)
+ s_arr=self->GetVertexData('s')
+ s_arr=s_arr/delta(s_arr)
+ f_arr=distfunc
+ sz=size(f_arr)
+ n_e=sz[1]
+ n_mu=sz[2]
+ n_s=sz[3]
+ n_t=sz[4]
+ f_arr_int=dblarr(n_e,n_s,n_t)
+ for k=0,n_t-1 do begin
+   for j=0,n_s-1 do begin
+     for i=0,n_e-1 do begin
+       f_arr_int[i,j,k]=2d0*!dpi*int_tabulated(mu_arr, f_arr[i, *,j,k], /double)
+     endfor
+   endfor
+ endfor
+ f_arr=temporary(f_arr_int)
+ loge=alog(e_arr)
+ f_arr_int=dblarr(n_s,n_t)
+ for k=0,n_t-1 do begin
+   for j=0,n_s-1 do begin
+     f_arr_int[j,k]=int_tabulated(loge, f_arr[*,j,k]*e_arr, /double)
+   endfor
+ endfor
+ f_arr=temporary(f_arr_int)
+ return,max(f_arr)
 end
 
 Function gxFluxTube::integrate_f_arr,pa=pa,energy=energy,e_arr=e_arr,mu_arr=mu_arr,s_arr=s_arr,t_arr=t_arr
   if ~ptr_valid(self.fparms) then return,!null
   s_arr=self->GetVertexData('s')
   s_arr=s_arr/delta(s_arr)
-  f_arr=(*self.fparms).f_arr*self.nb_arr
-  mu_arr=(*self.fparms).mu_arr
-  e_arr=(*self.fparms).e_arr
+  f_arr=double((*self.fparms).f_arr*self.nb_arr)
+  mu_arr=double((*self.fparms).mu_arr)
+  n_mu=n_elements(mu_arr)
+  e_arr=double((*self.fparms).e_arr)
+  n_E=n_elements(e_arr)
   s_arr0=(*self.fparms).s_arr
+  n_s=n_elements(s_arr0)
   t_arr=(*self.fparms).t_arr
+  n_t=n_elements(t_arr)
   dMu=mu_arr[1]-mu_arr[0]
-  loge=alog10(e_arr)
-  dloge=loge[1]-loge[0]
-  if keyword_set(pa) then f_arr=2*!pi*total(f_arr,2)*dMu;ap integration
-  if keyword_set(energy) then begin
-    dim=size(f_arr,/dim)
-    e_arr=array_replicate(e_arr,dim[1:*])
-    f_arr=alog(10.)*dloge*total(f_arr*e_arr,1)
+  if keyword_set(pa) then begin
+    ;ap integration
+    f_arr_int=dblarr(n_e,n_s,n_t)
+    for k=0,n_t-1 do begin
+      for j=0,n_s-1 do begin
+        for i=0,n_e-1 do begin
+          f_arr_int[i,j,k]=2d0*!dpi*int_trapzd(mu_arr, f_arr[i, *,j,k])
+        endfor
+      endfor 
+    endfor
+    f_arr=temporary(f_arr_int)
   endif
-  dim=size(f_arr,/dim)
-  if n_elements(dim) eq 3 then begin
-    dim[1]=n_elements(s_arr)
-    f_arr_int=dblarr(dim)
-    for i=0,dim[0]-1 do begin
-      for j=0,dim[2]-1 do begin
-        f_arr_int[i,*,j]=interpol(reform(f_arr[i,*,j]),s_arr0,s_arr)>0
+  
+  if keyword_set(energy) then begin
+    loge=alog(e_arr)
+    logf_arr=alog(f_arr)
+    if keyword_set(pa) then begin
+      f_arr_int=dblarr(n_s,n_t)
+      for k=0,n_t-1 do begin
+        for j=0,n_s-1 do begin
+          f_arr_int[j,k]=int_trapzdLog(loge, logf_arr[*,j,k])
+        endfor
       endfor
-    endfor
-  endif else begin
-    dim[0]=n_elements(s_arr)
-    f_arr_int=dblarr(dim)
-    for i=0,dim[1]-1 do begin
-     f_arr_int[*,i]=interpol(reform(f_arr[*,i]),s_arr0,s_arr)>0
-    endfor
-  endelse
+    endif else begin
+      f_arr_int=dblarr(n_mu,n_s,n_t)
+      for k=0,n_t-1 do begin
+        for j=0,n_s-1 do begin
+          for i=0,n_mu-1 do begin
+           f_arr_int[i,j,k]=int_trapzdLog(loge, logf_arr[*,i,j,k])
+          endfor
+        endfor
+      endfor
+    endelse
+    f_arr=temporary(f_arr_int)
+  endif
+  
+  sz=size(f_arr)
+  case sz[0] of
+    4:begin
+      sz[3]=n_elements(s_arr)
+      f_arr_int=dblarr(sz[1:4])
+      for i=0,sz[1]-1 do begin
+        for j=0,sz[2]-1 do begin
+          for k=0,sz[4]-1 do begin
+           f_arr_int[i,j,*,k]=interpol(reform(f_arr[i,j,*,k]),s_arr0,s_arr)>0
+          end
+        endfor
+      endfor
+    end
+    3:begin
+        sz[2]=n_elements(s_arr)
+        f_arr_int=dblarr(sz[1:3])
+        for i=0,sz[1]-1 do begin
+          for j=0,sz[3]-1 do begin
+            f_arr_int[i,*,j]=interpol(reform(f_arr[i,*,j]),s_arr0,s_arr)>0
+          endfor
+        endfor
+      end
+    else: begin
+            sz[1]=n_elements(s_arr)
+            f_arr_int=dblarr(sz[1:2])
+            for i=0,sz[2]-1 do begin
+              f_arr_int[*,i]=interpol(reform(f_arr[*,i]),s_arr0,s_arr)>0
+            endfor
+           end
+  endcase
   return,f_arr_int
 end
+
 
 Function gxFluxTube::colapse_f_arr,dimension_,axis=axis
  f_arr=!null
@@ -1754,11 +1834,10 @@ PRO gxFluxTube::UpdateEnergyDistribution
    if ptr_valid(self.fparms) then begin
      f_arr=self->integrate_f_arr(/pa,e_arr=e_arr)
      f_arr=f_arr[*,self.spine_idx,self.ftime_idx]
-     f_arr=interpol(f_arr,e_arr,E)>1
      plot,E,N,back=255,color=0,/ylog,/xlog,$
       xtitle='E(MeV)',ytitle='n(cm^-3)',/xsty,xticks=4,yticks=4,xmargin=[13,1],$
       xrange=minmax([e_arr,E]),yrange=minmax([N,f_arr]),/ysty
-     oplot,E,f_arr,color=150,thick=3
+     oplot,e_arr,f_arr,color=50,thick=3,psym=-2
    endif else begin
      plot,E,N,back=255,color=0,/ylog,/xlog,xtitle='E(MeV)',ytitle='n(cm^-3)',/xsty,xticks=4,yticks=4,xmargin=[13,1]
    endelse
@@ -2097,9 +2176,8 @@ PRO gxFluxTube::UpdatePADistribution
  if ptr_valid(self.fparms) then begin
   fparms=self->interpolate_fparms()
   f_arr=self->integrate_f_arr(/energy,mu_arr=mu_arr)
-  f_arr=interpol(f_arr[*,c_idx,self.ftime_idx]/max(f_arr),mu_arr,mu)>0
-  dmu=mu[1]-mu[0]
-  oplot,mu,f_arr/total(f_arr*dMu),color=150,thick=3
+  f_arr0=f_arr[*,c_idx,self.ftime_idx]
+  oplot,mu_arr,f_arr0/INT_TABULATED( mu_arr,f_arr0 ),psym=-2,color=50,thick=3
  endif
   
  !p.multi=pmulti
@@ -2179,11 +2257,21 @@ PRO gxFLUXTUBE::upload_fparms,filename
     title='Please select an IDL sav file to upload a fluxtube numerical solution')
   endif
   restore,filename
-  s_arr=exist(s)?s:z
-  self.nb_arr=self->f_arr_norm(distfunc,e,mu)
-  fparms={f_arr:distfunc/self.nb_arr,e_arr:e,mu_arr:mu,s_arr:s_arr,t_arr:t}
-  ptr_free,self.fparms
-  self.fparms=ptr_new(fparms)
+;  self.nb_arr=self->f_arr_norm(distfunc,e,mu)
+;  s_arr=exist(s)?s:z
+;  fparms={f_arr:distfunc/self.nb_arr,e_arr:e,mu_arr:mu,s_arr:s_arr,t_arr:t}
+;  ptr_free,self.fparms
+;  self.fparms=ptr_new(fparms)
+   self.nb_arr=1
+   s_arr=exist(s)?s:z
+   fparms={f_arr:distfunc/self.nb_arr,e_arr:e,mu_arr:mu,s_arr:s_arr,t_arr:t}
+   ptr_free,self.fparms
+   self.fparms=ptr_new(fparms)
+   spine_f_arr=self->integrate_f_arr(/en,/pa)
+   self.nb_arr=max(spine_f_arr)
+   fparms={f_arr:distfunc/self.nb_arr,e_arr:e,mu_arr:mu,s_arr:s_arr,t_arr:t}
+   ptr_free,self.fparms
+   self.fparms=ptr_new(fparms)
 END
 
 PRO gxFLUXTUBE::remove_fparms

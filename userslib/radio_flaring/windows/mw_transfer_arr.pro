@@ -157,15 +157,17 @@ pro MW_TRANSFER_ARR, parms,rowdata,nparms,rparms,path,datain,freqlist,E_arr,mu_a
         E_arr=double(E_arr)
         mu_arr=double(mu_arr)
         SpineS=transpose(parms[*,*,parms_idx+1])
+        SpineR=transpose(parms[*,*,parms_idx+2])
         HasArr=transpose(parms[*,*,parms_idx+3])
         aparms_idx=where(HasArr eq 1, aparms_count,comp=no_aparms_idx, ncomp=no_aparms_count)
         if no_aparms_count gt 0 then begin
           arr_key=reform(Parms_M[21,*,*])
           arr_key[no_aparms_idx]=1
           Parms_M[21,*,*]=arr_key
+          ;SpineR[no_aparms_idx]=0
         end
         f_arr_M=double(reform(f_arr[*,*,SpineS],Lparms_M[3],Lparms_M[4],Nvox,Npix))*$
-        (transpose(array_replicate(parms[*,*,parms_idx+2],Lparms_M[3],Lparms_M[4]),[2,3,1,0]))>1d-100  
+        (transpose(array_replicate(SpineR,Lparms_M[3],Lparms_M[4]),[2,3,0,1]))>1d-100  
       endif else no_aparms=1
      endif else no_aparms=1
    endif else no_aparms=1
@@ -177,13 +179,46 @@ pro MW_TRANSFER_ARR, parms,rowdata,nparms,rparms,path,datain,freqlist,E_arr,mu_a
     f_arr_M=0d
    endif
    
-   if LPARMS_M[8] eq -1 then begin
-    ;This is a GX-implemented custom use of arr_key global switch
-    ;arr_key=-1 sets analytical nonthermal density to 0 in the entire volume
-    ;thus, it allows contributions only from the array defined distributions, if any 
-    Parms_M[7,*,*]=0
-    LPARMS_M[8]=0; arr_key is switched on 
-   endif
+   case LPARMS_M[8] of
+     ;This is a GX-implemented custom use of arr_key global switch
+     ;arr_key=-1 sets analytical nonthermal density to 0 in the entire volume
+     ;thus, it allows contributions only from the array defined distributions, if any
+     ;arr_key=-2 replace analytical nonthermal density in the entire volume
+     ;with numerical values derived from the array defined distributions, if any
+    -1: begin
+          Parms_M[7,*,*]=0
+          LPARMS_M[8]=0; arr_key is switched on
+        end
+    -2:begin
+        if keyword_set(aparms_count) then begin
+          nb_arr=reform(Parms_M[7,*,*])
+          loge=double(alog(e_arr))
+          sz=size(f_arr)
+          n_e=sz[1]
+          n_mu=sz[2]
+          n_s=sz[3]
+          ;Nvox,Npix
+          nb_arr2ana=dblarr(n_s)
+          int_E_local=dblarr(n_E)
+          for j=0,n_s-1 do begin
+          for i=0, n_e-1 do begin
+                int_E_local[i]=2d0*!dpi*int_trapzd(double(mu_arr), double(f_arr[i, *,j]))
+          endfor
+          nb_arr2ana[j]=int_trapzdlog(loge, double(alog(int_E_local)))
+          end
+          nb_arr2ana=nb_arr2ana[SpineS]*SpineR
+          bad=where(finite(nb_arr2ana) eq 0,count)
+          if count gt 0 then begin
+            nb_arr2ana[bad]=0
+          endif
+          nb_arr[aparms_idx]=nb_arr2ana[aparms_idx]
+          Parms_M[7,*,*]=nb_arr
+          LPARMS_M[8]=1; arr_key is switched off
+        endif
+       end 
+    else:      
+   endcase
+
    result=call_external(path, 'GET_MW_SLICE', Lparms_M, Rparms_M, Parms_M, E_arr, mu_arr, f_arr_M, datain, /unload)
    ;--------------------------------------------
    

@@ -1129,7 +1129,8 @@ pro gxModel::Slice,parms,row,scanner=scanner
   if (size(idx))[0] ne 0 then begin
     vol=self->Box2Volume('bmed',/corona)
     if isa(vol)then begin
-      (*scanner).parms[*,*,idx]=interpolate(vol,vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
+      ;(*scanner).parms[*,*,idx]=interpolate(vol,vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
+      (*scanner).parms[*,*,idx]=interpolate(vol,fix(vol_ind[*,0]),fix(vol_ind[*,1]),fix(vol_ind[*,2]),missing=missing)
       assigned[idx]=1
     end
   end
@@ -1140,7 +1141,8 @@ pro gxModel::Slice,parms,row,scanner=scanner
     vol=self->Box2Volume('length',/corona)
     if isa(vol)then begin
       vol=gx_rsun()*vol/2
-      (*scanner).parms[*,*,idx]=interpolate(vol,vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
+      ;(*scanner).parms[*,*,idx]=interpolate(vol,vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
+      (*scanner).parms[*,*,idx]=interpolate(vol,fix(vol_ind[*,0]),fix(vol_ind[*,1]),fix(vol_ind[*,2]),missing=missing)
       assigned[idx]=1
     end
   end
@@ -1317,7 +1319,8 @@ pro gxModel::Slice,parms,row,scanner=scanner
           end
         end
       end
-      if (idx_parms[k] eq 'SpineS') or (idx_parms[k] eq 'HasArr') then begin
+      if (idx_parms[k] eq 'SpineS') or (idx_parms[k] eq 'HasArr') or $
+          (idx_parms[k] eq 'SpineR') or (idx_parms[k] eq 'dummy_n_b')then begin
         (*scanner).parms[*,*,idx]+=interpolate(vol[box2vol],fix(vol_ind[*,0]),fix(vol_ind[*,1]),fix(vol_ind[*,2]),missing=missing)
       endif else (*scanner).parms[*,*,idx]+=interpolate(vol[box2vol],vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
     endif
@@ -1773,11 +1776,18 @@ function gxModel::GetSTM,mscale=mscale,tm=tm
 end  
 
 function gxModel::GetDirections, TopViewCorrection=TopViewCorrection
-  btm=self->GetBTM()
+  btm=self->GetBTM(TopViewCorrection=TopViewCorrection)
   vx=btm[*,0]
   vy=btm[*,1]
   vz=btm[*,2]
   return,{x:vx,y:vy,z:vz}
+end
+
+function gxModel::EstimateOptimalImageGridResolution
+ btm=self->GetBTM()
+ pbr=pb0r(self->GetTime())*60
+ self.GetProperty,XCOORD_CONV=XCOORD_CONV,YCOORD_CONV=YCOORD_CONV,ZCOORD_CONV=ZCOORD_CONV
+ return,[(btm##[xcoord_conv[1]*pbr[2],0,0])[0],(btm##[0,ycoord_conv[1]*pbr[2],0])[1]]
 end
 
 function gxModel::GetBTM, TopViewCorrection=TopViewCorrection
