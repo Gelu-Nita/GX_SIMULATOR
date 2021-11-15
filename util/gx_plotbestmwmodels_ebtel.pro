@@ -208,7 +208,8 @@ if not file_test(psDir) then file_mkdir,psDir
   end
    device,/close
  end
- 
+ a_arr=a
+ b_arr=b
  if n_elements(a) lt 2 or n_elements(b) lt 2 then return
  q_chi2_best=(q_res2_best=(chi2_best=(res2_best=(dblarr(n_elements(a),n_elements(b))))))
  obj_chi2_best=(obj_res2_best=objarr(n_elements(a),n_elements(b)))
@@ -274,8 +275,8 @@ if not file_test(psDir) then file_mkdir,psDir
  oplot,a,chi2_best_b,color=250,thick=3,psym=-1
  plots,!x.crange,b[idx_res2[[1,1]]],linesty=1,color=50,thick=3
  plots,!x.crange,b[idx_chi2[[1,1]]],linesty=1,color=250,thick=3
- plots,b[idx_res2[[0,0]]],!y.crange,linesty=1,color=50,thick=3
- plots,b[idx_chi2[[0,0]]],!y.crange,linesty=1,color=250,thick=3
+ plots,a[idx_res2[[0,0]]],!y.crange,linesty=1,color=50,thick=3
+ plots,a[idx_chi2[[0,0]]],!y.crange,linesty=1,color=250,thick=3
  plots,a[idx_res2[0]],b[idx_res2[1]],psym=2,color=50,symsize=symsize,thick=3
  plots,a[idx_chi2[0]],b[idx_chi2[1]],psym=2,color=250,symsize=symsize,thick=3
  gx_plot_label,0.05,0.9,strcompress(string(best_res2,a[idx_res2[0]],b[idx_res2[1]],format="('RES!U2!N=',f0.3,'; a= ',f0.2,'; b= ',f0.2)")),charsize=1,color=50
@@ -343,6 +344,8 @@ if not file_test(psDir) then file_mkdir,psDir
  device,/close
  !p.font=0 
  !p.multi=0  
+ a=a_arr
+ b=b_arr
  set_plot,'win'
 end
 

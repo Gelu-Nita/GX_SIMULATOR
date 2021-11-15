@@ -52,7 +52,9 @@ pro gx_search4bestq, gxm_path=gxm_path,a_arr=a_arr,b_arr=b_arr,q_start=q_start, 
      almost_done=0
      done_res=0b
      done_chi=0b
-     repeat begin   
+     apply2=1
+     force_done=0
+     repeat begin; until done  
         for j=0,n_elements(q)-1 do begin
           modfile=modDir+strcompress(string(a,b,q[j],format="('\i_a',f7.2,'b',f7.2,'q',g0,'.map')"),/rem)
           if ~file_exist(modfile) or keyword_set(redo)then begin
@@ -75,57 +77,18 @@ pro gx_search4bestq, gxm_path=gxm_path,a_arr=a_arr,b_arr=b_arr,q_start=q_start, 
         result=gx_processmwmodels_ebtel(ab=[a,b],ref=ref,$
                            modDir=modDir,obsDir=obsDir,psDir=psDir,$
                            levels=levels,resize=resize,$
-                           file_arr=file_arr,apply2=1)
+                           file_arr=file_arr,apply2=apply2,done=force_done)
 
         if result.res_done eq 0 or result.chi_done  eq 0 then begin
-;          if result.res_done eq 0 then q=[q,result.q_res_best]
-;          if result.chi_done eq 0 then q=[q,result.q_chi_best]
+          nq=n_elements(q)
           if result.res_done eq 0 then q=[q,result.q_res_best] else q=[q,result.q_chi_best]
           q=q[uniq(q,sort(q))]  
-        endif else begin
-          done=1  
-          result=gx_processmwmodels_ebtel(ab=[a,b],ref=ref,$
-                             modDir='',obsDir=obsDir,psDir=psDir,$
-                             levels=levels,resize=resize,$
-                             modFiles=file_arr,q_arr=q,apply2=3)
-          done3=0
-          repeat begin
-            if result.res_done eq 0 or result.chi_done  eq 0 then begin
-              if result.res_done eq 0 then q=[q,result.q_res_best]
-              if result.chi_done eq 0 then q=[q,result.q_chi_best]
-              q=q[uniq(q,sort(q))]
-              file_arr=[]
-              for j=0,n_elements(q)-1 do begin
-                modfile=modDir+strcompress(string(a,b,q[j],format="('\i_a',f7.2,'b',f7.2,'q',g0,'.map')"),/rem)
-                file_arr=[file_arr,modfile]
-                if ~file_exist(modfile) or keyword_set(redo)then begin
-                  if ~isa(model,'gxmodel') then begin
-                    model=gx_read(gxm_path)
-                    fovdata=model->SetFOV(xc=xc,yc=yc,xfov=xfov, yfov=yfov,nx=nx,ny=nx,/compute_grid)
-                  end
-                  q0_formula='q[0]'
-                  q_formula=string(a,b,format="('q0*(B/q[1])^',g0,'/(L/q[2])^',g0)")
-                  q_parms=[q[j], 100.0, 1.0000000d+009, 0.0, 0.0]
-                  omap=gx_mwrender_ebtel(model,renderer,ebtel_path=ebtel_path,q_parms=q_parms,q_formula=q_formula,q0_formula=q0_formula,f_min=17d9,n_freq=1,gxcube=gxcube)
-                  if obj_valid(omap) then begin
-                    map->setmap,0,omap->get(0,/map)
-                    save,map,file=modfile
-                    obj_destroy,omap
-                  endif
-                  if (isa(gxcube) and keyword_set(save_gxc)) then save,gxcube,file=gxcDir+strcompress(string(a,b,q[j],format="('\a',f7.2,'b',f7.2,'q',g0,'.gxc')"),/rem)
-                endif else gx_message, modfile+' already exists, no reprocessing requested!',/info,/cont
-              endfor
-              result=gx_processmwmodels_ebtel(ab=[a,b],ref=ref,$
-                                 modDir='',obsDir=obsDir,psDir=psDir,$
-                                 levels=levels,resize=resize,$
-                                 modFiles=file_arr,q_arr=q,apply2=3)
-            endif else begin
-              final_result=[final_result,result]
-              done3=1
-            endelse
-          endrep until done3
-        endelse          
+         if n_elements(q) eq nq then begin
+          if apply2 eq 1 then apply2=3 else force_done=1
+         endif
+       endif else if apply2 eq 3 then done=1 else apply2=3        
      endrep until done
+     final_result=[final_result,result]   
  endfor
  endfor
  gx_message, string(n_elements(a_arr)*n_elements(b_arr),(systime(/s)-t0)/3600,format="('Computed ',i2,' sets in ',g0,' hours')"),/info,/cont

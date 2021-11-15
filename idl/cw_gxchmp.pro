@@ -24,9 +24,9 @@ function gxchmp::INIT,wBase,uname=uname, GXMpath=GXMpath,RefDataPath=RefDataPath
   self.EBTELpath=EBTELpath
   default,renderer,gx_findfile(self.WinOS?'AR_GRFF_nonLTE.pro':'mwgrtransfer.pro',folder='')
   self.renderer=renderer
-  default,alist,'0.7,0.8,0.9,1.0,1.1,1.2,1.3'
+  default,alist,'0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1,1.1,1.2,1.3'
   self.alist=alist
-  default,blist,'0.7,0.8,0.9,1.0,1.1,1.2,1.3'
+  default,blist,'0.7,0.8,0.9,1,1.1,1.2,1.3,1.4,1.5,1.6,1.7,1.8,1.9,2'
   self.blist=blist
   default,qlist,'0.0001,0.001'
   self.qlist=qlist
@@ -177,12 +177,16 @@ pro gxchmp::UpdateBridgeStatus,reset=reset,oncallback=oncallback
       bridge_status=replicate({status:'Initializing',task:'',time:'',calls:'',error:''},nbridges)
     endif else widget_control,wStatus,get_value=bridge_status
     bridge_status=bridge_status[0:(n_elements(bridge_status)<nbridges)-1]
+    active=0
     for i=0,nbridges-1 do begin
       bridge=self.bridges->Get(position=i)
       code=bridge->Status(error=error)
       case code of
         0:bridge_status[i].status='Idle'
-        1:bridge_status[i].status='Active'
+        1:begin 
+            bridge_status[i].status='Active'
+            active+=1
+          end  
         2:bridge_status[i].status='Completed'
         3:bridge_status[i].status='Error'
         4:bridge_status[i].status='Aborted'
@@ -205,6 +209,7 @@ pro gxchmp::UpdateBridgeStatus,reset=reset,oncallback=oncallback
       endif
     endfor
   widget_control,wStatus,set_value=bridge_status,table_ysize=n_elements(bridge_status)
+  self->ControlWidgets,sensitive=~active
 end          
 
 pro gxchmp::ResetTasks
@@ -236,7 +241,7 @@ end
 pro gxchmp::GetProperty,GXMpath=GXMpath,RefDataPath=RefDataPath,modDir=modDir,psDir=psDir,$
                        RefDataStruct=RefDataStruct,TmpDir=TmpDir,alist=alist,blist=blist,qlist=qlist,$
                        levels=levels,solution=solution, tasks=tasks,EBTELpath=EBTELpath,$
-                       renderer=renderer,bridges=bridges,fov=fov,res=res,nBridges=nBridges,$
+                       renderer=renderer,bridges=bridges,fov=fov,res=res,nBridges=nBridges,completed=completed,$
                        _ref_extra=extra
     GXMpath=self.GXMpath
     RefDataPath=self.RefDataPath
@@ -256,12 +261,21 @@ pro gxchmp::GetProperty,GXMpath=GXMpath,RefDataPath=RefDataPath,modDir=modDir,ps
     nBridges=ptr_valid(self.Bridges)?n_elements(*self.Bridges):0
     res=self.res
     fov=self.fov
+    completed=self.completed
     self->gxwidget::GetProperty,_extra=extra
 end
 
 function gxchmp::Str2Arr,strlist
  result=execute('list=['+strlist+']')
  return,list
+end
+
+pro gxchmp::abort
+  bridges=self.bridges->Get(/all,count=count)
+  for i=0,count-1 do begin
+    code=bridges[i]->Status(error=error)
+    if code eq 1 then bridges[i]->Abort
+  end
 end
 
 pro gxchmp::AssignTask,bridge,task_id,OnStartSearch=OnStartSearch
@@ -346,13 +360,19 @@ endwhile
 end
 
 pro gxchmp::OnCallback,Status, Error,bridge
+  
   bridge->SetVar,'t_end',systime(/s)
   id=bridge->GetVar('id')
+  if status eq 4 then begin
+    self->UpdateBridgeStatus,oncallback=id
+    return
+  endif
   self->UpdateBridgeStatus,oncallback=id
+  ntasks=self.tasks->Count()
   task_id=bridge->GetVar('task_id')
   tmp_file=strcompress(string(id,format="('bridge',i0,'.tmp')"),/rem)
   if ~file_exist(self.tmpDir+path_sep()+tmp_file) then begin
-     self->message,strcompress(string(self.completed, ntasks, task.a, task.b, format="('Error on: ', i0,' tasks out of ',i0,'; a=',g0, ' b=', g0)"))
+     self->message,strcompress(string(n_elements(self.solution), ntasks, task.a, task.b, format="('Error on: ', i0,' tasks out of ',i0,'; a=',g0, ' b=', g0)"))
     goto,skip
   endif
   restore,self.tmpDir+path_sep()+tmp_file
@@ -368,8 +388,7 @@ pro gxchmp::OnCallback,Status, Error,bridge
   self.tasks[task_id]=task
   self->UpdateTaskQueue
   self.completed+=1
-  ntasks=self.tasks->Count()
-  self->message,strcompress(string(self.completed, ntasks, task.a, task.b, format="('Completed ', i0,' tasks out of ',i0,'; a=',g0, ' b=', g0)"))
+  self->message,strcompress(string(n_elements(self.solution), ntasks, task.a, task.b, format="('Completed ', i0,' tasks out of ',i0,'; a=',g0, ' b=', g0)"))
   skip:
   if self.completed ne ntasks then begin
   i=0
@@ -412,6 +431,8 @@ pro gxchmp::CreatePanel,xsize=xsize,ysize=ysize
   toolbar= widget_base(main_base, /row,/toolbar)
   wExecute=widget_button(toolbar,value=gx_bitmap(gx_findfile('play.bmp')),tooltip='Execute Search Tasks',/bitmap,uname='execute')
   wSave=widget_button(toolbar,value=gx_bitmap(filepath('save.bmp', subdirectory=['resource', 'bitmaps'])),tooltip='Save search results',/bitmap,uname='save') 
+  wAbort=widget_button(toolbar,value=gx_bitmap(gx_findfile('abort.bmp')),tooltip='Abort all tasks',/bitmap,uname='abort')
+
   wRedo=CW_BGROUP(toolbar,'Recompute and overwrite already existing maps in the model maps repository',/nonexclusive,set_value=[0],uname='redo')
   wClearLog=widget_button(toolbar,value=gx_bitmap(filepath('delete.bmp', subdirectory=['resource', 'bitmaps'])),tooltip='Clear execution log',/bitmap,uname='clearlog')
   wLabelBase=widget_base(main_base,/row,scr_xsize=scr_xsize,/frame)
@@ -766,12 +787,12 @@ function gxchmp::HandleEvent, event
                  endelse
                end  
      'alist_reset': begin
-                   self.alist='0.7,0.8,0.9,1.0,1.1,1.2,1.3'
+                   self.alist='0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1,1.1,1.2,1.3'
                    widget_control,widget_info(self.wbase,find_by_uname='alist'),set_value=self.alist
                    self->ResetTasks
                end
      'blist_reset': begin
-                   self.blist='0.7,0.8,0.9,1.0,1.1,1.2,1.3'
+                   self.blist='0.7,0.8,0.9,1,1.1,1.2,1.3,1.4,1.5,1.6,1.7,1.8,1.9,2'
                    widget_control,widget_info(self.wbase,find_by_uname='blist'),set_value=self.blist
                    self->ResetTasks
                end                          
@@ -884,7 +905,8 @@ function gxchmp::HandleEvent, event
      'clearlog':begin
                    widget_control,widget_info(self.wIDBase,find_by_uname='console'),set_value=''
                  end  
-     'execute':self->OnStartSearch   
+     'execute':self->OnStartSearch  
+     'abort':self->Abort   
      'save':answ=self.SaveSolution()                                 
     else:
   endcase

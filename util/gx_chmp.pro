@@ -20,7 +20,7 @@ pro gxchmpTimerCallback,id,tlb
   widget_control,tlb,get_uvalue=wgxchmp
   widget_control,wgxchmp,get_uvalue=obj
   obj->UpdateBridgeStatus
-end
+ end
 
 pro gx_chmp,wgxchmp,fresh=fresh,font=font,_extra=_extra
   gx_setfonts,font=font

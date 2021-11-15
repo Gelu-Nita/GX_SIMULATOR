@@ -1,3 +1,45 @@
+function metrics_root,q,metrics,metrics_thresh,ignore_in=ignore_in,done=done
+  in_between=keyword_set(done)?$
+    where(abs(metrics) ge 0,in_count):$
+    where(abs(metrics) lt metrics_thresh,in_count)
+  if keyword_set(ignore_in) then begin
+    in_between=[-1]
+    in_count=0
+  endif
+  above_idx=where(metrics ge 0,above_count)
+  below_idx=where(metrics lt 0,below_count)
+  if above_count gt 0 and below_count gt 0 then begin
+    ametrics=min(metrics[above_idx])
+    aidx=(where(metrics eq ametrics))[0]
+    bmetrics=max(metrics[below_idx])
+    bidx=(where(metrics eq bmetrics))[0]
+  endif else begin
+    idx=sort(abs(metrics))
+    bidx=idx[0]
+    bmetrics=metrics[bidx]
+    aidx=idx[1]
+    ametrics=metrics[aidx]
+  endelse
+  fit=linfit(alog10(q[[aidx,bidx]]),[ametrics,bmetrics])
+  if in_count gt 0 then begin
+    abs_metrics_min=min(abs(metrics[in_between]),imin)
+    metrics_best=metrics[in_between[imin]]
+    metrics_best_idx=(where(metrics eq metrics_best))[0]
+    q_best=double(q[metrics_best_idx])
+  endif else begin
+    q_best=10d^(-fit[0]/fit[1])
+    metrics_best=0
+    metrics_best_idx=-1
+  endelse
+  q_best_high=10^((metrics_thresh-fit[0])/fit[1])
+  q_best_low=10^((-metrics_thresh-fit[0])/fit[1])
+  q_range=[q_best_low,q_best_high]
+  q_range=q_range[sort(q_range)]
+  done=in_count gt 0
+  return,{thresh:metrics_thresh,q_best:q_best,q_range:q_range,metrics_best:metrics_best,done:done,in_between:in_between,metrics_best_idx:metrics_best_idx}
+end
+
+
 function gx_processmwmodels_ebtel,ab=ab,ref=ref,$
                        modDir=modDir,modFiles=modFiles,psDir=psDir,$
                        lev=lev,resize=resize,$
@@ -23,9 +65,9 @@ function gx_processmwmodels_ebtel,ab=ab,ref=ref,$
  _obsIsdev=ref.maps[1]
  ;++++++++++++++++++++++++++++++++++++++++++++++++
  if ~isa(lev) then lev=[12,20,30,50,80]
- 
- if moddir ne '' then modFiles=find_files('*.map',modDir)
-
+ if n_elements(ab) eq 2 then begin
+   if moddir ne '' then modFiles=find_files(string(ab,format="('*a',f0.2,'b',f0.2,'*.map')"),modDir)
+ endif else if moddir ne '' then modFiles=find_files('*.map',modDir)
  ;----------------------------------------------------------------------------
  nmod=n_elements(modFiles)
  a0=(b0=(q0=fltarr(nmod)))
@@ -45,7 +87,7 @@ function gx_processmwmodels_ebtel,ab=ab,ref=ref,$
  result=[]
  repeat begin
  if n_elements(ab) eq 2 then begin
-  good=where(a0 eq ab[0] and b0 eq -ab[1],count)
+  good=where(a0 eq float(ab[0]) and b0 eq -float(ab[1]),count)
   comp=-1
   ncomp=0
  endif else begin
@@ -157,62 +199,50 @@ function gx_processmwmodels_ebtel,ab=ab,ref=ref,$
    !p.multi=[0,1,2]
    charsize=1.2
    ;=================RES=========================
-   Qm=exp(alog(min(Q))+(alog(max(Q))-alog(min(Q)))*dindgen(1000)/999)
-   d=(n_elements(Q)-1)<3   
-   
+   res_thresh=sqrt(n_elements(goodPix))*((apply2 eq 1)?3:1) 
    !p.font=2
-   plot, Q, Res, psym=4, /xlog,  xstyle=0, ystyle=1, xticks=4,$
-     xrange=[min(Q)*0.95, max(Q)*1.05], yrange=[-max(abs(Res))*1.2, max(abs(Res))*1.2], $
+   res_idx=sort([abs(res)])
+   case n_elements(res_idx) of
+     1:res_idx=replicate(res_idx[0],3)
+     2:res_idx=[res_idx,res_idx[0:1]]
+     else:res_idx=res_idx[0:2]
+   endcase
+   if apply2 ne 1 then begin
+    yrange=minmax([res[res_idx],res_thresh*[-10,10]])
+    xrange=minmax(q[where(res ge yrange[0] and res le yrange[1])])
+   endif else begin
+    yrange=[-max(abs(Res))*1.2, max(abs(Res))*1.2]
+    xrange=[min(Q)*0.95, max(Q)*1.05]
+   endelse
+   sort_idx=sort(q)
+   plot, Q[sort_idx], Res[sort_idx], psym=-4, /xlog,  xstyle=0, ystyle=1, xticks=4,$
+     xrange=xrange, yrange=yrange, $
      xtitle='!18Q!3', ytitle='!17 Residual!3', thick=2,charsize=1.2*charsize,title=_obsI.ID
-   
+   oplot, 10^!x.crange, [0,0], linestyle=2, thick=2,color=250
+   oplot, 10^!x.crange, res_thresh*[1,1], linestyle=1, thick=2
+   oplot, 10^!x.crange, -res_thresh*[1,1], linestyle=1, thick=2
    res_arr=res
    
-   afit=(apply2 eq 1)?poly_fit(alog(Q), Res, d):linfit(alog(Q), Res)
-   Res2=poly(alog(Qm), afit)
-   oplot, Qm, Res2, thick=2
+   solution=metrics_root(q,res,res_thresh,_extra=_extra)
+   q_res_best=solution.q_best
+   q_res_range=solution.q_range
+   res_best=solution.metrics_best
+   res_range=solution.thresh*[-1,1]
    
-   oplot, 10^!x.crange, [0,0], linestyle=2, thick=2,color=250  
-   
-   res_thresh=sqrt(n_elements(goodPix))
-   res_in_between=where(abs(Res) le res_thresh, res_count,comp=res_out)
-   if res_count gt 0 then begin
-    min_res=min(abs(Res[res_in_between]),min_res_idx)
-    res2_best=double(res2_best[res_in_between[min_res_idx]])
-    q_res2_best=double(q[res_in_between[min_res_idx]])
-    res2_best_file=setfiles[res_in_between[min_res_idx]]
-    res_best_metrics=obj_clone(obj_metrics_arr[res_in_between[min_res_idx]])
-    res_done=1
+   if solution.done then begin
+     q_res2_best=solution.q_best
+     res2_best=double(res2_best[solution.metrics_best_idx])
+     res2_best_file=setfiles[solution.metrics_best_idx]
+     res_best_metrics=obj_clone(obj_metrics_arr[solution.metrics_best_idx])
+     res_done=1
    endif else begin
-    res2_best=-1d
-    q_res2_best=-1d
-    res2_best_file=''
-    res_done=0
-    res_best_metrics=obj_new()
+     res2_best=-1d
+     q_res2_best=-1d
+     res2_best_file=''
+     res_done=0
+     res_best_metrics=obj_new()
    endelse
-
-   
-   oplot, 10^!x.crange, res_thresh*[1,1], linestyle=1, thick=2
-   oplot, 10^!x.crange, -res_thresh*[1,1], linestyle=1, thick=2  
-   
-   
-   amin=min(abs(Res2), k)
-   
-   if (Res2[k] ne Res2[0]) and (Res2[k] ne Res2[-1]) then begin
-     q_res_best=Qm[k]
-     res_best=Res2[k]
-     u=where(abs(Res2) le res_thresh)
-     q_res_range=Qm[[min(u),max(u)]]
-     res_range=Res2[[min(u),max(u)]]
-   endif else begin
-     idx=(amin eq Res2[0])?[0,1]:[n_elements(Res2)-2,n_elements(Res2)-1]
-     lfit=linfit(Qm[idx],Res2[idx])
-     q_res_best=-lfit[0]/lfit[1]
-     q_res_range=[(-res_thresh-lfit[0])/lfit[1],(res_thresh-lfit[0])/lfit[1]]
-     q_res_range=q_res_range[sort(q_res_range)]
-     res_best=lfit[0]
-     res_range=[-res_thresh,res_thresh]
-   endelse
-   
+   plots,q_res_best,res_best,color=250,psym=2,symsize=2,thick=3
    !p.font=2
    gx_plot_label,0.01,0.9,/xlog, string(a[0],-b[0],format="('a=',f5.2,'; ','b=',f5.2)"),charsize=charsize
    gx_plot_label,0.01,0.8, 'PROJECTED SOLUTION:',/xlog,charsize=charsize
@@ -222,54 +252,51 @@ function gx_processmwmodels_ebtel,ab=ab,ref=ref,$
      gx_plot_label,0.01,0.2, string(res2_best, format="('RES!S!U2!N!R!Dnorm!N = ',g0)") ,/xlog,charsize=charsize
      gx_plot_label,0.01,0.1, string([q_res2_best,q_res_range-q_res2_best], format="('Q = ',g0,'!S!D',g0,'!R!U+',g0)") ,/xlog,charsize=charsize
    end
-   ;=================Chi=========================
+  !p.font=-1
+;  =================Chi=========================
+   chi_thresh=sqrt(total((obsI.data[goodPix]/obsIsdev.data[goodPix])^2))*((apply2 eq 1)?3:1)
    !p.font=2
-   plot, Q, Chi, psym=4, /xlog,  xstyle=0, ystyle=1, xticks=4,$
-     xrange=[min(Q)*0.95, max(Q)*1.05], yrange=[-max(abs(Chi))*1.2, max(abs(Chi))*1.2], $
+   chi_idx=sort([abs(chi)])
+   case n_elements(chi_idx) of
+     1:chi_idx=replicate(chi_idx[0],3)
+     2:res_idx=[chi_idx,chi_idx[0:1]]
+     else:chi_idx=chi_idx[0:2]
+   endcase
+   if apply2 ne 1 then begin
+     yrange=minmax([chi[chi_idx],chi_thresh*[-10,10]])
+     xrange=minmax(q[where(chi ge yrange[0] and chi le yrange[1])])
+   endif else begin
+    yrange=[-max(abs(Chi))*1.2, max(abs(Chi))*1.2]
+    xrange=[min(Q)*0.95, max(Q)*1.05]
+   endelse
+   plot, Q[sort_idx], Chi[sort_idx], psym=-4, /xlog,  xstyle=0, ystyle=1, xticks=4,$
+     xrange=xrange, yrange=yrange, $
      xtitle='!18Q!3', ytitle='!17 Chi!3', thick=2,charsize=1.2*charsize,title=_obsI.ID
-   chi_arr=chi
-
-   afit=(apply2 eq 1)?poly_fit(alog(Q), Chi, d):linfit(alog(Q), Chi)
-   Chi2=poly(alog(Qm), afit)
-   oplot, Qm, Chi2, thick=2
    oplot, 10^!x.crange, [0,0], linestyle=2, thick=2,color=250
+   oplot, 10^!x.crange, chi_thresh*[1,1], linestyle=1, thick=2
+   oplot, 10^!x.crange, -chi_thresh*[1,1], linestyle=1, thick=2
+   chi_arr=chi
+   
+   solution=metrics_root(q,chi,chi_thresh,_extra=_extra)
+   q_chi_best=solution.q_best
+   q_chi_range=solution.q_range
+   chi_best=solution.metrics_best
+   chi_range=solution.thresh*[-1,1]
 
-   chi_thresh=sqrt(total((obsI.data[goodPix]/obsIsdev.data[goodPix])^2))
-   chi_in_between=where(abs(Chi) le chi_thresh, chi_count,comp=chi_out)
-   if chi_count gt 0 then begin
-     min_chi=min(abs(chi[chi_in_between]),min_chi_idx)
-     chi2_best=double(chi2_best[chi_in_between[min_chi_idx]])
-     q_chi2_best=double(q[chi_in_between[min_chi_idx]])
-     chi2_best_file=setfiles[chi_in_between[min_chi_idx]]
-     chi_best_metrics=obj_clone(obj_metrics_arr[chi_in_between[min_chi_idx]])
+   if solution.done then begin
+     q_chi2_best=solution.q_best
+     chi2_best=double(chi2_best[solution.metrics_best_idx])
+     chi2_best_file=setfiles[solution.metrics_best_idx]
+     chi_best_metrics=obj_clone(obj_metrics_arr[solution.metrics_best_idx])
      chi_done=1
    endif else begin
      chi2_best=-1d
      q_chi2_best=-1d
      chi2_best_file=''
-     chi_best_metrics=obj_new()
      chi_done=0
+     chi_best_metrics=obj_new()
    endelse
-
-   oplot, 10^!x.crange, chi_thresh*[1,1], linestyle=1, thick=2
-   oplot, 10^!x.crange, -chi_thresh*[1,1], linestyle=1, thick=2
-   amin=min(abs(Chi2), k)
-   if (Chi2[k] ne Chi2[0]) and (Chi2[k] ne Chi2[-1]) then begin
-     q_chi_best=Qm[k]
-     chi_best=Chi2[k]
-     u=where(abs(Chi2) le chi_thresh)
-     q_chi_range=Qm[[min(u),max(u)]]
-     chi_range=Chi2[[min(u),max(u)]]
-   endif else begin
-     idx=(amin eq Chi2[0])?[0,1]:[n_elements(Chi2)-2:n_elements(Chi2)-1]
-     lfit=linfit(Qm[idx],Chi2[idx])
-     q_chi_best=-lfit[0]/lfit[1]
-     q_chi_range=[(-chi_thresh-lfit[0])/lfit[1],(chi_thresh-lfit[0])/lfit[1]]
-     q_chi_range=q_chi_range[sort(q_chi_range)]
-     chi_best=lfit[0]
-     chi_range=[-chi_thresh,chi_thresh]
-   endelse
-   
+   plots,q_chi_best,chi_best,color=250,psym=2,symsize=2,thick=3
    !p.font=2
    gx_plot_label,0.01,0.9,/xlog, string(a[0],-b[0],format="('a=',f5.2,'; ','b=',f5.2)"),charsize=charsize
    gx_plot_label,0.01,0.8, 'PROJECTED SOLUTION:',/xlog,charsize=charsize
@@ -281,20 +308,19 @@ function gx_processmwmodels_ebtel,ab=ab,ref=ref,$
    end
   !p.font=-1
  endif
- 
  device,/close
- res_idx=sort([abs(res)])
- chi_idx=sort([abs(chi)])
- case n_elements(res_idx) of
-  1:res_idx=replicate(res_idx[0],3)
-  2:res_idx=[res_idx,res_idx[0:1]]
-  else:res_idx=res_idx[0:2]
- endcase
- case n_elements(chi_idx) of
-   1:chi_idx=replicate(chi_idx[0],3)
-   2:res_idx=[chi_idx,chi_idx[0:1]]
-   else:chi_idx=chi_idx[0:2]
- endcase
+; res_idx=sort([abs(res)])
+; case n_elements(res_idx) of
+;  1:res_idx=replicate(res_idx[0],3)
+;  2:res_idx=[res_idx,res_idx[0:1]]
+;  else:res_idx=res_idx[0:2]
+; endcase
+; chi_idx=sort([abs(chi)])
+; case n_elements(chi_idx) of
+;   1:chi_idx=replicate(chi_idx[0],3)
+;   2:res_idx=[chi_idx,chi_idx[0:1]]
+;   else:chi_idx=chi_idx[0:2]
+; endcase
  file_arr=setfiles[[res_idx,chi_idx]]
  q_arr=q[[res_idx,chi_idx]]
  idx=uniq(file_arr,sort(file_arr))
