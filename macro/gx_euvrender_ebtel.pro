@@ -10,7 +10,7 @@ function gx_euvrender_ebtel,model,renderer,ebtel_path=ebtel_path,ss=ss,q_parms=q
       goto,skip
     endif
   endelse
-  default,renderer,'AIA.pro'
+  default,renderer,'aia.pro'
   info=gx_rendererinfo(renderer)
   if ~isa(info) then begin
     message,'Invalid renderer routine! Operation aborted!',/cont
