@@ -73,6 +73,7 @@ function gx_processmwmodels_ebtel,ab=ab,ref=ref,$
  a0=(b0=(q0=fltarr(nmod)))
  formula0=(id0=(setfiles0=strarr(nmod)))
  dx0=(dy0=(width0=0))
+ thisDevice = !D.Name
  set_plot,'ps'
  for i=0,nmod-1 do begin
   restore,modFiles[i]
@@ -100,10 +101,12 @@ function gx_processmwmodels_ebtel,ab=ab,ref=ref,$
    id=id0[good]
    setfiles=modFiles[good]
    formula=formula0[good]
-   if (apply2 ne 3) then Filename=psDir+strcompress(string(a[0],b[0],format="('\set_a',g0,'b',g0,'.ps')"),/rem) else Filename=psDir+strcompress(string(a[0],b[0],format="('\set_a',g0,'b',g0,'_final.ps')"),/rem)
+   if (apply2 ne 3) then Filename=psDir+path_sep()+strcompress(string(a[0],b[0],format="('set_a',g0,'b',g0,'.ps')"),/rem) else Filename=psDir+path_sep()+strcompress(string(a[0],b[0],format="('set_a',g0,'b',g0,'_final.ps')"),/rem)
    charsize=1.2
    psObject = Obj_New("FSC_PSConfig", /Color, /Times, /Bold, Filename=Filename,xoffset=0.5,yoffset=0.25,xsize=6.4,ysize=9.5,landscape=0,bits=8)
-   Device, _Extra=psObject->GetKeywords()
+   _Extra=psObject->GetKeywords()
+   _Extra.filename=filename
+   Device, _Extra= _Extra
    !p.multi=[0,2,3,0,1]
    print,string(set,count,format="('Processing SET ',i2, ' file count=',i2)")
    print,string(a[0],b[0],format="('a= ',g0, ' b=',g0)")
@@ -347,7 +350,7 @@ function gx_processmwmodels_ebtel,ab=ab,ref=ref,$
  endif else ncomp=0
  endrep until ncomp eq 0
  close_lun,/all
- set_plot,'win'
+ set_plot,thisDevice
  return,result
 end
 

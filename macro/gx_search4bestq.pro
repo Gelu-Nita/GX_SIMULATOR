@@ -1,10 +1,17 @@
-pro gx_search4bestq, gxm_path=gxm_path,a_arr=a_arr,b_arr=b_arr,q_start=q_start, $
+function gx_search4bestq, gxm_path=gxm_path,a_arr=a_arr,b_arr=b_arr,q_start=q_start, $
                      modDir=modDir,psDir=psDir,tmpDir=tmpDir,refdatapath=refdatapath,$
                      ebtel_path=ebtel_path,renderer=renderer,$
                      xc=xc,yc=yc,xfov=xfov,yfov=yfov,nx=nx,ny=ny,$
-                     levels=levels,resize=resize,result=result,save_gxc=save_gxc,redo=redo,$
+                     levels=levels,resize=resize,save_gxc=save_gxc,redo=redo,$
                      save_result=save_result,plot_best=plot_best
   final_result=[]
+  catch, error_status
+  if error_status ne 0 then begin
+    catch, /cancel
+    gx_message,!error_state.msg + ' ' + !error_state.sys_msg
+    result=final_result
+    return, result
+  endif
   ;+++++++++++++++++++++++++++++++++++++++++++
   default,levels,[12,20,30,50,80]
   default,resize,100
@@ -14,7 +21,7 @@ pro gx_search4bestq, gxm_path=gxm_path,a_arr=a_arr,b_arr=b_arr,q_start=q_start, 
   ;++++++++++++++++++++++++++++++++++++++++++++
   default,q_start,[0.0001,0.001]
   ;++++++++++++++++++++++++++++++++++++++++++++
-  default,gxm_path,curdir()+'\gxmDIR\AR11520.gxm'
+  default,gxm_path,curdir()+path_sep()+'gxmDIR\AR11520.gxm'
   default,xc,-86.68
   default,yc,-320.0
   default,xfov,200.0
@@ -22,20 +29,20 @@ pro gx_search4bestq, gxm_path=gxm_path,a_arr=a_arr,b_arr=b_arr,q_start=q_start, 
   default,nx,200
   default,ny,200
   ;++++++++++++++++++++++++++++++++++++++++++++
-  default,modDir,curdir()+'\modDir'
-  default,psDir,curdir()+'\psDir'
-  default,tmpDir,curdir()+'\tmpDir'
+  default,modDir,curdir()+path_sep()+'modDir'
+  default,psDir,curdir()+path_sep()+'psDir'
+  default,tmpDir,curdir()+path_sep()+'tmpDir'
   ;++++++++++++++++++++++++++++++++++++++++++++++
   default,ebtel_path, gx_findfile('ebtel.sav',folder='')
   ;+++++++++++++++++++++++++++++++++++++++++++++
-  default,renderer,'AR_GRFF_nonLTE'
+  default,renderer,gx_findfile((!version.os_family eq 'Windows')?'AR_GRFF_nonLTE.pro':'mwgrtransfer.pro',folder='')
   ;+++++++++++++++++++++++++++++++++++++++++++++
   default,refdatapath,'norh_ref.sav'
   restore,refdatapath
   ;+++++++++++++++++++++++++++++++++++++++++++++
   if not file_test(modDir) then file_mkdir,modDir
   if keyword_set(save_gxc) then begin
-    gxcDir=modDir+'\gxc'
+    gxcDir=modDir+path_sep()+'gxc'
     if not file_test(gxcDir) then file_mkdir,gxcDir
   end
   if not file_test(psDir) then file_mkdir,psDir
@@ -56,7 +63,7 @@ pro gx_search4bestq, gxm_path=gxm_path,a_arr=a_arr,b_arr=b_arr,q_start=q_start, 
      force_done=0
      repeat begin; until done  
         for j=0,n_elements(q)-1 do begin
-          modfile=modDir+strcompress(string(a,b,q[j],format="('\i_a',f7.2,'b',f7.2,'q',g0,'.map')"),/rem)
+          modfile=modDir+path_sep()+strcompress(string(a,b,q[j],format="('i_a',f7.2,'b',f7.2,'q',g0,'.map')"),/rem)
           if ~file_exist(modfile) or keyword_set(redo)then begin
             if ~isa(model,'gxmodel') then begin
               model=gx_read(gxm_path)
@@ -71,7 +78,7 @@ pro gx_search4bestq, gxm_path=gxm_path,a_arr=a_arr,b_arr=b_arr,q_start=q_start, 
                 save,map,file=modfile
                 obj_destroy,omap
             endif
-            if (isa(gxcube) and keyword_set(save_gxc)) then save,gxcube,file=gxcDir+strcompress(string(a,b,q[j],format="('\a',f7.2,'b',f7.2,'q',g0,'.gxc')"),/rem)
+            if (isa(gxcube) and keyword_set(save_gxc)) then save,gxcube,file=gxcDir+path_sep()+strcompress(string(a,b,q[j],format="('a',f7.2,'b',f7.2,'q',g0,'.gxc')"),/rem)
           endif else gx_message, modfile+' already exists, no reprocessing requested!',/info,/cont
         endfor
         result=gx_processmwmodels_ebtel(ab=[a,b],ref=ref,$
@@ -96,4 +103,5 @@ pro gx_search4bestq, gxm_path=gxm_path,a_arr=a_arr,b_arr=b_arr,q_start=q_start, 
  result=final_result
  if size(save_result,/tname) eq 'STRING' then save,result,file=strcompress(tmpDir+path_sep()+save_result)
  if keyword_set(plot_best) then gx_plotbestmwmodels_ebtel, result, psDir
+ return,result
  end

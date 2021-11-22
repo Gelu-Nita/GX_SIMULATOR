@@ -16,7 +16,7 @@ pro MWTransferArr,parms,rowdata,nparms,rparms,path,datain,freqlist,info=info
     if n_elements(parms) gt 0 then dummy=temporary(parms)
     if n_elements(info) eq 0 then begin
       result=call_external(path,'GET_PARMS_SLICE',/F_VALUE,/unload )
-      openr,lun,'parms_input.txt',/get,error=error
+      openr,lun,'Parms_input.txt',/get,error=error
       if error eq 1 then return
       line=''
       WHILE ~ EOF(lun) DO BEGIN 

@@ -2257,13 +2257,12 @@ PRO gxFLUXTUBE::upload_fparms,filename
     title='Please select an IDL sav file to upload a fluxtube numerical solution')
   endif
   restore,filename
-;  self.nb_arr=self->f_arr_norm(distfunc,e,mu)
-;  s_arr=exist(s)?s:z
-;  fparms={f_arr:distfunc/self.nb_arr,e_arr:e,mu_arr:mu,s_arr:s_arr,t_arr:t}
-;  ptr_free,self.fparms
-;  self.fparms=ptr_new(fparms)
    self.nb_arr=1
    s_arr=exist(s)?s:z
+   bad=where(distfunc eq 0,count,comp=good)
+   if count gt 0 then begin
+    distfunc[bad]=min(distfunc[good],/nan)
+   endif
    fparms={f_arr:distfunc/self.nb_arr,e_arr:e,mu_arr:mu,s_arr:s_arr,t_arr:t}
    ptr_free,self.fparms
    self.fparms=ptr_new(fparms)

@@ -1155,9 +1155,7 @@ pro gxScanBox::DrawPixel,x,y
 end
 
 pro gxScanBox::BridgeReset,bridge
- if !version.os_family eq 'Windows' then $
-      bridge->Execute, '@' + pref_get('IDL_STARTUP') else $
-      bridge->Execute, '@gx_startup.pro'
+ bridge->Reset    
  gxGetBridgeVar,bridge,(*self.info).execute,vars
  for k=0,n_elements(vars)-1 do bridge->Execute,'delvar,'+vars[k]
  break_file, self.renderer, disk_log, dir, IDL_Renderer, ext
@@ -1168,7 +1166,6 @@ pro gxScanBox::BridgeReset,bridge
  bridge->Execute,'RESOLVE_ROUTINE, IDL_Renderer, /COMPILE_FULL_FILE ,/either' 
  bridge->SetVar,'rowdata',make_array([self.nx,(*self.info).pixdim],/float)
  bridge->SetVar,'calls',0
- self->BridgeResetEBTEL,bridge
 end
 
 pro gxScanBox::ResetAllBridges
@@ -1193,7 +1190,6 @@ pro gxScanbox::BridgeResetEBTEL,bridge
     bridge->Execute,'setenv, "ebtel='+ebtel+'"'
     bridge->Execute,'message,"ebtel enviroment variable set to '+ebtel+'",/cont'
   endif
-
   ebtel_ss=gx_ebtel_path(/ss)
   bridge->Execute,'ebtel_ss=GETENV("ebtel_ss")'
   if bridge->GetVar('ebtel_ss') ne ebtel_ss then begin

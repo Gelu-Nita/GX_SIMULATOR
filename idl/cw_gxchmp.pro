@@ -9,7 +9,6 @@ function gxchmp::INIT,wBase,uname=uname, GXMpath=GXMpath,RefDataPath=RefDataPath
     MESSAGE, /INFO, !ERROR_STATE.MSG
     return, 0
   end
-  self.WinOS=!version.os_family eq 'Windows'
   default,modDir,curdir()+path_sep()+'moddir'
   self.modDir=modDir
   default,psDir,curdir()+path_sep()+'PsDir'
@@ -223,7 +222,7 @@ pro gxchmp::ResetTasks
     endfor
     self->UpdateTaskQueue
     self->UpdateBridgeStatus,/reset
-    end   
+end   
     
 pro gxchmp::UpdateTaskQueue
     rows=[]
@@ -266,6 +265,7 @@ pro gxchmp::GetProperty,GXMpath=GXMpath,RefDataPath=RefDataPath,modDir=modDir,ps
 end
 
 function gxchmp::Str2Arr,strlist
+ compile_opt idl2, static
  result=execute('list=['+strlist+']')
  return,list
 end
@@ -291,14 +291,15 @@ pro gxchmp::AssignTask,bridge,task_id,OnStartSearch=OnStartSearch
     bridge_id=bridge->GetVar('id')
     task.status=string(bridge_id,format="('Assigned to thread #',i0)")
     self.tasks[task_id]=task
-    bridge->Execute,self->GetScript(task_id=task_id,bridge_id=bridge_id),/nowait
+    bridge->Execute,'delvar,result'
+    bridge->Execute,self->GetScript(task_id=task_id),/nowait
     self->UpdateTaskQueue
   end
   
   
-function gxchmp::GetScript,task_id=task_id, bridge_id=bridge_id
-script='gx_search4bestq'
-script+=', gxm_path="'+self.gxmpath+'"'
+function gxchmp::GetScript,task_id=task_id
+script='result=gx_search4bestq('
+script+='  gxm_path="'+self.gxmpath+'"'
 script+=', modDir="'+self.moddir+'"'
 script+=', psDir="'+self.psdir+'"'
 script+=', tmpDir="'+self.tmpdir+'"'
@@ -330,8 +331,7 @@ script+=strcompress(string(task.a,format="(', a_arr= ',g0)"))
 script+=strcompress(string(task.b,format="(', b_arr= ',g0)"))
 script+=string(arr2str((str2arr(', q_start=['+self.qlist+']')),format="(a0)"))
 script+=string(arr2str((str2arr(', levels=['+self.levels+']')),format="(a0)"))
-default,bridge_id,0
-script+=', save_result="'+strcompress(string(bridge_id,format="('bridge',i0,'.tmp')"),/rem)+'"'
+script+=')'
 return,strcompress(script)
 end
 
@@ -360,7 +360,6 @@ endwhile
 end
 
 pro gxchmp::OnCallback,Status, Error,bridge
-  
   bridge->SetVar,'t_end',systime(/s)
   id=bridge->GetVar('id')
   if status eq 4 then begin
@@ -370,12 +369,7 @@ pro gxchmp::OnCallback,Status, Error,bridge
   self->UpdateBridgeStatus,oncallback=id
   ntasks=self.tasks->Count()
   task_id=bridge->GetVar('task_id')
-  tmp_file=strcompress(string(id,format="('bridge',i0,'.tmp')"),/rem)
-  if ~file_exist(self.tmpDir+path_sep()+tmp_file) then begin
-     self->message,strcompress(string(n_elements(self.solution), ntasks, task.a, task.b, format="('Error on: ', i0,' tasks out of ',i0,'; a=',g0, ' b=', g0)"))
-    goto,skip
-  endif
-  restore,self.tmpDir+path_sep()+tmp_file
+  result=bridge->GetVar('result')
   self.solution->add,create_struct(result,'task_id',task_id)
   task=self.tasks[task_id]
   t_start=bridge->GetVar('t_start')
@@ -414,10 +408,12 @@ pro gxchmp::OnEndSearch
   solfile=strcompress(self.tmpDir+path_sep()+'gxchmp_solution.sav')
   result=self.solution->ToArray()
   save,result,file=solfile
-  self->message,'Solution saved in '+solfile
+  self->message,'Solution temporary saved in '+solfile
   self->message,'Generating the best solutions plots...'
   gx_plotbestmwmodels_ebtel, result, self.psDir,levels=self->Str2Arr(self.levels)
-  self->message,['Best solutions plots saved to:..',strcompress(self.psDir+path_sep()+'BestRES.sav'),strcompress(self.psDir+path_sep()+'BestCHI.sav')]
+  files=[strcompress(self.psDir+path_sep()+'BestRES.ps'),strcompress(self.psDir+path_sep()+'BestCHI.ps')]
+  if n_elements(result) ge 4 then files=[files,strcompress(self.psDir+path_sep()+'Best of Bests.ps')]
+  self->message,['Best solutions plots saved to:..',files]
 end
 
 pro gxchmp::CreatePanel,xsize=xsize,ysize=ysize
@@ -860,7 +856,7 @@ function gxchmp::HandleEvent, event
                endfor
                if ~(n_elements(raw) eq 2 and n_elements(resize) eq 2) then begin
                  answ=dialog_message([['Invalid syntax!'],['Expected:'],['raw=[Nx,Ny]; resize=[Nx,Ny]']])
-                 widget_control,event.id,set_value=self.fov
+                 widget_control,event.id,set_value=self.res
                endif else self.res=res
              endelse
            end 

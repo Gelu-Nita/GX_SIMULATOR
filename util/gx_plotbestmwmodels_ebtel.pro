@@ -1,4 +1,6 @@
-pro gx_plotbestmwmodels_ebtel, result,res2_best=res2_best,chi2_best=chi2_best,q_res2_best=q_res2_best,q_chi2_best=q_chi2_best, a=a,b=b, psDir,levels=levels,renorm_q=renorm_q
+pro gx_plotbestmwmodels_ebtel, result,res2_best=res2_best,chi2_best=chi2_best,$
+q_res2_best=q_res2_best,q_chi2_best=q_chi2_best, a=a,b=b, psDir,levels=levels,$
+renorm_q=renorm_q
 if ~isa(result) then begin
   message,'No input structure provided!',/cont
   return
@@ -19,20 +21,22 @@ if not file_test(psDir) then file_mkdir,psDir
  b=b0[uniq(b0,sort(b0))]
  chi2_img=(res2_img=(res_img=(chi_img=(q0_img=dblarr(n_elements(a),n_elements(b),2)*!values.d_nan))))
  obj_img=objarr(n_elements(a),n_elements(b),2)
+ thisDevice = !D.Name
+ set_plot,'ps'
  for k=0,1 do begin
    nmod=n_elements(result)
    R=(npix=(q0=(res=(res2=fltarr(nmod)))))
    chi2=res2
    chi=chi2
-
-   set_plot,'ps'
    psObject = Obj_New("FSC_PSConfig", /Color, /Times, /Bold, Filename=psFilesArr[k],yoffset=0.5,xoffset=0.25,ysize=6.4,xsize=9.5,landscape=1,bits=8)
-   Device, _Extra=psObject->GetKeywords()
+   _Extra=psObject->GetKeywords()
+   _Extra.filename=psFilesArr[k]
+   Device, _Extra= _Extra
     
    default,pmulti,[0,3,2,0,0]
    !p.multi=pmulti
    !p.font=2
-   charsize=1.2
+   charsize=2
    loadct,39
    modidx=0  
    smaxm=0
@@ -224,9 +228,11 @@ if not file_test(psDir) then file_mkdir,psDir
     obj_chi2_best[i,j]=obj_img[i,j,jmin]
   endfor
  end
-
- psObject = Obj_New("FSC_PSConfig", /Color, /Times, /Bold, Filename=psDir+'\Best of Bests.ps',yoffset=0.5,xoffset=0.25,ysize=6.4,xsize=9.5,landscape=1,bits=8)
- Device, _Extra=psObject->GetKeywords()
+ filename=psDir+'\Best of Bests.ps'
+ psObject = Obj_New("FSC_PSConfig", /Color, /Times, /Bold, Filename=Filename,yoffset=0.5,xoffset=0.25,ysize=6.4,xsize=9.5,landscape=1,bits=8)
+ _Extra=psObject->GetKeywords()
+ _Extra.filename=psDir+'\Best of Bests.ps'
+ Device, _Extra=_Extra
  !p.multi=[0,3,2,0,1]
  
  best_res2=min(res2_best,imin)
@@ -244,18 +250,24 @@ if not file_test(psDir) then file_mkdir,psDir
   q_res2_best[bad]=max(q_res2_best,/nan)*1.01
   q_chi2_best[bad]=max(q_chi2_best,/nan)*1.01
  endif
- 
- tvplot,res2_best,a,b,charsize=charsize,title='RES!U2!N',xtitle='a',ytitle='b',/sample,/iso
+ ymargin=[2,1]
+ cposition=[0.07,0.98,0.31,1.0]
+ tvplot,res2_best,a,b,charsize=charsize,ymargin=ymargin,title='RES!U2!N',xtitle='a',ytitle='b',/sample,/iso
  plots,a[idx_res2[0]],b[idx_res2[1]],psym=2,color=250,symsize=symsize,thick=3
- 
- tvplot,chi2_best,a,b,charsize=charsize,title='CHI!U2!N',xtitle='a',ytitle='b',/sample,/iso
- plots,a[idx_chi2[0]],b[idx_chi2[1]],psym=2,color=250,symsize=symsize,thick=3
- 
- tvplot,keyword_set(renorm_q)?alog10(q_res2_best):q_res2_best,a,b,charsize=charsize,title='Q!D0!N RES!U2!N',xtitle='a',ytitle='b',/sample,/iso
- plots,a[idx_res2[0]],b[idx_res2[1]],psym=2,color=250,symsize=symsize,thick=3
+ gx_colorbar,minmax(res2_best),cposition=cposition-[0,0.02,0,0.02],charsize=2,font=!p.font
 
- tvplot,keyword_set(renorm_q)?alog10(q_chi2_best):q_chi2_best,a,b,charsize=charsize,title='Q!D0!N CHI!U2!N',xtitle='a',ytitle='b',/sample,/iso
+ tvplot,chi2_best,a,b,charsize=charsize,ymargin=ymargin,title='CHI!U2!N',xtitle='a',ytitle='b',/sample,/iso
  plots,a[idx_chi2[0]],b[idx_chi2[1]],psym=2,color=250,symsize=symsize,thick=3
+ gx_colorbar,minmax(chi2_best),cposition=cposition-[0,0.52,0,0.52],charsize=2,font=!p.font
+ 
+ cposition=[0.07,0.98,0.31,1.0]+[1,0,1,0]*0.335
+ tvplot,keyword_set(renorm_q)?alog10(q_res2_best):q_res2_best,a,b,charsize=charsize,ymargin=ymargin,title='Q!D0!N RES!U2!N',xtitle='a',ytitle='b',/sample,/iso
+ plots,a[idx_res2[0]],b[idx_res2[1]],psym=2,color=250,symsize=symsize,thick=3
+ gx_colorbar,minmax(keyword_set(renorm_q)?alog10(q_res2_best):q_res2_best),cposition=cposition-[0,0.02,0,0.02],charsize=2,font=!p.font
+ 
+ tvplot,keyword_set(renorm_q)?alog10(q_chi2_best):q_chi2_best,a,b,charsize=charsize,ymargin=ymargin,title='Q!D0!N CHI!U2!N',xtitle='a',ytitle='b',/sample,/iso
+ plots,a[idx_chi2[0]],b[idx_chi2[1]],psym=2,color=250,symsize=symsize,thick=3
+ gx_colorbar,minmax(keyword_set(renorm_q)?alog10(q_chi2_best):q_chi2_best),cposition=cposition-[0,0.52,0,0.52],charsize=2,font=!p.font
   
  res2_best_b=b*0
  res2_min=b*0
@@ -270,7 +282,7 @@ if not file_test(psDir) then file_mkdir,psDir
 
 
  symsize=2
- plot,a,res2_best_b,/iso,xtitle='a',ytitle='b',charsize=charsize,/xsty,/ysty,xrange=minmax(a),yrange=minmax(b),/nodata,title='Best of Bests (a,b)'
+ plot,a,res2_best_b,/iso,xtitle='a',ytitle='b',charsize=charsize,ymargin=ymargin,/xsty,/ysty,xrange=minmax(a),yrange=minmax(b),/nodata,title='Best of Bests (a,b)'
  oplot,a,res2_best_b,color=50,thick=3,psym=-1
  oplot,a,chi2_best_b,color=250,thick=3,psym=-1
  plots,!x.crange,b[idx_res2[[1,1]]],linesty=1,color=50,thick=3
@@ -282,11 +294,12 @@ if not file_test(psDir) then file_mkdir,psDir
  gx_plot_label,0.05,0.9,strcompress(string(best_res2,a[idx_res2[0]],b[idx_res2[1]],format="('RES!U2!N=',f0.3,'; a= ',f0.2,'; b= ',f0.2)")),charsize=1,color=50
  gx_plot_label,0.05,0.8,strcompress(string(best_chi2,a[idx_chi2[0]],b[idx_chi2[1]],format="('CHI!U2!N=',f0.3,'; a= ',f0.2,'; b= ',f0.2)")),charsize=1,color=250
  
- plot,a,res2_min,charsize=charsize,/xsty,title='Best of Bests (RES!U2!N, CHI!U2!N)',color=0,/noerase,ysty=9,xtitle='a',ytitle='RES!U2!N'
+ ymargin=[2,6]
+ plot,a,res2_min,charsize=charsize,ymargin=ymargin,/xsty,title='Best of Bests (RES!U2!N, CHI!U2!N)',color=0,/noerase,ysty=9,xtitle='a',ytitle='RES!U2!N'
  oplot,a,res2_min,color=50,thick=3
- plot,a,chi2_min,charsize=charsize,/xsty,color=0,ysty=5
+ plot,a,chi2_min,charsize=charsize,ymargin=ymargin,/xsty,color=0,ysty=5
  oplot,a,chi2_min,color=250,thick=3
- axis,yaxis=1,ytitle='CHI!U2!N',/ysty,charsize=charsize
+ axis,yaxis=1,ytitle='CHI!U2!N',/ysty,charsize=charsize,ymargin=ymargin
  gx_plot_label,0.05,0.9,string(best_res2,best_res2_q,format="('RES!U2!N=',f0.3,' Q!D0!N=',g0)"),charsize=1,color=50
  gx_plot_label,0.05,0.8,string(best_chi2,best_chi2_q,format="('CHI!U2!N=',f0.3,' Q!D0!N=',g0)"),charsize=1,color=250
  
@@ -346,6 +359,6 @@ if not file_test(psDir) then file_mkdir,psDir
  !p.multi=0  
  a=a_arr
  b=b_arr
- set_plot,'win'
+ set_plot,thisDEvice
 end
 

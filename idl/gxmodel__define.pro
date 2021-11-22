@@ -1183,12 +1183,15 @@ pro gxModel::Slice,parms,row,scanner=scanner
   idx=gx_name2idx(parms,'DEMAVG')
   if (size(idx))[0] ne 0 then begin
     self->GetProperty,wparent=wparent
-    id=widget_info(wparent,find_by_uname='GXMODEL:DEMAVG')
-    if widget_valid(id) then begin
+    if widget_valid(wparent)  then begin
+     id=widget_info(wparent,find_by_uname='GXMODEL:DEMAVG')
+     if widget_valid(id) then begin
       widget_control,id,get_value=demavg
-      (*scanner).parms[*,*,idx]=demavg
-      assigned[idx]=1
-    endif
+     endif
+    endif 
+    default,demavg,0
+    (*scanner).parms[*,*,idx]=demavg
+    assigned[idx]=1
   end
 
   idx=gx_name2idx(parms,'hc_angle')

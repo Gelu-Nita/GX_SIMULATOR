@@ -1,4 +1,4 @@
-RenderIrregular	:	Render.o 
-			g++ -shared -Wl,-soname,RenderIrregular.so -o RenderIrregular.so Render.o
+RenderIrregular	:	Render.o
+			g++ $^ -shared -o  RenderIrregular.so -fopenmp
 Render.o	:	Render.cpp
-			g++ -c -O3 -fPIC -D LINUX Render.cpp
+			g++ -c -std=c++11 -O3 -fPIC -D LINUX Render.cpp -fopenmp

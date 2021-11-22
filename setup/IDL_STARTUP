@@ -1,2 +1,4 @@
 gxpath=getenv('SSW')+path_sep()+'packages'+path_sep()+'gx_simulator'
-ssw_path,gxpath
+ssw_path,gxpath,/norh
+ebtel=gx_ebtel_path(gx_ebtel_path())
+ebtel_ss=gx_ebtel_path(gx_ebtel_path(/ss),/ss)
