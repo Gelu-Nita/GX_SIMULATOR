@@ -36,7 +36,7 @@ if not file_test(psDir) then file_mkdir,psDir
    default,pmulti,[0,3,2,0,0]
    !p.multi=pmulti
    !p.font=2
-   charsize=2
+   charsize=1.2
    loadct,39
    modidx=0  
    smaxm=0
@@ -349,7 +349,6 @@ if not file_test(psDir) then file_mkdir,psDir
    plot_map,RES_NORM_MAP,charsize=charsize,title=filnam+'RES Map',dmax=d_res, dmin=-d_res
    xyouts,x[10*sx,90*sy],y[10*sx,90*sy],string(res,format="(' Res=',g0)"),charsize=charsize,color=25
    xyouts,x[10*sx,90*sy],y[10*sx,80*sy],string(res2,format="(' Res!U2!N=',g0)"),charsize=charsize,color=25
-  ; xyouts,x[10*sx,90*sy],y[10*sx,70*sy],string(Q0,format="(' Q0=',g0)"),charsize=charsize,color=25
    plot_map,CHI2_MAP,charsize=charsize,title=filnam+'CHI!U2!N Map' ,dmax=d_res*20, dmin=0 ;-d_res*10
    xyouts,x[10*sx,90*sy],y[10*sx,90*sy],string(chi,format="(' Chi=',g0)"),charsize=charsize,color=200
    xyouts,x[10*sx,90*sy],y[10*sx,80*sy],string(chi2,format="(' Chi!U2!N=',g0)"),charsize=charsize,color=200

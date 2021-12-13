@@ -3,7 +3,7 @@ function gx_search4bestq, gxm_path=gxm_path,a_arr=a_arr,b_arr=b_arr,q_start=q_st
                      ebtel_path=ebtel_path,renderer=renderer,$
                      xc=xc,yc=yc,xfov=xfov,yfov=yfov,nx=nx,ny=ny,$
                      levels=levels,resize=resize,save_gxc=save_gxc,redo=redo,$
-                     save_result=save_result,plot_best=plot_best
+                     save_result=save_result,plot_best=plot_best,_extra=_extra
   final_result=[]
   catch, error_status
   if error_status ne 0 then begin
@@ -72,7 +72,7 @@ function gx_search4bestq, gxm_path=gxm_path,a_arr=a_arr,b_arr=b_arr,q_start=q_st
             q0_formula='q[0]'
             q_formula=string(a,b,format="('q0*(B/q[1])^',g0,'/(L/q[2])^',g0)")
             q_parms=[q[j], 100.0, 1.0000000d+009, 0.0, 0.0]
-            omap=gx_mwrender_ebtel(model,renderer,ebtel_path=ebtel_path,q_parms=q_parms,q_formula=q_formula,q0_formula=q0_formula,f_min=17d9,n_freq=1,gxcube=gxcube)
+            omap=gx_mwrender_ebtel(model,renderer,ebtel_path=ebtel_path,q_parms=q_parms,q_formula=q_formula,q0_formula=q0_formula,f_min=17d9,n_freq=1,gxcube=gxcube,_extra=_extra)
             if obj_valid(omap) then begin
                 map->setmap,0,omap->get(0,/map)
                 save,map,file=modfile
@@ -85,6 +85,7 @@ function gx_search4bestq, gxm_path=gxm_path,a_arr=a_arr,b_arr=b_arr,q_start=q_st
                            modDir=modDir,obsDir=obsDir,psDir=psDir,$
                            levels=levels,resize=resize,$
                            file_arr=file_arr,apply2=apply2,done=force_done)
+
 
         if result.res_done eq 0 or result.chi_done  eq 0 then begin
           nq=n_elements(q)

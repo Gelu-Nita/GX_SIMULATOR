@@ -31,6 +31,7 @@ function metrics_root,q,metrics,metrics_thresh,ignore_in=ignore_in,done=done
     metrics_best=0
     metrics_best_idx=-1
   endelse
+  q_best=q_best>1e-6<1
   q_best_high=10^((metrics_thresh-fit[0])/fit[1])
   q_best_low=10^((-metrics_thresh-fit[0])/fit[1])
   q_range=[q_best_low,q_best_high]
@@ -104,9 +105,10 @@ function gx_processmwmodels_ebtel,ab=ab,ref=ref,$
    if (apply2 ne 3) then Filename=psDir+path_sep()+strcompress(string(a[0],b[0],format="('set_a',g0,'b',g0,'.ps')"),/rem) else Filename=psDir+path_sep()+strcompress(string(a[0],b[0],format="('set_a',g0,'b',g0,'_final.ps')"),/rem)
    charsize=1.2
    psObject = Obj_New("FSC_PSConfig", /Color, /Times, /Bold, Filename=Filename,xoffset=0.5,yoffset=0.25,xsize=6.4,ysize=9.5,landscape=0,bits=8)
-   _Extra=psObject->GetKeywords()
-   _Extra.filename=filename
-   Device, _Extra= _Extra
+   psKeys=psObject->GetKeywords()
+   if (apply2 ne 3) then Filename=psDir+path_sep()+strcompress(string(a[0],b[0],format="('set_a',g0,'b',g0,'.ps')"),/rem) else Filename=psDir+path_sep()+strcompress(string(a[0],b[0],format="('set_a',g0,'b',g0,'_final.ps')"),/rem)
+   psKeys.filename=filename
+   Device, _Extra= psKeys
    !p.multi=[0,2,3,0,1]
    print,string(set,count,format="('Processing SET ',i2, ' file count=',i2)")
    print,string(a[0],b[0],format="('a= ',g0, ' b=',g0)")

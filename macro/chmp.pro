@@ -268,6 +268,7 @@ pro chmp_status,status=status,_extra=_extra
     if keyword_set(moddir)then message,'moddir='+self.moddir,/info
     if keyword_set(psdir)then message,'psdir='+self.psdir,/info
     if keyword_set(tmpdir)then message,'tmpdir='+self.tmpdir,/info
+    if keyword_set(script)then print,chmp_script()
     if keyword_set(tasks)then begin
       tasklist=self.tasks
       pending=chmp_where(/pending,pending_count)

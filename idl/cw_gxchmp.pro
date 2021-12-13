@@ -27,7 +27,7 @@ function gxchmp::INIT,wBase,uname=uname, GXMpath=GXMpath,RefDataPath=RefDataPath
   self.alist=alist
   default,blist,'0.7,0.8,0.9,1,1.1,1.2,1.3,1.4,1.5,1.6,1.7,1.8,1.9,2'
   self.blist=blist
-  default,qlist,'0.0001,0.001'
+  default,qlist,'0.001,0.01'
   self.qlist=qlist
   default,levels,'12,20,30,50,80'
   self.levels=levels
@@ -491,7 +491,7 @@ pro gxchmp::CreatePanel,xsize=xsize,ysize=ysize
   wlabel=widget_label(wQlistBase,value='"q0" initial guess set',scr_xsize=label_scr_xsize)
   wResetQlist= widget_button(wQlistBase, $
     value=gx_bitmap(filepath('reset.bmp', subdirectory=['resource', 'bitmaps'])), $
-    /bitmap,tooltip='Reset "qo" parameter list to default',uname='blist_reset')
+    /bitmap,tooltip='Reset "qo" parameter list to default',uname='qlist_reset')
   geom = widget_info (wQlistBase, /geom)
   wQlist=widget_text(wQlistBase,scr_xsize=scr_xsize-geom.scr_xsize,uname='qlist',/editable,$
     value=self.qlist)
@@ -715,7 +715,7 @@ function gxchmp::HandleEvent, event
          ebtelpath_select:
          valid=file_exist(EBTELpath)
          if valid eq 1 then self.EBTELpath=EBTElpath else answ=dialog_message('Not a valid EBTEL file!')
-         widget_control,widget_info(self.wBase,find_by_uname='rendererpath'),set_value=self.renderer
+         widget_control,widget_info(self.wBase,find_by_uname='EBTELpath'),set_value=self.EBTELpath
        end  
       
        'psdir':begin
@@ -782,6 +782,17 @@ function gxchmp::HandleEvent, event
                    self->ResetTasks
                  endelse
                end  
+               
+       'qlist': begin
+                 widget_control,event.id,get_value=list
+                 if n_elements(self->Str2Arr(list[0])) eq 0 then begin
+                   answ=dialog_message('Invalid syntax!')
+                   widget_control,event.id,set_value=self.qlist
+                 endif else begin
+                   self.qlist=list[0]
+                   self->ResetTasks
+                 endelse
+               end          
      'alist_reset': begin
                    self.alist='0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1,1.1,1.2,1.3'
                    widget_control,widget_info(self.wbase,find_by_uname='alist'),set_value=self.alist
@@ -791,7 +802,12 @@ function gxchmp::HandleEvent, event
                    self.blist='0.7,0.8,0.9,1,1.1,1.2,1.3,1.4,1.5,1.6,1.7,1.8,1.9,2'
                    widget_control,widget_info(self.wbase,find_by_uname='blist'),set_value=self.blist
                    self->ResetTasks
-               end                          
+               end    
+     'qlist_reset': begin
+                 self.qlist='0.001,0.01'
+                 widget_control,widget_info(self.wbase,find_by_uname='qlist'),set_value=self.qlist
+                 self->ResetTasks
+               end                                
      'fov': begin
              widget_control,event.id,get_value=fov
              if n_elements(fov) eq 0 then begin
