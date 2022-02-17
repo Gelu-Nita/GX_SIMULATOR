@@ -29,9 +29,9 @@ if not file_test(psDir) then file_mkdir,psDir
    chi2=res2
    chi=chi2
    psObject = Obj_New("FSC_PSConfig", /Color, /Times, /Bold, Filename=psFilesArr[k],yoffset=0.5,xoffset=0.25,ysize=6.4,xsize=9.5,landscape=1,bits=8)
-   _Extra=psObject->GetKeywords()
-   _Extra.filename=psFilesArr[k]
-   Device, _Extra= _Extra
+   psKeys=psObject->GetKeywords()
+   psKeys.filename=psFilesArr[k]
+   Device, _Extra= psKeys
     
    default,pmulti,[0,3,2,0,0]
    !p.multi=pmulti
@@ -269,10 +269,10 @@ if not file_test(psDir) then file_mkdir,psDir
  plots,a[idx_chi2[0]],b[idx_chi2[1]],psym=2,color=250,symsize=symsize,thick=3
  gx_colorbar,minmax(keyword_set(renorm_q)?alog10(q_chi2_best):q_chi2_best),cposition=cposition-[0,0.52,0,0.52],charsize=2,font=!p.font
   
- res2_best_b=b*0
- res2_min=b*0
- chi2_min=b*0
- chi2_best_b=b*0
+ res2_best_b=a*0
+ res2_min=a*0
+ chi2_min=a*0
+ chi2_best_b=a*0
  for k=0,n_elements(a)-1 do begin
  res2_min[k]= min(res2_best[k,*],/nan,imin)
  res2_best_b[k]=b[imin]

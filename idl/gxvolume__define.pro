@@ -382,12 +382,12 @@ function gxVolume::SetQ,q_formula,quiet=quiet
   l=gx_rsun()*l/2
   result=execute('newQ='+q_formula)
   if result eq  0 then begin
-    answ= dialog_message(/error, 'Q formula error: '+!ERROR_STATE.MSG+' . Requested change undone!' )
+    if ~keyword_set(quiet) then answ= dialog_message(/error, 'Q formula error: '+!ERROR_STATE.MSG+' . Requested change undone!' )
     q_formula=undo
     if (n_elements(oldQ) ne 0) then newqQ=oldQ else  result=execute('newQ='+q_formula)
   endif
   if n_elements(newQ) ne n_elements(L) then begin
-    answ= dialog_message(/error, 'Q formula error: Expression returns unexpected array size. Requested change undone!')
+    if ~keyword_set(quiet) then answ= dialog_message(/error, 'Q formula error: Expression returns unexpected array size. Requested change undone!')
     q_formula=undo
     result=execute('newQ='+q_formula)
   endif
@@ -422,7 +422,7 @@ function gxVolume::SetQ0,q0_formula,q_formula=q_formula,quiet=quiet
   l=gx_rsun()*l/2
   result=execute('q0='+q0_formula)
   if result eq  0 then begin
-    answ= dialog_message(/INFO, ['Q0 formula error: '+!ERROR_STATE.MSG,'Rolling it back to: ',undo])
+    if ~keyword_set(quiet) then answ= dialog_message(/INFO, ['Q0 formula error: '+!ERROR_STATE.MSG,'Rolling it back to: ',undo])
     q0_formula=undo
     result=execute('q0='+q0_formula)
   endif
@@ -932,7 +932,7 @@ end
 pro gxVolume::ComputeNT,question=question,quiet=quiet,force=force,NTDEM=NTDEM,NTSS=NTSS,use_dem=use_dem,has_used_ddm=has_used_ddm
   if keyword_set(force) then goto, compute
   if ~self.flags.newNT and keyword_set(question) then begin
-    answ=dialog_message('The N-T pairs have been already computed using current settings. Do you want to recompute them  anyway?',/question)
+    if ~keyword_set(quiet) then answ=dialog_message('The N-T pairs have been already computed using current settings. Do you want to recompute them  anyway?',/question)
     if strupcase(answ) ne 'YES' then begin
       msg='Same N-T key, computation canceled by the user'
       goto,skip

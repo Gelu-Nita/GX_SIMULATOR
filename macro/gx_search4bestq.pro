@@ -61,7 +61,7 @@ function gx_search4bestq, gxm_path=gxm_path,a_arr=a_arr,b_arr=b_arr,q_start=q_st
      done_chi=0b
      apply2=1
      force_done=0
-     repeat begin; until done  
+     REPEAT BEGIN; until done       
         for j=0,n_elements(q)-1 do begin
           modfile=modDir+path_sep()+strcompress(string(a,b,q[j],format="('i_a',f7.2,'b',f7.2,'q',g0,'.map')"),/rem)
           if ~file_exist(modfile) or keyword_set(redo)then begin
@@ -70,32 +70,33 @@ function gx_search4bestq, gxm_path=gxm_path,a_arr=a_arr,b_arr=b_arr,q_start=q_st
               fovdata=model->SetFOV(xc=xc,yc=yc,xfov=xfov, yfov=yfov,nx=nx,ny=ny,/compute_grid)
               end
             q0_formula='q[0]'
-            q_formula=string(a,b,format="('q0*(B/q[1])^',g0,'/(L/q[2])^',g0)")
+            q_formula=string(a,b,format="('q0*(B/q[1])^(',g0,')/(L/q[2])^(',g0,')')")
             q_parms=[q[j], 100.0, 1.0000000d+009, 0.0, 0.0]
-            omap=gx_mwrender_ebtel(model,renderer,ebtel_path=ebtel_path,q_parms=q_parms,q_formula=q_formula,q0_formula=q0_formula,f_min=17d9,n_freq=1,gxcube=gxcube,_extra=_extra)
+            omap=gx_mwrender_ebtel(model,renderer,ebtel_path=ebtel_path,q_parms=q_parms,q_formula=q_formula,q0_formula=q0_formula,f_min=ref.freq*1d9,n_freq=1,gxcube=gxcube,_extra=_extra)
             if obj_valid(omap) then begin
                 map->setmap,0,omap->get(0,/map)
                 save,map,file=modfile
                 obj_destroy,omap
             endif
-            if (isa(gxcube) and keyword_set(save_gxc)) then save,gxcube,file=gxcDir+path_sep()+strcompress(string(a,b,q[j],format="('a',f7.2,'b',f7.2,'q',g0,'.gxc')"),/rem)
+            if (isa(gxcube) and keyword_set(save_gxc)) then save,gxcube,file=gxcDir+path_sep()+strcompress(string(a,b,q[j],ref.freq,format="('a',f7.2,'b',f7.2,'q',g0,'f',g0,'GHz.gxc')"),/rem)
           endif else gx_message, modfile+' already exists, no reprocessing requested!',/info,/cont
         endfor
         result=gx_processmwmodels_ebtel(ab=[a,b],ref=ref,$
-                           modDir=modDir,obsDir=obsDir,psDir=psDir,$
-                           levels=levels,resize=resize,$
-                           file_arr=file_arr,apply2=apply2,done=force_done)
-
-
-        if result.res_done eq 0 or result.chi_done  eq 0 then begin
-          nq=n_elements(q)
-          if result.res_done eq 0 then q=[q,result.q_res_best] else q=[q,result.q_chi_best]
-          q=q[uniq(q,sort(q))]  
-         if n_elements(q) eq nq then begin
-          if apply2 eq 1 then apply2=3 else force_done=1
-         endif
-       endif else if apply2 eq 3 then done=1 else apply2=3        
-     endrep until done
+          modDir=modDir,obsDir=obsDir,psDir=psDir,$
+          levels=levels,resize=resize,$
+          file_arr=file_arr,apply2=apply2,done=force_done)
+        if size(result,/tname) eq 'STRUCT' then begin
+          add_q=(apply2 eq 1)?((result.res_done eq 0) and (result.chi_done  eq 0)):((result.res_done eq 0) or (result.chi_done  eq 0))
+          if add_q eq 1 then begin
+            nq=n_elements(q)
+            if result.res_done eq 0 then q=[q,result.q_res_best] else q=[q,result.q_chi_best]
+            q=q[uniq(q,sort(q))]
+            if n_elements(q) eq nq then begin
+              if apply2 eq 1 then apply2=3 else force_done=1
+            endif
+          endif else if apply2 eq 3 then done=1 else apply2=3
+        endif else done=1
+     ENDREP UNTIL done
      final_result=[final_result,result]   
  endfor
  endfor

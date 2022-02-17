@@ -108,7 +108,8 @@ function gx_metrics_image, data_model, data_obs, data_sdev,mask=mask,apply2=appl
   data_obs_d = double(data_obs)
   
   if isa(data_sdev) then begin
-    if ~array_equal(size(data_model),size(data_sdev)) then begin
+    data_sdev_d=double(data_sdev)
+    if ~array_equal((size(data_model))[0:2],(size(data_sdev))[0:2]) then begin
      message,'Provided SDEV data, not matching model and data array sizes, will be ignored!',/cont 
     endif else data_sdev_d=double(data_sdev)
   endif

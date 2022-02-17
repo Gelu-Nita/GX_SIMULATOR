@@ -26,7 +26,7 @@ function gx_mwrender_ebtel,model,renderer,ebtel_path=ebtel_path,ss=ss,q_parms=q_
   flags=volume->Setflags(/NTDEM,NTSSDEM=keyword_set(ss))
   default, q0_formula, 'q[0]'
   q0_formula=volume->SetQ0(q0_formula,/quiet)
-  default, q_formula, 'q[0]*(B/q[1])^q[3](L/q[2])^q[4]'
+  default, q_formula, 'q[0]*(B/q[1])^(q[3])*(L/q[2])^(q[4])'
   q_formula=volume->SetQ(q_formula,/quiet)
   message,'EBTEL heating rate formula in use: '+q_formula,/cont
   volume->Update,/nt,use_dem=use_dem,has_used_ddm=has_used_ddm

@@ -71,6 +71,7 @@ function gx_processmwmodels_ebtel,ab=ab,ref=ref,$
  endif else if moddir ne '' then modFiles=find_files('*.map',modDir)
  ;----------------------------------------------------------------------------
  nmod=n_elements(modFiles)
+ if nmod eq 1 and modFiles[0] eq '' then return,[]
  a0=(b0=(q0=fltarr(nmod)))
  formula0=(id0=(setfiles0=strarr(nmod)))
  dx0=(dy0=(width0=0))
@@ -103,11 +104,11 @@ function gx_processmwmodels_ebtel,ab=ab,ref=ref,$
    setfiles=modFiles[good]
    formula=formula0[good]
    if (apply2 ne 3) then Filename=psDir+path_sep()+strcompress(string(a[0],b[0],format="('set_a',g0,'b',g0,'.ps')"),/rem) else Filename=psDir+path_sep()+strcompress(string(a[0],b[0],format="('set_a',g0,'b',g0,'_final.ps')"),/rem)
+   filename_copy=filename
    charsize=1.2
    psObject = Obj_New("FSC_PSConfig", /Color, /Times, /Bold, Filename=Filename,xoffset=0.5,yoffset=0.25,xsize=6.4,ysize=9.5,landscape=0,bits=8)
    psKeys=psObject->GetKeywords()
-   if (apply2 ne 3) then Filename=psDir+path_sep()+strcompress(string(a[0],b[0],format="('set_a',g0,'b',g0,'.ps')"),/rem) else Filename=psDir+path_sep()+strcompress(string(a[0],b[0],format="('set_a',g0,'b',g0,'_final.ps')"),/rem)
-   psKeys.filename=filename
+   psKeys.filename=filename_copy
    Device, _Extra= psKeys
    !p.multi=[0,2,3,0,1]
    print,string(set,count,format="('Processing SET ',i2, ' file count=',i2)")

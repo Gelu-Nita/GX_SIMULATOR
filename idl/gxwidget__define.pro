@@ -931,22 +931,22 @@ end
      'GXCORONA:N0':Begin
                          widget_control,event.id,get_value=n0
                          self.subject->SetProperty,n0=n0
-                         self.subject->UpdateVolume
+                         self.subject->UpdateVolume,/newID
                         End 
      'GXCORONA:T0':Begin
                          widget_control,event.id,get_value=T0
                          self.subject->SetProperty,T0=T0
-                         self.subject->UpdateVolume
+                         self.subject->UpdateVolume,/newID
                         End    
      'GXCORONA:N_TH':Begin
                      widget_control,event.id,get_value=n_th
                      self.subject->SetProperty,n_th=n_th
-                     self.subject->UpdateVolume
+                     self.subject->UpdateVolume,/newID
                     End  
      'GXCORONA:P':Begin
                      widget_control,event.id,get_value=p
                      self.subject->SetProperty,p=p
-                     self.subject->UpdateVolume
+                     self.subject->UpdateVolume,/newID
                     End  
      'GXCORONA:E_SELECT':Begin
                       case event.index of
@@ -955,34 +955,34 @@ end
                        else:dist_e=6
                       end
                       self.subject->SetProperty,dist_e=dist_e
-                      self.subject->UpdateVolume
+                      self.subject->UpdateVolume,/newID
                       self.subject->GetProperty,wParent=wParent
                       widget_control,widget_info(wParent,find_by_uname='GXCORONA:kappa'),map=(dist_e eq 6)
                     End  
      'GXCORONA:EMIN':Begin
                        widget_control,event.id,get_value=emin
                        self.subject->SetProperty,emin=emin
-                       self.subject->UpdateVolume
+                       self.subject->UpdateVolume,/newID
                     End
      'GXCORONA:EMAX':Begin
                        widget_control,event.id,get_value=emax
                        self.subject->SetProperty,emax=emax
-                       self.subject->UpdateVolume
+                       self.subject->UpdateVolume,/newID
                     End 
      'GXCORONA:KAPPA':Begin
                        widget_control,event.id,get_value=kappa
                        self.subject->SetProperty,kappa=kappa
-                       self.subject->UpdateVolume
+                       self.subject->UpdateVolume,/newID
                     End
      'GXCORONA:CHROMO_N':Begin
                        widget_control,event.id,get_value=chromo_n
                        self.subject->SetProperty,chromo_n=chromo_n
-                       self.subject->UpdateVolume
+                       self.subject->UpdateVolume,/newID
                     End
      'GXCORONA:CHROMO_T':Begin
                        widget_control,event.id,get_value=chromo_T
                        self.subject->SetProperty,chromo_T=chromo_T
-                       self.subject->UpdateVolume
+                       self.subject->UpdateVolume,/newID
                     End  
      'GXCORONA:CHROMO_H':Begin
                        widget_control,event.id,get_value=chromo_h
@@ -1000,15 +1000,15 @@ end
                        WIDGET_CONTROL, event.id,/bitmap,tooltip=tooltip,set_value=chromo_view?$
                         gx_bitmap(filepath('image.bmp', subdirectory=subdirectory)):$
                         gx_bitmap(filepath('eye_closed.bmp', subdirectory=subdirectory))
-                        self.subject->UpdateVolume
+                        self.subject->UpdateVolume,/newID
                     End 
      'GXCORONA:BLEND':BEGIN
                         self.subject->SetProperty,blend=event.select
-                        self.subject->UpdateVolume
+                        self.subject->UpdateVolume,/newID
                        END  
      'GXCORONA:IGNORE':BEGIN
                          self.subject->SetProperty,ignore=event.select
-                         self.subject->UpdateVolume
+                         self.subject->UpdateVolume,/newID
                        END                                                                                                                                                                                       
      ;---------------- gxModel-------------------------------------------------------------
      'GXMODEL:HIDE':BEGIN

@@ -9,6 +9,7 @@ function gxchmp::INIT,wBase,uname=uname, GXMpath=GXMpath,RefDataPath=RefDataPath
     MESSAGE, /INFO, !ERROR_STATE.MSG
     return, 0
   end
+  self.WinOS=!version.os_family eq 'Windows'
   default,modDir,curdir()+path_sep()+'moddir'
   self.modDir=modDir
   default,psDir,curdir()+path_sep()+'PsDir'
@@ -40,7 +41,6 @@ function gxchmp::INIT,wBase,uname=uname, GXMpath=GXMpath,RefDataPath=RefDataPath
   default,solution,list()
   self.solution=list()
   self.bridges=obj_new('IDL_Container')
-  self.WinOS=!version.os_family eq 'Windows'
   void=self->gxWidget::Init(wBase,self,KILL_NOTIFY='objgxchmpKill',_extra=_extra)
   self->SetBridges
   self->ResetTasks
@@ -83,6 +83,10 @@ function gxchmp::SaveSolution,question=question
     endif else answ='Cancel'
   endif
   return,answ
+end
+
+pro gxchmp::Solution2PS
+ gx_plotbestmwmodels_ebtel, self.solution->ToArray(), self.psDir
 end
 
 pro gxchmp::message,msg,_extra=_extra
@@ -211,13 +215,20 @@ pro gxchmp::UpdateBridgeStatus,reset=reset,oncallback=oncallback
   self->ControlWidgets,sensitive=~active
 end          
 
+function gxchmp::list2dblarr,strlist
+  s='['+arr2str(str2arr(str_replace(str_replace(str_replace('['+arr2str(strlist)+']','[',''),']',''),'d',''))+'d')+']'
+  code=execute('arr='+s)
+  return,arr  
+end
+
 pro gxchmp::ResetTasks
-    code=execute('a=['+self.alist+']')
-    code=execute('b=['+self.blist+']')
+    a=self->list2dblarr(self.alist)
+    b=self->list2dblarr(self.blist)
+    q=minmax(self->list2dblarr(self.qlist))
     if obj_valid(self.tasks) then self.tasks->Remove,/all else self.tasks=list()
     for i=0,n_elements(a)-1 do begin
       for j=0,n_elements(b)-1 do begin
-        self.tasks->add,{id:self.tasks->Count(),a:string(a[i],format='(g0)'),b:string(b[j],format='(g0)'),res2:0.0d,qres2:0.0d,chi2:0.0d,qchi2:0.0d,status:'pending'}
+        self.tasks->add,{id:self.tasks->Count(),a:a[i],b:b[j],q:q,res2:0.0d,qres2:0.0d,chi2:0.0d,qchi2:0.0d,status:'pending'}
       endfor
     endfor
     self->UpdateTaskQueue
@@ -230,7 +241,7 @@ pro gxchmp::UpdateTaskQueue
     for k=0,self.tasks->Count()-1 do begin
       task=self.tasks(k)
       rows_labels=[rows_labels,string(task.id,format='(g0)')]
-      rows=[rows,rem_tag(task,'ID')]
+      rows=[rows,rem_tag(rem_tag(task,'ID'),'q')]
     endfor
       wQueue=widget_info(self.wBase,find_by_uname='Queue')
       widget_control,wQueue,table_ysize=n_elements(rows)
@@ -289,7 +300,7 @@ pro gxchmp::AssignTask,bridge,task_id,OnStartSearch=OnStartSearch
     bridge->SetVar,'a',task.a
     bridge->SetVar,'b',task.b
     bridge_id=bridge->GetVar('id')
-    task.status=string(bridge_id,format="('Assigned to thread #',i0)")
+    task.status=string(bridge_id,format="('#',i0)")+'@'+strmid(systime(),11,8)
     self.tasks[task_id]=task
     bridge->Execute,'delvar,result'
     bridge->Execute,self->GetScript(task_id=task_id),/nowait
@@ -329,7 +340,7 @@ default,task_id,0
 task=self.tasks[task_id]
 script+=strcompress(string(task.a,format="(', a_arr= ',g0)"))
 script+=strcompress(string(task.b,format="(', b_arr= ',g0)"))
-script+=string(arr2str((str2arr(', q_start=['+self.qlist+']')),format="(a0)"))
+script+=', q_start=['+arr2str(task.q)+']'
 script+=string(arr2str((str2arr(', levels=['+self.levels+']')),format="(a0)"))
 script+=')'
 return,strcompress(script)
@@ -370,19 +381,33 @@ pro gxchmp::OnCallback,Status, Error,bridge
   ntasks=self.tasks->Count()
   task_id=bridge->GetVar('task_id')
   result=bridge->GetVar('result')
-  self.solution->add,create_struct(result,'task_id',task_id)
   task=self.tasks[task_id]
   t_start=bridge->GetVar('t_start')
   t_end=bridge->GetVar('t_end')
-  task.status=strcompress(string(t_end-t_start,format="('Completed in ',g0,'s')"))
+  if n_elements(result) eq 0 then begin
+    msg='Aborted after '
+    goto,update_task
+  endif
+  if self.solution->Count() gt 0 then begin
+    if n_tags(result) eq n_tags(self.solution(0))-1 then begin
+     self.solution->add,create_struct(result,'task_id',task_id)
+     msg='C@'+strmid(systime(),11,8)+' in '
+    endif else msg='Aborted after '
+  endif else begin
+    self.solution->add,create_struct(result,'task_id',task_id)
+    msg='C@'+strmid(systime(),11,8)+' in '
+  endelse
   task.res2=result.RES2_BEST
   task.chi2=result.CHI2_BEST
   task.qres2=result.Q_RES2_BEST
   task.qchi2=result.Q_CHI2_BEST
+  update_task:
+  task.status=strcompress(string(msg,t_end-t_start,format="(a0,g0,'s')"))
   self.tasks[task_id]=task
   self->UpdateTaskQueue
   self.completed+=1
   self->message,strcompress(string(n_elements(self.solution), ntasks, task.a, task.b, format="('Completed ', i0,' tasks out of ',i0,'; a=',g0, ' b=', g0)"))
+  self->Solution2PS
   skip:
   if self.completed ne ntasks then begin
   i=0
@@ -426,6 +451,7 @@ pro gxchmp::CreatePanel,xsize=xsize,ysize=ysize
 
   toolbar= widget_base(main_base, /row,/toolbar)
   wExecute=widget_button(toolbar,value=gx_bitmap(gx_findfile('play.bmp')),tooltip='Execute Search Tasks',/bitmap,uname='execute')
+  wPlot=widget_button(toolbar,value=gx_bitmap(filepath('plot.bmp', subdirectory=['resource', 'bitmaps'])),tooltip=' Send results to PS file',/bitmap,uname='2ps')
   wSave=widget_button(toolbar,value=gx_bitmap(filepath('save.bmp', subdirectory=['resource', 'bitmaps'])),tooltip='Save search results',/bitmap,uname='save') 
   wAbort=widget_button(toolbar,value=gx_bitmap(gx_findfile('abort.bmp')),tooltip='Abort all tasks',/bitmap,uname='abort')
 
@@ -915,11 +941,16 @@ function gxchmp::HandleEvent, event
                   self.SetBridges,nthreads
                  end  
      'clearlog':begin
-                   widget_control,widget_info(self.wIDBase,find_by_uname='console'),set_value=''
+                   ;widget_control,widget_info(self.wIDBase,find_by_uname='console'),set_value=''
+                   self.Solution2PS 
                  end  
      'execute':self->OnStartSearch  
-     'abort':self->Abort   
-     'save':answ=self.SaveSolution()                                 
+     'abort':begin 
+               answ=dialog_message('Do you want to abort all running tasks?',/question)
+               if strupcase(answ) eq 'YES' then self->Abort   
+              end 
+     'save':answ=self.SaveSolution()   
+     '2ps':self.Solution2PS                              
     else:
   endcase
   return,self->Rewrite(event)

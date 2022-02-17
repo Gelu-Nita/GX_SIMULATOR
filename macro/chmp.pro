@@ -12,6 +12,8 @@ pro chmp_help
   print,'% IDL-> chmp, /start; to start processing the task queue
   print,'% IDL-> chmp, /flush; to flush the pending task queue
   print,'% IDL-> chmp, /abort; to abort all active tasks and flush the pending task queue
+  print,'% IDL-> chmp, /quiet; to turn off run-time execution progress messages
+  print,'% IDL-> chmp, /loud; to turn on run-time execution progress messages
   print,'% IDL-> chmp, /exit; to abort all active tasks, flush the pending task queue, and exit the application
   gx_message,'% Any logical combination of the arguments and keywords listed above should result in a valid single-line calling sequence',/cont,/info,level=-1
 end
@@ -21,7 +23,7 @@ pro chmp_self
   if ~isa(self,'chmp') then begin
     self={chmp,active:0l,GXMpath:'',RefDataPath:'',modDir:'',psDir:'',TmpDir:'',EbtelPath:'',$
       renderer:'',alist:'',blist:'',qlist:'',levels:'',fov:'',res:'',completed:0l,$
-      RefDataStruct:ptr_new(),solution:obj_new(),bridges:obj_new(),tasks:obj_new(),WinOS:0l}
+      RefDataStruct:ptr_new(),solution:obj_new(),bridges:obj_new(),tasks:obj_new(),WinOS:0l,quiet:0L}
     if file_exist('gxchmp.ini') and ~keyword_set(fresh) then restore,'gxchmp.ini'
     self.WinOS=(!version.os_family eq 'Windows')
     default,modDir,curdir()+path_sep()+'moddir'
@@ -127,15 +129,22 @@ pro chmp_set_bridges, nbridges,new=new,force=force
   chmp_status,/bridges
 end
 
+function chmp_list2dblarr,strlist
+  s='['+arr2str(str2arr(str_replace(str_replace(str_replace('['+arr2str(strlist)+']','[',''),']',''),'d',''))+'d')+']'
+  code=execute('arr='+s)
+  return,arr
+end
+
 pro chmp_reset,_extra=_extra
   common chmp, self
   chmp_self
-  code=execute('a=['+self.alist+']')
-  code=execute('b=['+self.blist+']')
+  a=chmp_list2dblarr(self.alist)
+  b=chmp_list2dblarr(self.blist)
+  q=minmax(chmp_list2dblarr(self.qlist))
   if obj_valid(self.tasks) then self.tasks->Remove,/all else self.tasks=list()
   for i=0,n_elements(a)-1 do begin
     for j=0,n_elements(b)-1 do begin
-      self.tasks->add,{id:self.tasks->Count(),a:string(a[i],format='(g0)'),b:string(b[j],format='(g0)'),duration:0d,status:'pending'}
+      self.tasks->add,{id:self.tasks->Count(),a:a[i],b:b[j],q:q,duration:0d,status:'pending'}
     endfor
   endfor
   chmp_status,_extra=_extra
@@ -201,13 +210,13 @@ function chmp_where,pending=pending,completed=completed,aborted=aborted,active=a
   return,selected
 end
 
-pro chmp_flush_queue,quiet=quiet
+pro chmp_flush_queue
   common chmp, self
   chmp_self
   if obj_valid(self.tasks) eq 0 then self.tasks=list()
   self.tasks->Remove,/all
   pending=chmp_where(/pending,count)
-  if ~keyword_set(quiet) then message,string (count,format="('Tasks list updated: ',g0, ' pending tasks in the proceesing queue')"),/info
+  message,string (count,format="('Tasks list updated: ',g0, ' pending tasks in the proceesing queue')"),/info
 end
 
 pro chmp_close_bridges
@@ -241,7 +250,7 @@ function chmp_script,task_id=task_id
   task=self.tasks[task_id]
   script+=strcompress(string(task.a,format="(', a_arr= ',g0)"))
   script+=strcompress(string(task.b,format="(', b_arr= ',g0)"))
-  script+=string(arr2str((str2arr(', q_start=['+self.qlist+']')),format="(a0)"))
+  script+=', q_start=['+arr2str(task.q)+']'
   script+=string(arr2str((str2arr(', levels=['+self.levels+']')),format="(a0)"))
   script+=')'
   return,strcompress(script)
@@ -280,14 +289,12 @@ pro chmp_status,status=status,_extra=_extra
       endif else begin
         count=0
       endelse
-      if count eq 0 then message,'WARNING: No task list exists in memory! Use "IDL>chmp, cpinput" to provide one.',/info
-      if aborted_count gt 0 then message, strcompress(string(aborted_count,count,format="('ABORTED TASKS: ', g0, '/',  g0)")),/info
-      if pending_count gt 0 then message, strcompress(string(pending_count,count,format="('PENDING TASKS: ', g0, '/',  g0)")),/info
-      if active_count gt 0 then message, strcompress(string(active_count,count,format="('ACTIVE TASKS: ', g0, '/',  g0)")),/info
-;      if completed_count gt 0 then begin
-;        duration=systime(/s)-cp_start_time
-;        message, strcompress(string(completed_count,count,duration,format="('TOTAL: ', g0, '/' , g0, ' tasks completed in ', g0,' seconds')")),/info
-;      endif
+      if count eq 0 then message,'WARNING: No task list exists in memory! Use "IDL>chmp_add_tasks,tasks" to provide one or more.',/info
+      if self.quiet eq 0 then begin
+        if aborted_count gt 0 then message, strcompress(string(aborted_count,count,format="('ABORTED TASKS: ', g0, '/',  g0)")),/info
+        if pending_count gt 0 then message, strcompress(string(pending_count,count,format="('PENDING TASKS: ', g0, '/',  g0)")),/info
+        if active_count gt 0 then message, strcompress(string(active_count,count,format="('ACTIVE TASKS: ', g0, '/',  g0)")),/info
+      end
     endif
     if keyword_set(bridges)then begin  
       bridges=self.bridges
@@ -297,7 +304,7 @@ pro chmp_status,status=status,_extra=_extra
       endif
       bridge_array=bridges->Get(/all,count=count)
       if count eq 0 then begin
-        if ~(keyword_set(quiet) or keyword_set(nobridges)) then  message, 'No bridges alive, use IDL>chmp,nbridges to create at least one.',/info
+        if (self.quiet eq 0 or keyword_set(nobridges)) then  message, 'No bridges alive, use IDL>chmp,nbridges to create at least one.',/info
         return
       endif
       for i=0,count-1 do begin
@@ -310,7 +317,7 @@ pro chmp_status,status=status,_extra=_extra
           4:status='Aborted'
           else:status='Unknown'
         endcase
-        message, strcompress('Bridge ID='+string(i+1)+' status: '+ status),/info
+        if self.quiet eq 0 then message, strcompress('Bridge ID='+string(i+1)+' status: '+ status),/info
       end
     end
 end
@@ -323,6 +330,12 @@ function chmp_solution
   common chmp, self
   chmp_self
   return,self.solution->ToArray()
+end
+
+function chmp_tasks
+  common chmp, self
+  chmp_self
+  return,self.tasks->ToArray()
 end
 
 function chmp_checklist,anylist
@@ -343,6 +356,36 @@ case 1 of
                      end  
   else: return,!null                                            
 endcase
+end
+
+pro chmp_add_task,tasks
+ common chmp, self
+ if tag_exist(tasks,'a') and tag_exist(tasks,'b') and tag_exist(tasks,'b') then begin
+  if n_elements(tasks[0].q) eq 2 then begin
+    if ~self.tasks->IsEmpty()then begin
+    l=self.tasks->ToArray()
+    for k=0,n_elements(tasks)-1 do begin
+     idx=where(l.a eq tasks[k].a and l.b eq tasks[k].b,count)
+     if count eq 0 then begin
+      self.tasks->add,{id:self.tasks->Count(),a:double(tasks[k].a),b:double(tasks[k].b),q:double(tasks[k].q),duration:0d,status:'pending'}
+     endif else begin
+      if strupcase(l[idx].status) ne 'ACTIVE' then begin
+      t=self.tasks->remove(idx)
+      t.a=double(tasks[k].a)
+      t.b=double(tasks[k].b)
+      t.q=double(tasks[k].q)
+      self.tasks->add,t,idx    
+      message,string(double(tasks[k].a),double(tasks[k].b),format="('An already existing task having a=',g0,' and b=',g0,' has been updated!')"),/info
+      endif else message,string(double(tasks[k].a),double(tasks[k].b),format="('A task having a=',g0,' and b=',g0,' is active. Request ingnored!')"),/info 
+     endelse
+    end
+    endif else begin
+     for k=0,n_elements(tasks)-1 do $
+      self.tasks->add,{id:self.tasks->Count(),a:double(tasks[k].a),b:double(tasks[k].b),q:double(tasks[k].q),duration:0d,status:'pending'}
+    endelse
+  endif else message,'Input q tag exoecte to be a two elements array',/info
+ endif else message,'Invalid task list input. Expected input structure tags: a,b,q!',/info
+ chmp_status,/tasks
 end
 
 
@@ -489,11 +532,12 @@ pro chmp_callback,status,error,bridge,userdata
     task.duration=duration
     tasklist(task.id)=task
   endelse
-  
-  print,'________________________'
-  message,strcompress(string(task.a, task.b,task.duration,format="('[a=',g0,', b=',g0,'] solution computed in ',g0,' seconds')")),/info
-  chmp_status,/tasks
-  print,'________________________'
+  if  self.quiet eq 0 then begin
+    print,'________________________'
+    message,strcompress(string(task.a, task.b,task.duration,format="('[a=',g0,', b=',g0,'] solution computed in ',g0,' seconds')")),/info
+    chmp_status,/tasks
+    print,'________________________'
+  end
   
   pending=chmp_where(/pending,task_count)
   if task_count gt 0 and ~keyword_set(abort) then begin
@@ -665,5 +709,11 @@ pro chmp, nthreads,fresh=fresh, _extra=_extra
   if keyword_set(script)then mprint,chmp_script()
   if keyword_set(start) then chmp_start
   if keyword_set(abort) then chmp_abort
+  if keyword_set(quiet) then self.quiet=1;
+  if keyword_set(loud) then self.quiet=0;
+  if keyword_set(reset) then begin
+    chmp_reset
+    chmp_status
+  endif
 end
 
