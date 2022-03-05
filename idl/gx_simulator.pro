@@ -76,6 +76,7 @@ pro gx_simulator_event,event
                          endif
                          state.Sun->SetTime,time
                          state.scanbox->SetRefModel,model
+                         state.scanbox->CreateArrayInputControls
                          if obj_valid(model) then begin
                            sroi=model->getroi(/scanbox)
                            sdata=gx_transform(sroi->GetScanboxData(),model->GetSTM(),/inv)
@@ -331,7 +332,7 @@ pro gx_simulator_event,event
                            endfor
                          state.Sun->SetTime,model->GetTime()
                          state.scanbox->SetRefModel,model
-                         state.scanbox->UpdateAllParms
+                         state.scanbox->CreateArrayInputControls
                        endif  
                      endif else answ=dialog_message('Invalid GX model!')
                      state.scanbox->DrawSlicer

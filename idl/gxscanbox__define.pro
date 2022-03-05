@@ -124,19 +124,19 @@ pro gxScanBox::CreateArrayInputControls
 
   if widget_valid(self.wArrayParmBase) then widget_control,self.wArrayParmBase,/destroy
   map=1
+  moi=self->GetMoi()
+  if obj_valid(moi) then begin
+    *self.info=moi->UpdateEUVinfo(*self.info)
+  endif
   if tag_exist((*self.info),'nparms') then begin
     if ~widget_valid(self.wArrayParmBase) then self.wArrayParmBase=widget_base(self.wParmBase,/row,map=map)
     wNbase=widget_base(self.wArrayParmBase,/column)
     self.wNparms=cw_objarray(wNbase,value=(*self.info).nparms.value,items=strcompress((*self.info).nparms.name,/rem),names=strcompress((*self.info).nparms.name+'; '+$
     (*self.info).nparms.unit+'; '+(*self.info).nparms.hint),/frame,inc=1,/static,$
     sensitive=(*self.info).nparms.user,/vert,/right,xtextsize=10,font=!defaults.font,type=1l)
-    widget_control,self.wNparms,set_uvalue=(*self.info).nparms.name,set_uname='renderer:nparms'
-    wDEMavg=widget_info(get_tlb(self.wNparms),find_by_uname='GXMODEL:DEMAVG')
-    if widget_valid(wDEMavg) then widget_control,wDEMAvg,get_value=DEMavg else DEMavg=0
-    wDEMavg=widget_info(self.wNparms,find_by_uname='DEMavg')
-    if widget_valid(wDEMavg) then widget_control,wDEMavg,set_value=DEMavg
+    widget_control,self.wNparms,set_value=(*self.info).nparms.value,set_uvalue=(*self.info).nparms.name,set_uname='renderer:nparms'
   endif
-
+  
   if tag_exist((*self.info),'rparms') then begin
     if ~widget_valid(self.wArrayParmBase) then self.wArrayParmBase=widget_base(self.wParmBase,/row,map=map)
     wRbase=widget_base(self.wArrayParmBase,/column)
@@ -145,7 +145,7 @@ pro gxScanBox::CreateArrayInputControls
     sensitive=(*self.info).rparms.user,/vert,/right,xtextsize=10,font=!defaults.font,type=0d)
     widget_control,self.wRparms,set_uvalue=(*self.info).rparms.name,set_uname='renderer:rparms'
   endif
-
+  
   if self->AcceptFreqList() then begin
     if ~widget_valid(self.wArrayParmBase) then self.wArrayParmBase=widget_base(self.wParmBase,/row,map=map)
     
@@ -236,14 +236,14 @@ end
 pro gxScanBox::ReplaceParmValue,name,value
  if ptr_valid(self.info) then begin
    idx=where(strupcase(((*self.info).parms).name) eq strupcase(name),count)
-   if count eq 1 then begin
+    if count eq 1 then begin
      parms=(*self.info).parms
      parms[idx].value=value
      (*self.info).parms=parms
      widget_control,self.wParmsTable,get_value=parms
      parms[idx].value=value
      widget_control,self.wParmsTable,set_value=parms
-   endif else begin
+    endif
     if tag_exist(*self.info,'nparms') and widget_valid(self.wNparms) then begin
       idx=where(strcompress(strupcase(((*self.info).nparms).name),/rem) eq strcompress(strupcase(name),/rem),count)
       if count eq 1 then begin
@@ -262,7 +262,6 @@ pro gxScanBox::ReplaceParmValue,name,value
         widget_control,widget_info(self.wRparms,find_by_uname=name),set_value=value
       endif
     end
-   endelse
  end
 end
 
@@ -1716,18 +1715,17 @@ pro gxScanbox::UpdateFields
   if idx ge 0 then begin
     table[idx].value=dS
     parms[idx].value=dS
-  endif else begin
-    if tag_exist(*self.info,'rparms') and widget_valid(self.wRparms) then begin
-      wdS=widget_info(self.wRparms,find_by_uname='dS')
-      if widget_valid(wdS) then widget_control,wdS,set_value=dS
-      idx=gx_name2idx((*self.info).rparms,'dS')
-      if idx ge 0 then begin
-        rparms=(*self.info).rparms
-        rparms[idx].value=ds
-        (*self.info).rparms=rparms
-      endif
+  endif
+  if tag_exist(*self.info,'rparms') and widget_valid(self.wRparms) then begin
+    wdS=widget_info(self.wRparms,find_by_uname='dS')
+    if widget_valid(wdS) then widget_control,wdS,set_value=dS
+    idx=gx_name2idx((*self.info).rparms,'dS')
+    if idx ge 0 then begin
+      rparms=(*self.info).rparms
+      rparms[idx].value=ds
+      (*self.info).rparms=rparms
     endif
-  endelse
+  endif
   idx=self->name2idx('dR')
   if idx ge 0 then begin
     table[idx].value=dR

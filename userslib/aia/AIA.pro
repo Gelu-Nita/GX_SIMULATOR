@@ -1,28 +1,46 @@
-pro aia,parms,rowdata,path=path,logtdem=logtdem,dem_run=dem_run,qrun=qrun,lrun=lrun,logte=logte,response=response,dem_tr_run=dem_tr_run,q0=q0,l0=l0,info=info
+pro aia,parms,rowdata,nparms,rparms,path=path,logtdem=logtdem,dem_run=dem_run,qrun=qrun,lrun=lrun,logte=logte,response=response,dem_tr_run=dem_tr_run,q0=q0,l0=l0,info=info
      if n_elements(response_path) eq 0 then begin
       dirpath=file_dirname((ROUTINE_INFO('aia',/source)).path,/mark)
       response_path=dirpath+'AIA_Response.sav'
      end
+     dr_idx=0
+     t0_idx=1
+     n0_idx=2
+     q_idx=3
+     l_idx=4
+     v_idx=5
+     nhi_idx=6
+     trf_idx=7
  if arg_present(info) then begin
      if n_elements(info) eq 0 then begin
-       Parms=Replicate({Name:'unused',Value:0d,Unit:'',Hint:''},15)
-       Parms[0].Name='dS'          & Parms[0].Value=0.180E+19     & Parms[0].Unit='cm^2'     & Parms[0].Hint='Source/pixel Area
-       Parms[1].Name='dR'          & Parms[1].Value=0.600E+09     & Parms[1].Unit='cm'       & Parms[1].Hint='Source/voxel Depth
-       Parms[2].Name='T_0'         & Parms[2].Value=0.200E+08     & Parms[2].Unit='K'        & Parms[2].Hint='Plasma Temperature
-       Parms[3].Name='n_0'         & Parms[3].Value=0.500E+10    & Parms[3].Unit='cm^{-3}' & Parms[3].Hint='Thermal e density
-       Parms[4].Name='Q'           & Parms[4].Value=0            & Parms[4].Unit=''        & Parms[4].Hint='Heating rate'
-       Parms[5].Name='Length'      & Parms[5].Value=0            & Parms[5].Unit='cm'      & Parms[5].Hint='Half length of the associated fieldline'
-       Parms[6].Name='UseDEM'      & Parms[6].Value=0            & Parms[6].Unit='0/1'        & Parms[6].Hint='Use DEM'
-       Parms[7].Name='VoxelID'      & Parms[7].Value=0            & Parms[7].Unit='0/1/2'        & Parms[7].Hint='chromo/TR/corona'
-       Parms[8].Name='AddTR'       & Parms[8].Value=0            & Parms[8].Unit='0/1'        & Parms[8].Hint='Add Transition Region Contribution'
-       Parms[9].Name='n_hi'       & Parms[9].Value=0            & Parms[9].Unit='cm^{-3}'        & Parms[9].Hint='Neutral Hydrogen density'
-       Parms[10].Name='n_hi0'    & Parms[10].Value=1         & Parms[10].Unit='cm^{-3}'        & Parms[10].Hint='Neutral Hydrogen density coronal cutoff'
-       Parms[11].Name='SS'       & Parms[11].Value=0            & Parms[11].Unit=''        & Parms[11].Hint='Use steady state DEM table'
-       Parms[12].Name='TRfactor'     & Parms[12].Value=0            & Parms[12].Unit=''        & Parms[12].Hint='TR factor'
-       Parms[13].Name='ApplyTRfactor'     & Parms[13].Value=1            & Parms[13].Unit='0/1'        & Parms[13].Hint='Apply TR Factor'
-       Parms[14].Name='DEMavg'     & Parms[14].Value=0            & Parms[14].Unit='0/1'        & Parms[14].Hint='DEM Interpolation Method'
-    endif else parms=info.parms
-     restore,response_path
+       Parms=Replicate({Name:'unused',Value:0d,Unit:'',Hint:''},8)
+       Parms[dr_idx].Name='dR'          & Parms[dr_idx].Value=0.600E+09     & Parms[dr_idx].Unit='cm'       & Parms[dr_idx].Hint='Source/voxel Depth'
+       Parms[t0_idx].Name='T_0'         & Parms[t0_idx].Value=0.200E+08     & Parms[t0_idx].Unit='K'        & Parms[t0_idx].Hint='Plasma Temperature'
+       Parms[n0_idx].Name='n_0'         & Parms[n0_idx].Value=0.500E+10    & Parms[n0_idx].Unit='cm^{-3}' & Parms[n0_idx].Hint='Thermal e density'
+       Parms[q_idx].Name='Q'           & Parms[q_idx].Value=0            & Parms[q_idx].Unit=''        & Parms[q_idx].Hint='Heating rate'
+       Parms[l_idx].Name='Length'      & Parms[l_idx].Value=0            & Parms[l_idx].Unit='cm'      & Parms[l_idx].Hint='Half length of the associated fieldline'
+       Parms[v_idx].Name='VoxelID'      & Parms[v_idx].Value=0            & Parms[v_idx].Unit='0/1/2'        & Parms[v_idx].Hint='chromo/TR/corona'
+       Parms[nhi_idx].Name='n_hi'       & Parms[nhi_idx].Value=0            & Parms[nhi_idx].Unit='cm^{-3}'        & Parms[nhi_idx].Hint='Neutral Hydrogen density'
+       Parms[trf_idx].Name='TRfactor'     & Parms[trf_idx].Value=0            & Parms[trf_idx].Unit=''        & Parms[trf_idx].Hint='TR factor'
+       nparms=[{name:'N_pix',value:0l,unit:'(int)',user:0,hint:'Number of pixels'},$
+               {name:'N_vox',value:0l,unit:'(int)',user:0,hint:'Number of voxels'},$
+               {name:'UseDEM',value:0l,unit:'(int)',user:0,hint:'Use DEM'},$
+               {name:'AddTR',value:0l,unit:'(int)',user:0,hint:'Add TR Contribution'},$
+               {name:'SS',value:0l,unit:'(int)',user:0,hint:'Use DEM'},$
+               {name:'ApplyTRfactor',value:0l,unit:'(int)',user:0,hint:'Apply TR Factor'},$
+               {name:'DEMavg',value:0l,unit:'(int)',user:0,hint:'DEM Interpolation Method'}]
+       restore,response_path
+       rparms=[{name:'dS',value:0d,unit:'(cm^2)',user:0,hint:'Source pixel/area'},$
+               {name:'AIA_response_date',value:gx_utcstr2time(response.date,/seconds),unit:'(UTsec)',user:0,hint:gx_utcstr2time(response.date)},$
+               {name:'n_hi0',value:1d,unit:'cm^{-3}',user:1,Hint:'Neutral H density coronal cutoff'}]
+
+    endif else begin
+      parms=info.parms
+      nparms=info.nparms
+      rparms=info.rparms
+    endelse
+     update_response=(n_elements(response) eq 0)?1:(gx_utcstr2time(response.date,/seconds) ne rparms[1].value)
+     if update_response ne 0 then response=aia_get_response(/temp,/dn,/evenorm,timedepend_date=atime(rparms[1].value),/silent)
      nchan=n_elements(response.channels)
      w=fltarr(nchan)
      for i=0,nchan-1 do w[i]=fix(strmid(response.channels[i],1))
@@ -36,70 +54,75 @@ pro aia,parms,rowdata,path=path,logtdem=logtdem,dem_run=dem_run,qrun=qrun,lrun=l
      restore,dirpath+'AIA_RGB.sav'
      skip_rgb:
      info={parms:parms,$
+           nparms:nparms,$
+           rparms:rparms,$
            pixdim:[nchan],$
            spectrum:{x:{axis:w,label:'Wavelength',unit:'A'},$
-                    y:{label:'I',unit:'counts/s/pix'}},rgb:rgb} 
+                     y:{label:'I',unit:'counts/s/pix'}},rgb:rgb} 
      return
  end
-
    sz=size(rowdata,/dim)
    Npix=sz[0]
    Nchan=sz[1]
    rowdata[*]=0
-   if (n_elements(logte) eq 0) or (n_elements(response) eq 0) then begin
-    restore,response_path
+   update_response=(n_elements(response) eq 0)?1:(gx_utcstr2time(response.date,/seconds) ne rparms[1])
+   if (n_elements(logte) eq 0) or (update_response eq 1) then begin
+    response=aia_get_response(/temp,/dn,/evenorm,timedepend_date=atime(rparms[1]),/silent)
     logte=response.logte
-    response=response.all
    end  
    maxLogT=max(logte,min=minLogT)
-   norm_tr=parms[0,0,0]/((4.5e7)^2)
-   useDEM=parms[0,0,6]
+   useDEM=nparms[2]
+   AddTR=nparms[3]
+   ss=nparms[4]
+   ApplyTRfactor=nparms[5]
+   avgdem=nparms[6]
+   norm_tr=rparms[0]/((4.5e7)^2)
+   n_hi0=rparms[2]
+   
+   
+
    for pix=0, Npix-1 do begin
-     rparms=transpose(parms[pix,*,*])
-     n_hi0=rparms[10,0]
-     cutoff=max(where(rparms[9,*] ge n_hi0))
-     if cutoff ge 0 then rparms[9,0:cutoff]=n_hi0
-     tr_idx=max(where((ulong(rparms[7,*]) and gx_voxelid(/euv)) ne 0))
-     point_in=where((rparms[2,*] gt 0 and rparms[7,*] gt 1 and rparms[9,*] lt n_hi0), Nvox)
-     ;if tr_idx ge 0 then print,'1:',tr_idx,minmax(point_in)
+     rowparms=transpose(parms[pix,*,*])
+     cutoff=max(where(rowparms[nhi_idx,*] ge n_hi0))
+     if cutoff ge 0 then rowparms[nhi_idx,0:cutoff]=n_hi0
+     tr_idx=max(where((ulong(rowparms[v_idx,*]) and gx_voxelid(/euv)) ne 0))
+     point_in=where((rowparms[t0_idx,*] gt 0 and rowparms[v_idx,*] gt 1 and rowparms[nhi_idx,*] lt n_hi0), Nvox)
      if Nvox gt 0 then begin
-        parmin=rparms[*,point_in]
-        norm=parmin[1,*]*norm_tr;parmin[0,*]/((4.5e7)^2)
+        parmin=rowparms[*,point_in]
+        norm=parmin[dr_idx,*]*norm_tr
        if useDEM eq 1 then begin
-         dem_interpolate,n,t,dem,path=path,logtdem=logtdem,dem_run=dem_run,qrun=qrun,lrun=lrun,qarr=parmin[4,*],larr=parmin[5,*],ss=parmin[11,0],avgdem=parmin[14,0]
+         dem_interpolate,n,t,dem,path=path,logtdem=logtdem,dem_run=dem_run,qrun=qrun,lrun=lrun,qarr=parmin[q_idx,*],larr=parmin[l_idx,*],ss=ss,avgdem=avgdem
          tr_factor=1
-         if parmin[8,0] eq 1 then begin
-           tr_idx=max(where((ulong(parmin[7,*]) and gx_voxelid(/euv)) ne 0))
+         if AddTR eq 1 then begin
+           tr_idx=max(where((ulong(parmin[v_idx,*]) and gx_voxelid(/euv)) ne 0))
            if tr_idx ge 0 then begin
-           point_in=where((parmin[2,*] gt 0 and parmin[9,*] lt n_hi0))
-           ;print,'2:',tr_idx,minmax(point_in)
+           point_in=where((parmin[t0_idx,*] gt 0 and parmin[nhi_idx,*] lt n_hi0))
            dem_interpolate,n_tr,t_tr,dem_tr,path=path,logtdem=logtdem,dem_run=dem_tr_run,lrun=lrun,qrun=qrun,$
-             larr=parmin[5,tr_idx],qarr=parmin[4,tr_idx],/tr,ss=parmin[11,0],avgdem=parmin[14,0]
-             tr_factor=parmin[13,tr_idx] gt 0?parmin[12,tr_idx]:1
-             addTR=(n_tr[0] gt 0 and t_tr[0] gt 0)
-           endif else addTR=0
-         endif else addTR=0
+             larr=parmin[l_idx,tr_idx],qarr=parmin[q_idx,tr_idx],/tr,ss=ss,avgdem=avgdem
+             tr_factor=ApplyTRfactor gt 0?parmin[trf_idx,tr_idx]:1
+             tr_add=(n_tr[0] gt 0 and t_tr[0] gt 0)
+           endif else tr_add=0
+         endif else tr_add=0
          dlogt = logtdem(1) - logtdem(0)
          for chan=0, nchan-1 do begin
            noDEMvox=where((n eq 0 or t eq 0),nnoDemvox, comp=DEMvox,ncomp=nDemvox)
            if nnoDEMvox gt 0 then begin
-             g = dspline(logte, response[*,chan], alog10(reform(parmin[2,noDEMvox]))<maxLogT>minLogT)
-             rowdata[pix,chan]= rowdata[pix,chan]+total(norm*reform(parmin[3,noDEMvox])^2*g,/double)
+             g = dspline(logte, response.all[*,chan], alog10(reform(parmin[t0_idx,noDEMvox]))<maxLogT>minLogT)
+             rowdata[pix,chan]= rowdata[pix,chan]+total(norm*reform(parmin[n0_idx,noDEMvox])^2*g,/double)
            end
            DEMvox=where((n gt 0 and t gt 0),nDemvox)
            if nDEMvox gt 0 then begin
-             g = dspline(logte, response[*,chan], logtdem<maxLogT>minLogT)
+             g = dspline(logte, response.all[*,chan], logtdem<maxLogT>minLogT)
              rowdata[pix,chan]= rowdata[pix,chan]+ alog(10.)*dlogt*total(norm*((g*(10.^logtdem))#dem))
-             if addTR eq 1 then begin
+             if tr_add eq 1 then begin
                rowdata[pix,chan]= rowdata[pix,chan]+ norm_tr*tr_factor*alog(10.)*dlogt*total((g*(10.^logtdem))*dem_tr)
-               ;print,tr_factor
              end 
            end
          end
        endif else begin
         for chan=0, nchan-1 do begin
-            g = dspline(logte, response[*,chan], alog10(reform(parmin[2,*]))<maxLogT>minLogT)
-            rowdata[pix,chan] = total(norm*reform(parmin[3,*])^2*g,/double)
+            g = dspline(logte, response.all[*,chan], alog10(reform(parmin[t0_idx,*]))<maxLogT>minLogT)
+            rowdata[pix,chan] = total(norm*reform(parmin[n0_idx,*])^2*g,/double)
         end
        end
      end

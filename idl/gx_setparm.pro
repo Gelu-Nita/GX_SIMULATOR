@@ -17,6 +17,7 @@ pro gx_setparm,info, name,value,found=found
     message,'No valid input parameters provided, no action performed!',/cont
     return
   endif
+  
   if size(info,/tname) eq 'STRUCT' then begin
     idx=where(strupcase((info.parms).name) eq strupcase(name),count)
     if count eq 1 then begin
@@ -24,8 +25,8 @@ pro gx_setparm,info, name,value,found=found
       parms[idx].value=value
       info.parms=parms
       found=1
-    endif else begin
-      if tag_exist(info,'nparms') then begin
+    endif
+    if tag_exist(info,'nparms') then begin
         idx=where(strcompress(strupcase((info.nparms).name),/rem) eq strcompress(strupcase(name),/rem),count)
         if count eq 1 then begin
           nparms=info.nparms
@@ -34,15 +35,15 @@ pro gx_setparm,info, name,value,found=found
           found=1
         endif
       end
-      if tag_exist(info,'rparms') then begin
+    if tag_exist(info,'rparms') then begin
         idx=where(strcompress(strupcase((info.rparms).name),/rem) eq strcompress(strupcase(name),/rem),count)
         if count eq 1 then begin
           rparms=info.rparms
           rparms[idx].value=value
+          if name eq 'AIA_response_date' then rparms[idx].hint=atime(value)
           info.rparms=rparms
           found=1
         endif
-      end
-    endelse
+    end
   end
 end

@@ -1644,9 +1644,27 @@ function gxModel::refmaps
   return,self.refmaps
 end
 
-function gxModel::GetTime
- return,(*self.refmaps)->get(2,/time)
+function gxModel::GetTime,seconds=seconds
+ time=(*self.refmaps)->get(2,/time)
+ if keyword_set(seconds) then time=anytim(time)
+ return,time
 end
+
+function GXModel::UpdateEUVinfo,info
+  volume=self->GetVolume()
+  self->GetProperty,wparent=wparent
+  if widget_valid(wparent) then begin
+    wDEMavg=widget_info(wParent,find_by_uname='GXMODEL:DEMAVG')
+    if widget_valid(wDEMavg) then widget_control,wDEMAvg,get_value=DEMavg else DEMavg=0
+    gx_setparm,info, 'DEMavg',DEMavg
+  endif
+  gx_setparm,info, 'UseDEM',(volume->getflags()).NTDEM
+  gx_setparm,info, 'SS',(volume->getflags()).NTSSDEM
+  gx_setparm,info, 'AddTR',(volume->getflags()).TRADD
+  gx_setparm,info, 'ApplyTRfactor',(volume->getflags()).TRFACTOR
+  gx_setparm,info, 'AIA_response_date',self->GetTime(/sec)
+  return,info
+end  
 
 PRO gxModel::GetProperty,NS=NS,EW=EW,ROI=ROI,FLUXTUBECOUNT=FLUXTUBECOUNT,$
  XCOORD_CONV=XCOORD_CONV,YCOORD_CONV=YCOORD_CONV,ZCOORD_CONV=ZCOORD_CONV,$

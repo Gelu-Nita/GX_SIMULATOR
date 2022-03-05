@@ -1369,10 +1369,17 @@ end
                           2:flags=volume->setflags(/NTss)
                           else:
                          endcase
+                         widget_control,widget_info(event.top,find_by_uname='Scanbox'),get_uvalue=scanbox
+                         scanbox->ReplaceParmValue,'UseDEM',(usedem eq 1)
+;                         wnparms=widget_info(event.top,FIND_BY_UNAME='renderer:nparms')
+;                         if widget_valid(wnparms) then begin
+;                           wUseDEM=widget_info(wnparms,find_by_uname='UseDEM')
+;                           if widget_valid(wUseDEM) then widget_control,wUseDEM,set_value=(usedem eq 1)
+;                         endif
                          flags=volume->setflags(newNT=volume->NewNT())
                          volume->PlotModelAttributes
                          all=self.subject->Get(/all,isa='GXFLUXTUBE',count=count)
-                         for t=0,count-1 do all[t]->SelectThermalModel,usedem=usedem   
+                         for t=0,count-1 do all[t]->SelectThermalModel,usedem=usedem  
                        END  
      'GXMODEL:DEM/DDM': BEGIN
                          volume=(self.subject->GetVolume())
@@ -1386,14 +1393,12 @@ end
                        END
      
      'GXMODEL:DEMAVG': BEGIN
+                        widget_control,event.id,get_value=demavg
                         volume=(self.subject->GetVolume())
                         flags=volume->setflags(newNT=volume->NewNT())
                         wnparms=widget_info(event.top,FIND_BY_UNAME='renderer:nparms')
-                        if widget_valid(wnparms) then begin
-                          widget_control,event.id,get_value=value
-                          wDEMavg=widget_info(wnparms,find_by_uname='DEMavg')
-                          if widget_valid(wDEMavg) then widget_control,wDEMavg,set_value=value
-                        endif
+                        widget_control,widget_info(event.top,find_by_uname='Scanbox'),get_uvalue=scanbox
+                        scanbox->ReplaceParmValue,'DEMavg',demavg
                        END                    
      'GXMODEL:TRMASKMENU':begin
                             self.subject->ReplaceTRMask,event
