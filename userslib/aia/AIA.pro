@@ -28,7 +28,9 @@ pro aia,parms,rowdata,nparms,rparms,path=path,logtdem=logtdem,dem_run=dem_run,qr
                {name:'AddTR',value:0l,unit:'(int)',user:0,hint:'Add TR Contribution'},$
                {name:'SS',value:0l,unit:'(int)',user:0,hint:'Use DEM'},$
                {name:'ApplyTRfactor',value:0l,unit:'(int)',user:0,hint:'Apply TR Factor'},$
-               {name:'DEMavg',value:0l,unit:'(int)',user:0,hint:'DEM Interpolation Method'}]
+               {name:'DEMavg',value:0l,unit:'(int)',user:0,hint:'DEM Interpolation Method'},$
+               {name:'EVEnorm',value:1l,unit:'(int)',user:1,hint:'Perform EVE normalization'},$
+               {name:'CHIANTIfix',value:1l,unit:'(int)',user:1,hint:'Apply CHIANTI correction'}]
        restore,response_path
        rparms=[{name:'dS',value:0d,unit:'(cm^2)',user:0,hint:'Source pixel/area'},$
                {name:'AIA_response_date',value:gx_utcstr2time(response.date,/seconds),unit:'(UTsec)',user:0,hint:gx_utcstr2time(response.date)},$
@@ -61,26 +63,26 @@ pro aia,parms,rowdata,nparms,rparms,path=path,logtdem=logtdem,dem_run=dem_run,qr
                      y:{label:'I',unit:'counts/s/pix'}},rgb:rgb} 
      return
  end
+   useDEM=nparms[2]
+   AddTR=nparms[3]
+   ss=nparms[4]
+   ApplyTRfactor=nparms[5]
+   avgdem=nparms[6]
+   evenorm=nparms[7]
+   chiantifix=nparms[8]
+   norm_tr=rparms[0]/((4.5e7)^2)
+   n_hi0=rparms[2]
    sz=size(rowdata,/dim)
    Npix=sz[0]
    Nchan=sz[1]
    rowdata[*]=0
    update_response=(n_elements(response) eq 0)?1:(gx_utcstr2time(response.date,/seconds) ne rparms[1])
    if (n_elements(logte) eq 0) or (update_response eq 1) then begin
-    response=aia_get_response(/temp,/dn,/evenorm,timedepend_date=atime(rparms[1]),/silent)
+    response=aia_get_response(/temp,/dn,timedepend_date=atime(rparms[1]),evenorm=evenorm,chiantifix=chiantifix)
     logte=response.logte
    end  
    maxLogT=max(logte,min=minLogT)
-   useDEM=nparms[2]
-   AddTR=nparms[3]
-   ss=nparms[4]
-   ApplyTRfactor=nparms[5]
-   avgdem=nparms[6]
-   norm_tr=rparms[0]/((4.5e7)^2)
-   n_hi0=rparms[2]
    
-   
-
    for pix=0, Npix-1 do begin
      rowparms=transpose(parms[pix,*,*])
      cutoff=max(where(rowparms[nhi_idx,*] ge n_hi0))
