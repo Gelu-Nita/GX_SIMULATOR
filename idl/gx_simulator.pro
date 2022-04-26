@@ -305,11 +305,11 @@ pro gx_simulator_event,event
                        widget_control,state.wModelsTab,SET_TAB_CURRENT=widget_info(state.wModelsTab,/N_CHILDREN)-1
                        wBaseSelect=widget_info(wIdBase,find_by_uname='GXMODEL:BaseMapSelect')
           
-                       omaps=*(model->refmaps())   
-                       if obj_valid(omaps) then begin
-                       nitems=omaps->get(/count)
+                       omaps=(model->refmaps())   
+                       if obj_valid(*omaps) then begin
+                       nitems=(*omaps)->get(/count)
                          for i=3,nitems-1 do begin
-                             widget_control,wBaseSelect,COMBOBOX_ADDITEM=omaps->get(i,/id)eq''?'Noname':omaps->get(i,/id)
+                             widget_control,wBaseSelect,COMBOBOX_ADDITEM=(*omaps)->get(i,/id)eq''?'Noname':(*omaps)->get(i,/id)
                          end  
                        end
                        roi=model->GetRoi(/scanbox)

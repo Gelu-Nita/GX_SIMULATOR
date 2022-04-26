@@ -4,6 +4,8 @@ function gxWidget::INIT,wParent,subject,frame=frame,name=name,_extra=_extra
   if error_stat ne 0 then begin
       catch, /cancel
       if !ERROR_STATE.NAME eq 'IDL_M_KEYWORD_BAD' then goto,jump
+      if !ERROR_STATE.NAME eq 'IDL_M_MATHERROR_DETECTED' then goto,jump
+;      if !ERROR_STATE.BLOCK eq 'IDL_MBLK_CORE' then goto,jump
       MESSAGE, /INFO, !ERROR_STATE.MSG
       if widget_valid(self.wIDBase) then widget_control,self.wIDBase,/destroy
       return, 0
@@ -125,6 +127,7 @@ pro gxWidget::CreatePanel,_extra=_extra
    wAll2Plotman=widget_button(font=font,wBaseMapMenu,value='Send All to Plotman',uname=prefix+'All2Plotman')
    wBaseMapUp=widget_button(font=font,wBaseMapMenu,value='Move Up',uname=prefix+'BaseMapUp',sensitive=0)
    wBaseMapRemove=widget_button(font=font,wBaseMapMenu,value='Remove',uname=prefix+'BaseMapRemove',sensitive=0)
+   wRefMapManager=widget_button(font=font,wBaseMapMenu,value='Reference Maps Manager',uname=prefix+'RefMapMan',sensitive=1)
    wBaseMap=widget_combobox(font=font,wSelectBase,value=['Bx','By','Bz'],/dynamic_resize,uname=prefix+'BaseMapSelect')
    widget_control,wBaseMap,set_combobox_select=2
    wHideBase=widget_base(self.wBase,/row,/nonexclusive)
@@ -1227,7 +1230,25 @@ end
                              nitems=widget_info(widget_info(self.wBase,find_by_uname='GXMODEL:BaseMapSelect'),/COMBOBOX_NUMBER)
                              widget_control,widget_info(self.wBase,find_by_uname='GXMODEL:BaseMapRemove'),sensitive=(nitems gt 3)
                              self.subject->DisplayMap,selected-1
-                            End  
+                            End 
+     'GXMODEL:REFMAPMAN':Begin 
+                          sel=ptr_new(-1l)
+                          gx_refmap_manager, self.subject,/modal,sel=sel
+                          selected=*sel
+                          ptr_free,sel
+                          wBaseSelect=widget_info(self.wBase,find_by_uname='GXMODEL:BaseMapSelect')
+                          omaps=(self.subject->refmaps())
+                          if obj_valid(*omaps) then begin
+                            nitems=(*omaps)->get(/count)
+                            items=[]
+                            for i=0,nitems-1 do begin
+                              items=[items,(*omaps)->get(i,/id)eq''?'Noname':(*omaps)->get(i,/id)]
+                            end
+                          end
+                          widget_control,wBaseSelect,set_value=items
+                          widget_control,wBaseSelect,SET_COMBOBOX_SELECT=selected
+                          self.subject->DisplayMap,selected
+                         End                       
      'GXMODEL:ALL2PLOTMAN':Begin
                              self.subject->GetProperty,refmaps=refmaps
                              if ptr_valid(refmaps) then begin

@@ -2188,7 +2188,7 @@ PRO gxFluxTube::CLEANUP
 if obj_valid(self.centerline) then begin
  self.centerline->SetProperty,center=0,lock=0
  self.centerline->GetProperty,parent=oModel
- oModel->RequestVolumeUpdate, /newID
+ if obj_valid(oModel) then oModel->RequestVolumeUpdate, /newID
 end
  self->IDLgrModel::CLEANUP
 END
