@@ -26,11 +26,10 @@ pro aia,parms,rowdata,nparms,rparms,path=path,logtdem=logtdem,dem_run=dem_run,qr
                {name:'N_vox',value:0l,unit:'(int)',user:0,hint:'Number of voxels'},$
                {name:'UseDEM',value:0l,unit:'(int)',user:0,hint:'Use DEM'},$
                {name:'AddTR',value:0l,unit:'(int)',user:0,hint:'Add TR Contribution'},$
-               {name:'SS',value:0l,unit:'(int)',user:0,hint:'Use DEM'},$
                {name:'ApplyTRfactor',value:0l,unit:'(int)',user:0,hint:'Apply TR Factor'},$
                {name:'DEMavg',value:0l,unit:'(int)',user:0,hint:'DEM Interpolation Method'},$
                {name:'EVEnorm',value:1l,unit:'(int)',user:1,hint:'Perform EVE normalization'},$
-               {name:'CHIANTIfix',value:1l,unit:'(int)',user:1,hint:'Apply CHIANTI correction'}]
+               {name:'CHIANTIfix',value:0l,unit:'(int)',user:1,hint:'Apply CHIANTI correction'}]
        restore,response_path
        rparms=[{name:'dS',value:0d,unit:'(cm^2)',user:0,hint:'Source pixel/area'},$
                {name:'AIA_response_date',value:gx_utcstr2time(response.date,/seconds),unit:'(UTsec)',user:0,hint:gx_utcstr2time(response.date)},$
@@ -65,11 +64,10 @@ pro aia,parms,rowdata,nparms,rparms,path=path,logtdem=logtdem,dem_run=dem_run,qr
  end
    useDEM=nparms[2]
    AddTR=nparms[3]
-   ss=nparms[4]
-   ApplyTRfactor=nparms[5]
-   avgdem=nparms[6]
-   evenorm=nparms[7]
-   chiantifix=nparms[8]
+   ApplyTRfactor=nparms[4]
+   avgdem=nparms[5]
+   evenorm=nparms[6]
+   chiantifix=nparms[7]
    norm_tr=rparms[0]/((4.5e7)^2)
    n_hi0=rparms[2]
    sz=size(rowdata,/dim)
@@ -93,14 +91,14 @@ pro aia,parms,rowdata,nparms,rparms,path=path,logtdem=logtdem,dem_run=dem_run,qr
         parmin=rowparms[*,point_in]
         norm=parmin[dr_idx,*]*norm_tr
        if useDEM eq 1 then begin
-         dem_interpolate,n,t,dem,path=path,logtdem=logtdem,dem_run=dem_run,qrun=qrun,lrun=lrun,qarr=parmin[q_idx,*],larr=parmin[l_idx,*],ss=ss,avgdem=avgdem
+         dem_interpolate,n,t,dem,path=path,logtdem=logtdem,dem_run=dem_run,qrun=qrun,lrun=lrun,qarr=parmin[q_idx,*],larr=parmin[l_idx,*],avgdem=avgdem
          tr_factor=1
          if AddTR eq 1 then begin
            tr_idx=max(where((ulong(parmin[v_idx,*]) and gx_voxelid(/euv)) ne 0))
            if tr_idx ge 0 then begin
            point_in=where((parmin[t0_idx,*] gt 0 and parmin[nhi_idx,*] lt n_hi0))
            dem_interpolate,n_tr,t_tr,dem_tr,path=path,logtdem=logtdem,dem_run=dem_tr_run,lrun=lrun,qrun=qrun,$
-             larr=parmin[l_idx,tr_idx],qarr=parmin[q_idx,tr_idx],/tr,ss=ss,avgdem=avgdem
+             larr=parmin[l_idx,tr_idx],qarr=parmin[q_idx,tr_idx],/tr,avgdem=avgdem
              tr_factor=ApplyTRfactor gt 0?parmin[trf_idx,tr_idx]:1
              tr_add=(n_tr[0] gt 0 and t_tr[0] gt 0)
            endif else tr_add=0

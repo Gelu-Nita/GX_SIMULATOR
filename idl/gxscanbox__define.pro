@@ -95,12 +95,6 @@ self.wSelectEBTEL= widget_button( wEBTELToolbarBase, $
   /bitmap,tooltip='Select EBTEL Table',uname='EBTEL')
 self.wEBTELTable=widget_text(font=!defaults.font,wEBTELToolbarBase,value=gx_ebtel_path(),SCR_XSIZE=geometry1.SCR_XSIZE-geometry3.SCR_XSIZE,/wrap);-3*geometry2.SCR_XSIZE
   
-wEBTELSSToolbarBase = widget_base(self.wParmBase, /row, /frame,/TOOLBAR,map=0)  
-self.wSelectEBTELSS= widget_button( wEbtelSSToolbarBase, $
-    value=gx_bitmap(filepath('open.bmp', subdirectory=['resource', 'bitmaps'])), $
-    /bitmap,tooltip='Select Steady-State heating EBTEL Table')  
-self.wEBTELSSTable=widget_text(font=!defaults.font,wEBTELSSToolbarBase,value=gx_ebtel_path(/ss),uvalue=gx_ebtel_path(),SCR_XSIZE=geometry1.SCR_XSIZE-3*geometry2.SCR_XSIZE,/wrap)
-
  self->CreateArrayInputControls
  self.wScan=widget_info(main_base,find_by_uname='SCAN_START')
  self.wDebug=widget_info(main_base,find_by_uname='SCAN_DEBUG')
@@ -965,10 +959,7 @@ case event.id of
                         end 
   self.wSelectEBTEL: begin
                           self->ReplaceEBTELtables
-                        end                      
-  self.wSelectEBTELss: begin
-                          self->ReplaceEBTELtables,/ss
-                        end                                            
+                        end                                                                
   self.wSlice: Begin
                  if ptr_valid(self.grid) then begin
                    self->Slice,event.value
@@ -1105,16 +1096,16 @@ case event.id of
 return, self->Rewrite(event,auto=auto)
 END
 
-pro gxScanBox::ReplaceEBTELtables,path=path,ss=ss
+pro gxScanBox::ReplaceEBTELtables,path=path
  if self.active then begin
   answ=dialog_message('There is an active scan in progress.'+string(10b)+$
     'Any unsaved results will be lost!'+string(10b)+$
     'Do you want to continue anyway?',/question)
   if strupcase(answ) eq 'NO' then return
  end
- path=gx_ebtel_valid_path(path)?path:dialog_pickfile(path=gx_findfile(filename,folder='userslib'+path_sep()+'aia'+path_sep()+'ebtel'),default='.sav')
+ path=gx_ebtel_valid_path(path)?path:dialog_pickfile(path=file_dirname(gx_findfile('ebtel.sav')),default='.sav')
  if gx_ebtel_valid_path(path) then begin
-  widget_control,keyword_set(ss)?self.wEbtelSSTable:self.wEbtelTable,set_value=gx_ebtel_path(path,ss=ss)
+  widget_control,self.wEbtelTable,set_value=gx_ebtel_path(path)
   bridges=self.bridges->Get(/all,count=count)
   for i=0, count-1 do begin
     self->BridgeResetEBTEL,bridges[i]
@@ -1794,7 +1785,7 @@ ROI:obj_new(),slicer:obj_new(),wParmsTable:0l,wScan:0L,wPause:0L,wAbort:0L,wDebu
 renderer:'',wRenderer:0l,wSelectRenderer:0l,pData:ptr_new(),grid:ptr_new(),info:ptr_new(),bridges:obj_new(),$
 pause:0b,active:0b,new_view:0b,log:0l,t_start:0d,wPlotLOSOptions:0L,wLOS:0L,wPlotLOS:0L,wModelInfo:0l,profiler:obj_new(),$
 Grid2Update:0L,wGrid2Update:0L,wMinVolume:0l,wMaxVolume:0l,wPowerIndexVolume:0l,wResetVolumeScale:0l,$
-wSelectEbtel:0l,wEbtelTable:0l,wSelectEbtelSS:0l,wEbtelSSTable:0l,wParmBase:0l,wArrayParmBase:0l,wNparms:0l,wRparms:0l,$
+wSelectEbtel:0l,wEbtelTable:0ll,wParmBase:0l,wArrayParmBase:0l,wNparms:0l,wRparms:0l,$
 wUploadFreqList:0l,wFreqList:0l,wUseFreqList:0l,wDelFreqList:0l,wUndoFreqList:0l,$
 wResetFreqList:0l,wSaveFreqList:0l,wEditedFreqList:0l,Rsun:(pb0r())[2]*60}
 end

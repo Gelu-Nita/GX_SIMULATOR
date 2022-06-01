@@ -194,8 +194,6 @@ pro gxWidget::CreatePanel,_extra=_extra
       widget_control,wAddTR,set_button=flags.TRadd
       wApplyTRmask=widget_button(font=font,wDemButtons ,value='Apply TR Mask',uname=prefix+'TRmask')
       widget_control,wApplyTRmask,set_button=flags.TRmask
-      wSS=widget_button(font=font,wDemButtons ,value='Steady State EBTEL',uname=prefix+'SS')
-      widget_control,wSS,set_button=flags.NTssdem
       wExpertButtons=widget_base(wDemBase,/column)
       wTRfactor=widget_button(font=font,widget_base(wExpertButtons,/non) ,value='Apply TR factor',uname=prefix+'TRfactor')
       widget_control,wTRfactor,set_button=flags.TRfactor     
@@ -215,8 +213,6 @@ pro gxWidget::CreatePanel,_extra=_extra
       widget_control,wAddTR,set_button=flags.TRadd
       wApplyTRmask=widget_button(font=font,wDemButtons ,value='Apply TR Mask',uname=prefix+'TRmask')
       widget_control,wApplyTRmask,set_button=flags.TRmask
-      wSS=widget_button(font=font,wDemButtons ,value='Steady State EBTEL',uname=prefix+'SS')
-      widget_control,wSS,set_button=flags.NTssdem
     endelse
    endif 
    
@@ -366,8 +362,7 @@ pro gxWidget::CreatePanel,_extra=_extra
    endelse
    wLabel=widget_label(wOptionBase,value='DEM/DDM Interpolation Method',font=font)
    if keyword_set(expert) then begin
-     restore,gx_ebtel_path(ss=flags.NTSSDEM)
-     has_ddm=(n_elements(ddm_cor_run) eq n_elements(dem_cor_run)) and (n_elements(ddm_cor_run) eq n_elements(dem_cor_run))
+     valid=gx_ebtel_path(has_ddm=has_ddm)
      wDEMDDM=cw_bgroup(font=font,wOptionBase,$
        ['Use DEM','Use DDM'],$
        set_value=has_ddm ,$
@@ -1364,39 +1359,17 @@ end
                          flags=(self.subject->GetVolume())->setflags(TRFACTOR=ApplyTRfactor)
                          widget_control,widget_info(event.top,find_by_uname='Scanbox'),get_uvalue=scanbox
                          scanbox->ReplaceParmValue,'ApplyTRfactor', ApplyTRfactor
-                       END                  
-     'GXMODEL:SS': BEGIN
-                         NTSSDEM=widget_info(event.id,/button_set)
-                         widget_control,widget_info(event.top,find_by_uname='Scanbox'),get_uvalue=scanbox
-                         scanbox->ReplaceParmValue,'SS',NTSSDEM
-                         volume=(self.subject->GetVolume())
-                         flags=volume->Setflags(NTSSDEM=NTSSDEM) 
-                         flags=volume->setflags(newNT=volume->NewNT())
-                         if flags.NTSSDEM then begin
-                          widget_control,event.id,set_uvalue=gx_ebtel_path()
-                          scanbox->ReplaceEBTELtables,path=gx_ebtel_path(/ss)
-                         endif else begin
-                          widget_control,event.id,get_uvalue=path
-                          scanbox->ReplaceEBTELtables,path=path
-                         endelse
-                         volume->PlotModelAttributes
-                       END                  
+                       END                                   
      'GXMODEL:USEDEM': BEGIN
                          usedem=event.value
                          volume=(self.subject->GetVolume())
                          case usedem of
                           0:flags=volume->setflags(/NTstored)
                           1:flags=volume->setflags(/NTdem)
-                          2:flags=volume->setflags(/NTss)
                           else:
                          endcase
                          widget_control,widget_info(event.top,find_by_uname='Scanbox'),get_uvalue=scanbox
                          scanbox->ReplaceParmValue,'UseDEM',(usedem eq 1)
-;                         wnparms=widget_info(event.top,FIND_BY_UNAME='renderer:nparms')
-;                         if widget_valid(wnparms) then begin
-;                           wUseDEM=widget_info(wnparms,find_by_uname='UseDEM')
-;                           if widget_valid(wUseDEM) then widget_control,wUseDEM,set_value=(usedem eq 1)
-;                         endif
                          flags=volume->setflags(newNT=volume->NewNT())
                          volume->PlotModelAttributes
                          all=self.subject->Get(/all,isa='GXFLUXTUBE',count=count)
@@ -1405,8 +1378,7 @@ end
      'GXMODEL:DEM/DDM': BEGIN
                          volume=(self.subject->GetVolume())
                          flags=volume->getflags()
-                         restore,gx_ebtel_path(ss=flags.NTSSDEM)
-                         has_ddm=(n_elements(ddm_cor_run) eq n_elements(dem_cor_run)) and (n_elements(ddm_cor_run) eq n_elements(dem_cor_run))
+                         path=gx_ebtel_path(has_ddm=has_ddm,/quiet)
                          if ~has_ddm and event.value eq 1 then begin
                           answ=dialog_message('No DDM provided by the selected  EBTEL table, reverting to DEM interpolation!',/info)
                           widget_control,event.id,set_value=0

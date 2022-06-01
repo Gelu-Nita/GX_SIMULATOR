@@ -1,6 +1,7 @@
 function gx_findfile,file,folder=folder
  default,file,''
- default,folder,'bitmaps'
+ ;default,folder,'bitmaps'
+ default,folder,''
  which,'gx_simulator',outfile=outfile,/quiet
  gxpath=file_dirname(file_dirname(outfile,/mark),/mark)
  fullpath=(gxpath+folder+((file ne '')?PATH_SEP():'')+file)[0]

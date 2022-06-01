@@ -1162,12 +1162,6 @@ pro gxModel::Slice,parms,row,scanner=scanner
     assigned[idx]=1
   end
 
-  idx=gx_name2idx(parms,'SS')
-  if (size(idx))[0] ne 0 then begin
-    (*scanner).parms[*,*,idx]=(volume->getflags()).NTSSDEM
-    assigned[idx]=1
-  end
-
   idx=gx_name2idx(parms,'AddTR')
   if (size(idx))[0] ne 0 then begin
     (*scanner).parms[*,*,idx]=(volume->getflags()).TRADD
@@ -1659,7 +1653,6 @@ function GXModel::UpdateEUVinfo,info
     gx_setparm,info, 'DEMavg',DEMavg
   endif
   gx_setparm,info, 'UseDEM',(volume->getflags()).NTDEM
-  gx_setparm,info, 'SS',(volume->getflags()).NTSSDEM
   gx_setparm,info, 'AddTR',(volume->getflags()).TRADD
   gx_setparm,info, 'ApplyTRfactor',(volume->getflags()).TRFACTOR
   gx_setparm,info, 'AIA_response_date',self->GetTime(/sec)

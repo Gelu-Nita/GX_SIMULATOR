@@ -124,6 +124,8 @@ dem_run=dem_run,ddm_run=ddm_run,qrun=qrun,lrun=lrun,use_dem=use_dem,has_ddm=has_
    N_parms=sz[2]
    parms_idx=N_parms-3
    rowdata[*]=0
+   avgdem=nparms[6]
+   recomputeNT=nparms[7]
    ndat=long(nparms[0:n_elements(nparms)-3])
    rdat=rparms#replicate(1,Npix)
    if n_elements(logtdem) gt 0 then tdem=10d0^logtdem
@@ -133,7 +135,7 @@ dem_run=dem_run,ddm_run=ddm_run,qrun=qrun,lrun=lrun,use_dem=use_dem,has_ddm=has_
   for pix=0, Npix-1 do begin
     parmin[*,*]=transpose(parms[pix,*,*])
     dem_interpolate,n,t,los_dem,los_ddm,logtdem=logtdem,dem_run=dem_run,ddm_run=ddm_run,qrun=qrun,lrun=lrun,$
-      qarr=parmin[parms_idx+1,*],larr=parmin[parms_idx+2,*],avgdem=nparms[5],use_dem=use_dem,has_ddm=has_ddm
+      qarr=parmin[parms_idx+1,*],larr=parmin[parms_idx+2,*],avgdem=avgdem,use_dem=use_dem,has_ddm=has_ddm
     DEMvox=where((n gt 0 and t gt 0),nDemvox,comp=noDEMvox,ncomp=nNoDEMvox)
     if ~keyword_set(has_ddm) then los_ddm=los_dem*0
     if n_elements(dem) eq 0 then begin
@@ -143,7 +145,7 @@ dem_run=dem_run,ddm_run=ddm_run,qrun=qrun,lrun=lrun,use_dem=use_dem,has_ddm=has_
     dem[*,*,pix]=los_dem
     ddm[*,*,pix]=los_ddm
     if nDemVox gt 0 then begin
-      if nparms[6] gt 0 then begin
+      if recomputeNT gt 0 then begin
         ;Replace n&T computed from volume interpolated DEM/DDM with LOS-interpolated DEM/DDM moments
         parmin[1,DEMvox]=t[DEMvox]
         parmin[2,DEMvox]=n[DEMvox]

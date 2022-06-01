@@ -306,7 +306,7 @@ pro gxVolume::PlotModelAttributes
         xrange=pxrange,yrange=pyrange,xlog=xlog,ylog=ylog ,xmargin=[15,2]
         if self.flags.NTDEM then begin
           if (xselect eq 6 or xselect eq 7) and (yselect eq 6 or yselect eq 7) then begin
-            ebtel_file=gx_ebtel_path(ss=self.flags.NTSSDEM)
+            ebtel_file=gx_ebtel_path()
             if gx_ebtel_valid_path(ebtel_file) then begin
               restore,ebtel_file
               if xselect eq 6 and widget_info(wRotateXY,/button_set) eq 0 then oplot,2*lrun,qrun,psym=1,color=250 else $
@@ -921,8 +921,8 @@ function gxVolume::NewNT,newkey,oldkey
   endif
   default,oldkey,byte('')
   default,newkey,oldkey
-  if self.flags.NTDEM then newkey=byte(strcompress('q=['+arr2str(q0_coeff)+'] & q0='+string(byte(q0_formula))+' & q='+string(byte(q_formula))+$
-    ' & NTDEM='+string(self.flags.NTDEM)+' & NTSSDEM='+string(self.flags.NTSSDEM))+(n_elements(demavg) gt 0? string(demavg,format="(' & DEMAVG=',i1)"):'')+' & EBTEL='+file_basename(gx_ebtel_path(ss=self.flags.NTSSDEM)))
+   if self.flags.NTDEM then newkey=byte(strcompress('q=['+arr2str(q0_coeff)+'] & q0='+string(byte(q0_formula))+' & q='+string(byte(q_formula))+$
+    ' & NTDEM='+string(self.flags.NTDEM))+(n_elements(demavg) gt 0? string(demavg,format="(' & DEMAVG=',i1)"):'')+' & EBTEL='+file_basename(gx_ebtel_path()))
   if self.flags.NTSS then newkey=byte(strcompress('q=['+arr2str(q0_coeff)+'] & q0='+string(byte(q0_formula))+' & q='+string(byte(q_formula))+$
     ' & NTSS='+string(self.flags.NTSS))+(n_elements(demavg) gt 0? string(demavg,format="(' & DEMAVG=',i1)"):'')+'& EBTEL=Analytical SS')
   flags=self->setflags(newNT=(string(newkey) ne string(oldkey)))
@@ -960,7 +960,7 @@ pro gxVolume::ComputeNT,question=question,quiet=quiet,force=force,NTDEM=NTDEM,NT
           use_dem=~keyword_set(useDDM)
         endif
       end
-      dem_interpolate,n,t,Qarr=Q,Larr=L,ss=self.flags.NTSSDEM,avgdem=avgdem,duration=duration,use_dem=use_dem,has_used_ddm=has_used_ddm
+      dem_interpolate,n,t,Qarr=Q,Larr=L,avgdem=avgdem,duration=duration,use_dem=use_dem,has_used_ddm=has_used_ddm
       if widget_valid(wparent) then begin
         id=widget_info(wparent,find_by_uname='GXMODEL:DEMDT')
         method=keyword_set(has_used_ddm)?'DDM':'DEM'
@@ -968,8 +968,7 @@ pro gxVolume::ComputeNT,question=question,quiet=quiet,force=force,NTDEM=NTDEM,NT
       end
       self->SetVertexAttributeData,'n',n
       self->SetVertexAttributeData,'T',t
-      if self.flags.NTSSDEM then flags=self->setflags(/storedNTSSDEM) $
-      else flags=self->setflags(/storedNTDEM)
+      flags=self->setflags(/storedNTDEM)
     end
   end
   if self.flags.NTSS or keyword_set(NTSS) then begin
@@ -1339,16 +1338,11 @@ function gxVolume::setflags,_extra=flags
       self.flags.NTss=1
     end
   endif
-  
-  if tag_exist(flags,'NTssdem') then begin
-      self.flags.NTssdem=keyword_set(flags.NTssdem)
-    end
     
   if tag_exist(flags,'storedNTdem') then begin
     self.flags.storedNTdem=keyword_set(flags.storedNTdem)
     if self.flags.storedNTdem then begin
      self.flags.storedNTss=0
-     self.flags.storedNTssdem=0
      self.flags.newNT=0
      self.flags.newData=1
      self.flags.hasNT=1
@@ -1360,19 +1354,6 @@ function gxVolume::setflags,_extra=flags
     self.flags.storedNTss=keyword_set(flags.storedNTss)
     if self.flags.storedNTss then begin
       self.flags.storedNTdem=0
-      self.flags.storedNTssdem=0
-      self.flags.newNT=0
-      self.flags.newData=1
-      self.flags.hasNT=1
-      self.flags.newID=1
-    endif  
-  endif
-  
-  if tag_exist(flags,'storedNTssdem') then begin
-    self.flags.storedNTssdem=keyword_set(flags.storedNTssdem)
-    if self.flags.storedNTssdem then begin
-      self.flags.storedNTdem=0
-      self.flags.storedNTss=0
       self.flags.newNT=0
       self.flags.newData=1
       self.flags.hasNT=1
@@ -1404,7 +1385,7 @@ pro gxVolume__define
           NTstored:0L,$
           NTdem:0L,$
           NTss:0L,$
-          NTssdem:0L,$
+          ;NTssdem:0L,$
           hasNT:0L,$
           TRadd:0L,$
           TRMask:0L,$
@@ -1415,6 +1396,6 @@ pro gxVolume__define
           newData:0L,$
           storedNTdem:0L,$
           storedNTss:0L,$
-          storedNTssdem:0L,$
+          ;storedNTssdem:0L,$
           hasBL:0L}}
 end
