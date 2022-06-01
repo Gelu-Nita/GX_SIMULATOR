@@ -1,11 +1,12 @@
-pro gx_plotbestmwmodels_ebtel, result,res2_best=res2_best,chi2_best=chi2_best,$
-q_res2_best=q_res2_best,q_chi2_best=q_chi2_best, a=a,b=b, psDir,levels=levels,$
-renorm_q=renorm_q
+pro gx_plotbestmwmodels_ebtel, result, psDir,res2_best=res2_best,chi2_best=chi2_best,$
+q_res2_best=q_res2_best,q_chi2_best=q_chi2_best, a=a,b=b,levels=levels,$
+renorm_q=renorm_q,charsize=charsize,maps_best=maps_best
 if ~isa(result) then begin
   message,'No input structure provided!',/cont
   return
 endif
 compile_opt idl2
+default,charsize,!p.charsize
 default,psDir,curdir()+'\psDir'
 if not file_test(psDir) then file_mkdir,psDir
  
@@ -36,8 +37,6 @@ if not file_test(psDir) then file_mkdir,psDir
    default,pmulti,[0,3,2,0,0]
    !p.multi=pmulti
    !p.font=2
-   charsize=1.2
-   loadct,39
    modidx=0  
    smaxm=0
    d_res=1 
@@ -131,8 +130,6 @@ if not file_test(psDir) then file_mkdir,psDir
       xyouts,x[10*sx,90*sy],y[10*sx,80*sy],string(chi2[i],format="(' Chi!U2!N=',g0)"),charsize=charsize,color=200
      endfor
 
-     
-     charsize=1.5
      for l=0,nmod-1 do begin
       ii=where(a0[l] eq a)
       jj=where(b0[l] eq b)
@@ -279,8 +276,6 @@ if not file_test(psDir) then file_mkdir,psDir
  chi2_min[k]= min(chi2_best[k,*],/nan,imin)
  chi2_best_b[k]=b[imin]
  endfor
-
-
  symsize=2
  plot,a,res2_best_b,/iso,xtitle='a',ytitle='b',charsize=charsize,ymargin=ymargin,/xsty,/ysty,xrange=minmax(a),yrange=minmax(b),/nodata,title='Best of Bests (a,b)'
  oplot,a,res2_best_b,color=50,thick=3,psym=-1
@@ -308,6 +303,7 @@ if not file_test(psDir) then file_mkdir,psDir
  plots=['Best RES solution: ','Best CHI solution: ']
  ab=[[a[idx_res2[0]],b[idx_res2[1]]],[a[idx_chi2[0]],b[idx_chi2[1]]]]
  q=[q_res2_best,q_chi2_best]
+ maps_best=[]
  for k=0,1 do begin
    filnam=plots[k]
    a=ab[0,k]
@@ -352,6 +348,7 @@ if not file_test(psDir) then file_mkdir,psDir
    plot_map,CHI2_MAP,charsize=charsize,title=filnam+'CHI!U2!N Map' ,dmax=d_res*20, dmin=0 ;-d_res*10
    xyouts,x[10*sx,90*sy],y[10*sx,90*sy],string(chi,format="(' Chi=',g0)"),charsize=charsize,color=200
    xyouts,x[10*sx,90*sy],y[10*sx,80*sy],string(chi2,format="(' Chi!U2!N=',g0)"),charsize=charsize,color=200
+   maps_best=[maps_best,{modI:modI,obsI:obsI,RES_NORM_MAP:RES_NORM_MAP,CHI2_MAP:CHI2_MAP,a:a,b:b,q0:q0,npix:npix,R:R,chi:chi,chi2:chi2,res:res,res2:res2}]
  endfor
  device,/close
  !p.font=0 

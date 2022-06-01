@@ -45,7 +45,7 @@ function gx_processmwmodels_ebtel,ab=ab,ref=ref,$
                        modDir=modDir,modFiles=modFiles,psDir=psDir,$
                        lev=lev,resize=resize,$
                        file_arr=file_arr,q_arr=q_arr,$
-                       apply2=apply2,_extra=_extra
+                       apply2=apply2,charsize=charsize,_extra=_extra
  ;++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  ;This routine provides a means to search for the best EBTEL GX model to data match 
  ;in a set of GX microwave maps obtained using the gx_mwrender_ebtel macro, which are looked for 
@@ -77,6 +77,7 @@ function gx_processmwmodels_ebtel,ab=ab,ref=ref,$
  dx0=(dy0=(width0=0))
  thisDevice = !D.Name
  set_plot,'ps'
+ map=obj_new()
  for i=0,nmod-1 do begin
   restore,modFiles[i]
   keys=gx_getEBTELparms(map->get(/gx_key),aa,bb,qq,f=f)
@@ -85,12 +86,13 @@ function gx_processmwmodels_ebtel,ab=ab,ref=ref,$
   b0[i]=bb
   q0[i]=qq
   formula0[i]=f
+  obj_destroy,map
  endfor
  set=1
  result=[]
  repeat begin
  if n_elements(ab) eq 2 then begin
-  good=where(a0 eq float(ab[0]) and b0 eq -float(ab[1]),count)
+  good=where(a0 eq float(ab[0]) and b0 eq float(ab[1]),count)
   comp=-1
   ncomp=0
  endif else begin
@@ -105,7 +107,7 @@ function gx_processmwmodels_ebtel,ab=ab,ref=ref,$
    formula=formula0[good]
    if (apply2 ne 3) then Filename=psDir+path_sep()+strcompress(string(a[0],b[0],format="('set_a',g0,'b',g0,'.ps')"),/rem) else Filename=psDir+path_sep()+strcompress(string(a[0],b[0],format="('set_a',g0,'b',g0,'_final.ps')"),/rem)
    filename_copy=filename
-   charsize=1.2
+   default,charsize,!p.charsize
    psObject = Obj_New("FSC_PSConfig", /Color, /Times, /Bold, Filename=Filename,xoffset=0.5,yoffset=0.25,xsize=6.4,ysize=9.5,landscape=0,bits=8)
    psKeys=psObject->GetKeywords()
    psKeys.filename=filename_copy
@@ -124,6 +126,7 @@ function gx_processmwmodels_ebtel,ab=ab,ref=ref,$
    obj_metrics=obj_new()   
    for i=0,count-1 do begin
     print,'restoring{ ',modFiles[good[i]]
+    obj_destroy,map
     restore,modFiles[good[i]]
     
     if n_elements(resize) ne 0 then begin
@@ -148,6 +151,7 @@ function gx_processmwmodels_ebtel,ab=ab,ref=ref,$
     for k=1,map->get(/count)-1 do freq=[freq,map->get(k,/freq)]
     m=min(abs(freq-ref.freq),modidx)
     modI=map->get(modidx,/map)
+    obj_destroy,map
     modI.data=convol_fft(modI.data, ObsBeam)  
     modI0=modI
     _obsI0=_obsI
@@ -203,7 +207,6 @@ function gx_processmwmodels_ebtel,ab=ab,ref=ref,$
     xyouts,x[10.*sz[1]/100,90.*sz[2]/100],y[10.*sz[1]/100,80.*sz[2]/100],string(q[i],format="('q=',g0)"),charsize=charsize,color=255
    endfor
    !p.multi=[0,1,2]
-   charsize=1.2
    ;=================RES=========================
    res_thresh=sqrt(n_elements(goodPix))*((apply2 eq 1)?3:1) 
    !p.font=2
@@ -250,7 +253,7 @@ function gx_processmwmodels_ebtel,ab=ab,ref=ref,$
    endelse
    plots,q_res_best,res_best,color=250,psym=2,symsize=2,thick=3
    !p.font=2
-   gx_plot_label,0.01,0.9,/xlog, string(a[0],-b[0],format="('a=',f5.2,'; ','b=',f5.2)"),charsize=charsize
+   gx_plot_label,0.01,0.9,/xlog, string(a[0],b[0],format="('a=',f5.2,'; ','b=',f5.2)"),charsize=charsize
    gx_plot_label,0.01,0.8, 'PROJECTED SOLUTION:',/xlog,charsize=charsize
    gx_plot_label,0.01,0.7, string([q_res_best,q_res_range-q_res_best], format="('Q!Dres_best!N = ',g0,'!S!D',g0,'!R!U+',g0)") ,/xlog,charsize=charsize
    if res_done then begin
@@ -304,7 +307,7 @@ function gx_processmwmodels_ebtel,ab=ab,ref=ref,$
    endelse
    plots,q_chi_best,chi_best,color=250,psym=2,symsize=2,thick=3
    !p.font=2
-   gx_plot_label,0.01,0.9,/xlog, string(a[0],-b[0],format="('a=',f5.2,'; ','b=',f5.2)"),charsize=charsize
+   gx_plot_label,0.01,0.9,/xlog, string(a[0],b[0],format="('a=',f5.2,'; ','b=',f5.2)"),charsize=charsize
    gx_plot_label,0.01,0.8, 'PROJECTED SOLUTION:',/xlog,charsize=charsize
    gx_plot_label,0.01,0.7, string([q_chi_best,q_chi_range-q_chi_best], format="('Q!Dchi_best!N = ',g0,'!S!D',g0,'!R!U+',g0)") ,/xlog,charsize=charsize
    if chi_done then begin
@@ -315,31 +318,23 @@ function gx_processmwmodels_ebtel,ab=ab,ref=ref,$
   !p.font=-1
  endif
  device,/close
-; res_idx=sort([abs(res)])
-; case n_elements(res_idx) of
-;  1:res_idx=replicate(res_idx[0],3)
-;  2:res_idx=[res_idx,res_idx[0:1]]
-;  else:res_idx=res_idx[0:2]
-; endcase
-; chi_idx=sort([abs(chi)])
-; case n_elements(chi_idx) of
-;   1:chi_idx=replicate(chi_idx[0],3)
-;   2:res_idx=[chi_idx,chi_idx[0:1]]
-;   else:chi_idx=chi_idx[0:2]
-; endcase
  file_arr=setfiles[[res_idx,chi_idx]]
  q_arr=q[[res_idx,chi_idx]]
  idx=uniq(file_arr,sort(file_arr))
  file_arr=file_arr[idx]
  q_arr=q_arr[idx]
- 
- result=[result,{a:double(a[0]),b:double(-b[0]),$
+
+ result=[result,{a:double(a[0]),b:double(b[0]),$
   q_res_best:double(q_res_best),q_res_range:double(q_res_range), res_best:double(res_best),res_range:double(res_range),$
   q_chi_best:double(q_chi_best),q_chi_range:double(q_chi_range), chi_best:double(chi_best),chi_range:double(chi_range),$
-  ref:ref,use_mean:keyword_set(use_mean),modDir:modDir,psfile:filename,$
+  use_mean:keyword_set(use_mean),modDir:modDir,psDir:psdir,psfile:file_basename(filename),$
   res_threshold:res_thresh,chi_threshold:chi_thresh,chi2_best:chi2_best,res2_best:res2_best,q_chi2_best:q_chi2_best,$
   q_res2_best:q_res2_best,chi_done:chi_done,res_done:res_done,$
-  res2_best_file:res2_best_file,chi2_best_file:chi2_best_file,res_best_metrics:res_best_metrics,chi_best_metrics:chi_best_metrics,mask:lev[0]}]
+  res2_best_file:file_basename(res2_best_file),chi2_best_file:file_basename(chi2_best_file),$
+  res_best_metrics:res_best_metrics,chi_best_metrics:chi_best_metrics,mask:lev[0],$
+  refdatapath:tag_exist(_extra,'refdatapath',/quiet)?_extra.refdatapath:'',$
+  gxmpath:tag_exist(_extra,'gxmpath',/quiet)?_extra.gxmpath:'',$
+  q_start:tag_exist(_extra,'q_start',/quiet)?_extra.q_start:[0.0001,0.001]}]
 
  obj_destroy,[obj_metrics_arr,obj_metrics]
  if ncomp gt 1 then begin

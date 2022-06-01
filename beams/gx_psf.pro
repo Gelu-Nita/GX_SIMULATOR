@@ -14,7 +14,7 @@ function gx_psf,sigmaIn,phi,widthIn,maxwidthIn=maxwidthIn
 
   if (n_elements(width) eq 1) then width = REPLICATE(width, 2) else width=width[0:1]
   width = LONG(width) > 1
-  maxwidth=n_elements(maxwidthIn) gt 0? min([maxwidthIn,width]):max(width)
+  maxwidth=n_elements(maxwidthIn) gt 0? min([maxwidthIn,width]):min(width)
   maxwidth or=1 ;; ensure width is odd
   width=width<(maxwidth-2);;force PSF to be square and less than maxwidth while remaining odd
    

@@ -229,12 +229,12 @@ function chmp_script,task_id=task_id
   common chmp, self
   chmp_self
   script='result=gx_search4bestq('
-  script+='  gxm_path="'+self.gxmpath+'"'
+  script+='  gxmpath="'+self.gxmpath+'"'
   script+=', modDir="'+self.moddir+'"'
   script+=', psDir="'+self.psdir+'"'
   script+=', tmpDir="'+self.tmpdir+'"'
   script+=', refdatapath="'+self.refdatapath+'"'
-  script+=', ebtel_path="'+self.ebtelpath+'"'
+  script+=', ebtelpath="'+self.ebtelpath+'"'
   script+=', renderer="'+self.renderer+'"'
   str_arr=str2arr(self.res,';')
   for k=0,0 do begin

@@ -298,8 +298,9 @@ pro gxImgViewWid::OnStartScan
   self.fovmap=(self.model->scanbox())->GetFOVMap()
   map=self.fovmap->get(/map)
   directions=self.model->GetDirections()
-  if tag_exist(map,'gx_key')then map.gx_key=gx_key else map=create_struct(map,'gx_key',gx_key)
-  if tag_exist(map,'directions')then map.directions=directions else map=create_struct(map,'directions',directions)
+  add_prop,map,gx_key=gx_key,/replace
+  add_prop,map,renderer=file_basename(self.renderer),/replace
+  add_prop,map,directions=directions,/replace
   self.fovmap->setmap,0,map
  endif
  if widget_valid(self.wSave) then widget_control,self.wSave,sensitive=0

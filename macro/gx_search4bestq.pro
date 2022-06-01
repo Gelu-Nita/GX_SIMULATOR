@@ -1,4 +1,4 @@
-function gx_search4bestq, gxm_path=gxm_path,a_arr=a_arr,b_arr=b_arr,q_start=q_start, $
+function gx_search4bestq, gxmpath=gxmpath,a_arr=a_arr,b_arr=b_arr,q_start=q_start, $
                      modDir=modDir,psDir=psDir,tmpDir=tmpDir,refdatapath=refdatapath,$
                      ebtel_path=ebtel_path,renderer=renderer,$
                      xc=xc,yc=yc,xfov=xfov,yfov=yfov,nx=nx,ny=ny,$
@@ -21,7 +21,6 @@ function gx_search4bestq, gxm_path=gxm_path,a_arr=a_arr,b_arr=b_arr,q_start=q_st
   ;++++++++++++++++++++++++++++++++++++++++++++
   default,q_start,[0.0001,0.001]
   ;++++++++++++++++++++++++++++++++++++++++++++
-  default,gxm_path,curdir()+path_sep()+'gxmDIR\AR11520.gxm'
   default,xc,-86.68
   default,yc,-320.0
   default,xfov,200.0
@@ -37,7 +36,6 @@ function gx_search4bestq, gxm_path=gxm_path,a_arr=a_arr,b_arr=b_arr,q_start=q_st
   ;+++++++++++++++++++++++++++++++++++++++++++++
   default,renderer,gx_findfile((!version.os_family eq 'Windows')?'AR_GRFF_nonLTE.pro':'mwgrtransfer.pro',folder='')
   ;+++++++++++++++++++++++++++++++++++++++++++++
-  default,refdatapath,'norh_ref.sav'
   restore,refdatapath
   ;+++++++++++++++++++++++++++++++++++++++++++++
   if not file_test(modDir) then file_mkdir,modDir
@@ -66,7 +64,7 @@ function gx_search4bestq, gxm_path=gxm_path,a_arr=a_arr,b_arr=b_arr,q_start=q_st
           modfile=modDir+path_sep()+strcompress(string(a,b,q[j],format="('i_a',f7.2,'b',f7.2,'q',g0,'.map')"),/rem)
           if ~file_exist(modfile) or keyword_set(redo)then begin
             if ~isa(model,'gxmodel') then begin
-              model=gx_read(gxm_path)
+              model=gx_read(gxmpath)
               fovdata=model->SetFOV(xc=xc,yc=yc,xfov=xfov, yfov=yfov,nx=nx,ny=ny,/compute_grid)
               end
             q0_formula='q[0]'
@@ -82,9 +80,10 @@ function gx_search4bestq, gxm_path=gxm_path,a_arr=a_arr,b_arr=b_arr,q_start=q_st
           endif else gx_message, modfile+' already exists, no reprocessing requested!',/info,/cont
         endfor
         result=gx_processmwmodels_ebtel(ab=[a,b],ref=ref,$
-          modDir=modDir,obsDir=obsDir,psDir=psDir,$
+          modDir=modDir,psDir=psDir,$
           levels=levels,resize=resize,$
-          file_arr=file_arr,apply2=apply2,done=force_done)
+          file_arr=file_arr,apply2=apply2,done=force_done,$
+          refdatapath=refdatapath,gxmpath=gxmpath,q_start=q_start)
         if size(result,/tname) eq 'STRUCT' then begin
           add_q=(apply2 eq 1)?((result.res_done eq 0) and (result.chi_done  eq 0)):((result.res_done eq 0) or (result.chi_done  eq 0))
           if add_q eq 1 then begin

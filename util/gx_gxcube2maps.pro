@@ -31,6 +31,7 @@ function gx_gxcube2maps,gxcube,map
  add_prop,amap,chan=chan[0]
  add_prop,amap,datatype=(((info).spectrum).x.label)
  add_prop,amap,dataunit=(((info).spectrum).x.unit)
+ add_prop,amap,renderer=file_basename(gxcube.renderer),/replace
  i=map->get(/count) 
  sz=size(gxcube.data)
  if sz[0] gt 3 then begin
