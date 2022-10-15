@@ -1,34 +1,34 @@
-function combo_model,pbox,chromo_mask
+function combo_model,box,chromo_mask
 setenv, 'WCS_RSUN=6.96d8'
   if n_elements(chromo_mask) eq 0 then begin
-    if ~tag_exist(pbox,'base') then return, pbox
-    if ~tag_exist(pbox.base,'bz') then return, pbox
-    if ~tag_exist(pbox.base,'ic') then return, pbox
-    chromo_mask=decompose(pbox.base.bz,pbox.base.ic)
+    if ~tag_exist(box,'base') then return, box
+    if ~tag_exist(box.base,'bz') then return, box
+    if ~tag_exist(box.base,'ic') then return, box
+    chromo_mask=decompose(box.base.bz,box.base.ic)
   endif
 populate_chromo, chromo_mask,chromo
 csize=size(chromo.nh)
-if tag_exist(pbox,'bx') then begin
-  bx=pbox.bx
-  pbox=rem_tag(pbox,'bx')
-  by=pbox.by
-  pbox=rem_tag(pbox,'by')
-  bz=pbox.bz
-  pbox=rem_tag(pbox,'bz')
+if tag_exist(box,'bx') then begin
+  bx=box.bx
+  box=rem_tag(box,'bx')
+  by=box.by
+  box=rem_tag(box,'by')
+  bz=box.bz
+  box=rem_tag(box,'bz')
   dim=size(bx,/dim)
   bcube=fltarr(dim[0],dim[1],dim[2],3)
   bcube[*,*,*,0]=temporary(bx)
   bcube[*,*,*,1]=temporary(by)
   bcube[*,*,*,2]=temporary(bz)
-  pbox=add_tag(pbox,temporary(bcube),'bcube',/no_copy,/duplicate)
+  box=add_tag(box,temporary(bcube),'bcube',/no_copy,/duplicate)
 endif
-msize=size(reform((pbox).bcube[*,*,*,0]))
-dx=(pbox).dr[0]
-dy=(pbox).dr[1]
-if ~tag_exist(pbox,'dz') then begin
+msize=size(reform((box).bcube[*,*,*,0]))
+dx=(box).dr[0]
+dy=(box).dr[1]
+if ~tag_exist(box,'dz') then begin
  dz=dblarr(msize[1],msize[2],msize[3])
- dz[*]=(pbox).dr[2]
-endif else dz=(pbox).dz
+ dz[*]=(box).dr[2]
+endif else dz=(box).dz
 
 ;Assume the heights to be 0,dz,2*dz,.....
 z=dblarr(msize[1],msize[2],msize[3])
@@ -74,9 +74,9 @@ bcube=fltarr(csize[1],csize[2],max_chromo_idx+1,3)
 
 for i=0,csize[1]-1 do begin
   for j=0,csize[2]-1 do begin    
-      bcube[i,j,*,0]=interpol((pbox).bcube[i,j,*,0],z[i,j,*],h[i,j,*])
-      bcube[i,j,*,1]=interpol((pbox).bcube[i,j,*,1],z[i,j,*],h[i,j,*])
-      bcube[i,j,*,2]=interpol((pbox).bcube[i,j,*,2],z[i,j,*],h[i,j,*])
+      bcube[i,j,*,0]=interpol((box).bcube[i,j,*,0],z[i,j,*],h[i,j,*])
+      bcube[i,j,*,1]=interpol((box).bcube[i,j,*,1],z[i,j,*],h[i,j,*])
+      bcube[i,j,*,2]=interpol((box).bcube[i,j,*,2],z[i,j,*],h[i,j,*])
   end
 end
 
@@ -107,7 +107,7 @@ bcube[*,*,*,2]=bz
 
 
 
-box=create_struct(pbox,$
+box=create_struct(box,$
   'chromo_idx',chromo_idx, 'chromo_bcube',bcube,'n_htot',nh,'n_hi',nhi,'n_p',np,'dz',temporary(big_dh),$
   'chromo_n',n,'chromo_t',t,'chromo_layers',max_chromo_idx+1,'tr',tr_idx,'tr_h',tr_h,'corona_base',corona_base_idx)
 

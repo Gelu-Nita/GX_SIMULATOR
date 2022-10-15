@@ -30,7 +30,7 @@ pro gx_chmp,wgxchmp,fresh=fresh,font=font,_extra=_extra
   if n_elements(_extra) eq 0 then begin
     if file_exist('gxchmp.ini') then begin
      if ~keyword_set(fresh) then restore,'gxchmp.ini'
-      wgxchmp=cw_gxchmp(tlb,GXMpath=GXMpath,RefDataPath=RefDataPath,modDir=modDir,psDir=psDir,$
+      wgxchmp=cw_gxchmp(tlb,GXMpath=GXMpath,RefDataPath=RefDataPath,modDir=modDir,psDir=psDir,tmpDir=tmpDir,$
                        RefDataStruct=RefDataStruct,alist=alist,blist=blist,qlist=qlist,$
                        levels=levels,solution=solution, renderer=renderer,$
                        fov=fov,res=res,nBridges=nBridges,EBTELpath=EBTELpath)

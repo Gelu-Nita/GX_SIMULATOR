@@ -6,11 +6,18 @@ endif
 compile_opt idl2
  
  ;----------------------------------------------------------------------------
- objMetricsArr=[[result.RES_BEST_METRICS],[result.CHI_BEST_METRICS]]
- modFilesArr=[[result.res2_best_file],[result.chi2_best_file]]
  a0=result.a
  b0=result.b
- q_best= [[result.Q_RES2_BEST],[result.Q_CHI2_BEST]]
+ 
+ objMetricsArr=objarr(n_elements(result),2)
+ q_best=dblarr(n_elements(result),2)
+ modFilesArr=strarr(n_elements(result),2)
+ objMetricsArr[*,0]=result.RES_BEST_METRICS
+ objMetricsArr[*,1]=result.CHI_BEST_METRICS
+ modFilesArr[*,0]=result.res2_best_file
+ modFilesArr[*,1]=result.chi2_best_file
+ q_best[*,0]=result.Q_RES2_BEST
+ q_best[*,1]=result.Q_CHI2_BEST
  
  a=a0[uniq(a0,sort(a0))]
  b=b0[uniq(b0,sort(b0))]

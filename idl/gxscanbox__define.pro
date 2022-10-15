@@ -1180,12 +1180,6 @@ pro gxScanbox::BridgeResetEBTEL,bridge
     bridge->Execute,'setenv, "ebtel='+ebtel+'"'
     bridge->Execute,'message,"ebtel enviroment variable set to '+ebtel+'",/cont'
   endif
-  ebtel_ss=gx_ebtel_path(/ss)
-  bridge->Execute,'ebtel_ss=GETENV("ebtel_ss")'
-  if bridge->GetVar('ebtel_ss') ne ebtel_ss then begin
-    bridge->Execute,'setenv, "ebtel_ss='+ebtel+'"'
-    bridge->Execute,'message,"ebtel_ss enviroment variable set to '+ebtel_ss+'",/cont'
-  endif
 end
 
 function gxScanbox::ds

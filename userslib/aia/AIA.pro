@@ -24,9 +24,10 @@ pro aia,parms,rowdata,nparms,rparms,path=path,logtdem=logtdem,dem_run=dem_run,qr
        Parms[trf_idx].Name='TRfactor'     & Parms[trf_idx].Value=0            & Parms[trf_idx].Unit=''        & Parms[trf_idx].Hint='TR factor'
        nparms=[{name:'N_pix',value:0l,unit:'(int)',user:0,hint:'Number of pixels'},$
                {name:'N_vox',value:0l,unit:'(int)',user:0,hint:'Number of voxels'},$
-               {name:'UseDEM',value:0l,unit:'(int)',user:0,hint:'Use DEM'},$
-               {name:'AddTR',value:0l,unit:'(int)',user:0,hint:'Add TR Contribution'},$
-               {name:'ApplyTRfactor',value:0l,unit:'(int)',user:0,hint:'Apply TR Factor'},$
+               {name:'N_chan',value:0l,unit:'(int)',user:0,hint:'Number of channels'},$
+               {name:'UseDEM',value:1l,unit:'(int)',user:0,hint:'Use DEM'},$
+               {name:'AddTR',value:1l,unit:'(int)',user:0,hint:'Add TR Contribution'},$
+               {name:'ApplyTRfactor',value:1l,unit:'(int)',user:0,hint:'Apply TR Factor'},$
                {name:'DEMavg',value:0l,unit:'(int)',user:0,hint:'DEM Interpolation Method'},$
                {name:'EVEnorm',value:1l,unit:'(int)',user:1,hint:'Perform EVE normalization'},$
                {name:'CHIANTIfix',value:0l,unit:'(int)',user:1,hint:'Apply CHIANTI correction'}]
@@ -62,12 +63,12 @@ pro aia,parms,rowdata,nparms,rparms,path=path,logtdem=logtdem,dem_run=dem_run,qr
                      y:{label:'I',unit:'counts/s/pix'}},rgb:rgb} 
      return
  end
-   useDEM=nparms[2]
-   AddTR=nparms[3]
-   ApplyTRfactor=nparms[4]
-   avgdem=nparms[5]
-   evenorm=nparms[6]
-   chiantifix=nparms[7]
+   useDEM=nparms[3]
+   AddTR=nparms[4]
+   ApplyTRfactor=nparms[5]
+   avgdem=nparms[6]
+   evenorm=nparms[7]
+   chiantifix=nparms[8]
    norm_tr=rparms[0]/((4.5e7)^2)
    n_hi0=rparms[2]
    sz=size(rowdata,/dim)

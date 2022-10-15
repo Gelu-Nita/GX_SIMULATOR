@@ -1,39 +1,55 @@
-function metrics_root,q,metrics,metrics_thresh,ignore_in=ignore_in,done=done
+function metrics_root,q,metrics,metrics_thresh,done=done
+  
   in_between=keyword_set(done)?$
     where(abs(metrics) ge 0,in_count):$
     where(abs(metrics) lt metrics_thresh,in_count)
-  if keyword_set(ignore_in) then begin
-    in_between=[-1]
-    in_count=0
-  endif
-  above_idx=where(metrics ge 0,above_count)
-  below_idx=where(metrics lt 0,below_count)
-  if above_count gt 0 and below_count gt 0 then begin
-    ametrics=min(metrics[above_idx])
-    aidx=(where(metrics eq ametrics))[0]
-    bmetrics=max(metrics[below_idx])
-    bidx=(where(metrics eq bmetrics))[0]
+    
+  above_idx=where(metrics ge 0,above_count,comp=below_idx,ncomp=below_count)
+  if below_count eq 0 or above_count eq 0 then begin
+      q_best=(below_count eq 0)?min(q)/10:max(q)*10
+      q_best_high=0
+      q_best_low=0
+      metrics_best=0
+      metrics_best_idx=-1
+      goto,skip_fit
   endif else begin
-    idx=sort(abs(metrics))
-    bidx=idx[0]
-    bmetrics=metrics[bidx]
-    aidx=idx[1]
-    ametrics=metrics[aidx]
+    if in_count gt 0 then begin
+      abs_metrics_min=min(abs(metrics[in_between]),imin)
+      metrics_best=metrics[in_between[imin]]
+      metrics_best_idx=(where(metrics eq metrics_best))[0]
+      q_best=double(q[metrics_best_idx])
+      
+      idx=sort(abs(metrics))
+      bidx=idx[0]
+      bmetrics=metrics[bidx]
+      aidx=idx[1]
+      ametrics=metrics[aidx]
+      fit=linfit(alog10(q[[aidx,bidx]]),[ametrics,bmetrics])
+      q_best_high=10^((metrics_thresh-fit[0])/fit[1])
+      q_best_low=10^((-metrics_thresh-fit[0])/fit[1])
+      
+    endif else begin
+      abs_metrics_min=min(abs(metrics[above_idx]),imin)
+      metrics_best_above=metrics[above_idx[imin]]
+      metrics_best_idx=(where(metrics eq metrics_best_above))[0]
+      q_best_above=double(q[metrics_best_idx])
+      
+      abs_metrics_min=min(abs(metrics[below_idx]),imin)
+      metrics_best_below=metrics[below_idx[imin]]
+      metrics_best_idx=(where(metrics eq metrics_best_below))[0]
+      q_best_below=double(q[metrics_best_idx])   
+      
+      fit=linfit(alog10([q_best_below,q_best_above]),[metrics_best_below,metrics_best_above])
+      q_best=10d^(-fit[0]/fit[1])  
+      q_best_high=0
+      q_best_low=0
+      metrics_best=0
+      metrics_best_idx=-1
+      
+    endelse
   endelse
-  fit=linfit(alog10(q[[aidx,bidx]]),[ametrics,bmetrics])
-  if in_count gt 0 then begin
-    abs_metrics_min=min(abs(metrics[in_between]),imin)
-    metrics_best=metrics[in_between[imin]]
-    metrics_best_idx=(where(metrics eq metrics_best))[0]
-    q_best=double(q[metrics_best_idx])
-  endif else begin
-    q_best=10d^(-fit[0]/fit[1])
-    metrics_best=0
-    metrics_best_idx=-1
-  endelse
-  q_best=q_best>1e-6<1
-  q_best_high=10^((metrics_thresh-fit[0])/fit[1])
-  q_best_low=10^((-metrics_thresh-fit[0])/fit[1])
+  
+  skip_fit:
   q_range=[q_best_low,q_best_high]
   q_range=q_range[sort(q_range)]
   done=in_count gt 0
@@ -43,7 +59,7 @@ end
 
 function gx_processmwmodels_ebtel,ab=ab,ref=ref,$
                        modDir=modDir,modFiles=modFiles,psDir=psDir,$
-                       lev=lev,resize=resize,$
+                       levels=levels,resize=resize,$
                        file_arr=file_arr,q_arr=q_arr,$
                        apply2=apply2,charsize=charsize,_extra=_extra
  ;++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -65,7 +81,7 @@ function gx_processmwmodels_ebtel,ab=ab,ref=ref,$
  _obsI=ref.maps[0]
  _obsIsdev=ref.maps[1]
  ;++++++++++++++++++++++++++++++++++++++++++++++++
- if ~isa(lev) then lev=[12,20,30,50,80]
+ if ~isa(levels) then levels=[12,20,30,50,80]
  if n_elements(ab) eq 2 then begin
    if moddir ne '' then modFiles=find_files(string(ab,format="('*a',f0.2,'b',f0.2,'*.map')"),modDir)
  endif else if moddir ne '' then modFiles=find_files('*.map',modDir)
@@ -157,8 +173,8 @@ function gx_processmwmodels_ebtel,ab=ab,ref=ref,$
     _obsI0=_obsI
     _obsIsdev0=_obsIsdev
     obj_destroy,obj_metrics
-    obj_metrics=gx_metrics_map(modI, _obsI,_obsIsdev,mask=lev[0],metrics=metrics,apply2=apply2)
-    obj_metrics_arr[i]=gx_metrics_map(modI0, _obsI0,_obsIsdev0,mask=lev[0],metrics=metrics3,apply2=3)
+    obj_metrics=gx_metrics_map(modI, _obsI,_obsIsdev,mask=levels[0],metrics=metrics,apply2=apply2)
+    obj_metrics_arr[i]=gx_metrics_map(modI0, _obsI0,_obsIsdev0,mask=levels[0],metrics=metrics3,apply2=3)
     obsI=obj_metrics->get(1,/map)
     dx=obsI.xc-obsI.orig_xc
     dy=obsI.yc-obsI.orig_yc
@@ -199,8 +215,8 @@ function gx_processmwmodels_ebtel,ab=ab,ref=ref,$
       chi2_best[i]=metrics3.chi2
 
     plot_map,modI,charsize=charsize,title=modI.id
-    plot_map,modI,/over,lev=lev,/perc,color=0,thick=3
-    plot_map,obsI,/over,lev=lev,/perc,color=200,thick=3
+    plot_map,modI,/over,levels=levels,/perc,color=0,thick=3
+    plot_map,obsI,/over,levels=levels,/perc,color=200,thick=3
     get_map_coord,modI,x,y
     sz=size(modI.data)
     xyouts,x[10.*sz[1]/100,90.*sz[2]/100],y[10.*sz[1]/100,90.*sz[2]/100],string(dx,dy,format="('!4D!3x=',f7.3,' !4D!3y=',f7.3)"),charsize=charsize,color=255
@@ -331,7 +347,7 @@ function gx_processmwmodels_ebtel,ab=ab,ref=ref,$
   res_threshold:res_thresh,chi_threshold:chi_thresh,chi2_best:chi2_best,res2_best:res2_best,q_chi2_best:q_chi2_best,$
   q_res2_best:q_res2_best,chi_done:chi_done,res_done:res_done,$
   res2_best_file:file_basename(res2_best_file),chi2_best_file:file_basename(chi2_best_file),$
-  res_best_metrics:res_best_metrics,chi_best_metrics:chi_best_metrics,mask:lev[0],$
+  res_best_metrics:res_best_metrics,chi_best_metrics:chi_best_metrics,mask:levels[0],$
   refdatapath:tag_exist(_extra,'refdatapath',/quiet)?_extra.refdatapath:'',$
   gxmpath:tag_exist(_extra,'gxmpath',/quiet)?_extra.gxmpath:'',$
   q_start:tag_exist(_extra,'q_start',/quiet)?_extra.q_start:[0.0001,0.001]}]

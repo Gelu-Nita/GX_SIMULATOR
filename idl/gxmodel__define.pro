@@ -48,7 +48,7 @@ function gxModel::GetB,p,Bx=Bx,By=By,Bz=Bz,volume=volume
 if obj_valid(self.volume) then return,self.volume->GetB(p,Bx=Bx,By=By,Bz=Bz,volume=volume) else return,[0,0,0]*!Values.f_nan
 end
 
-function gxModel::GetBLine,p,dxdydz,subgridpts=subgridpts,tr_height=tr_height,no_tr=no_tr,full=full,_extra=_extra
+function gxModel::GetBLine,p,dxdydz,subgridpts=subgridpts,tr_height=tr_height,no_tr=no_tr,full=full,use_idl=use_idl,_extra=_extra
 id=self.volume->VoxelId()
 tr_layer=where((id and 1) gt 0,count)
 if count gt 0 then begin
@@ -59,7 +59,8 @@ sy=self.size[2]
 sz=self.size[3]
 if n_elements(p) eq 0 then p,randomu(seed,3)*[sx,sy,sz]-1
 
-if ~self.lock  then begin
+;if ~self.lock  then begin
+if keyword_set(use_idl)  then begin
   default,subgridpts,self.subgridpts
   default,dxdydz,[1., 1., 1.]
   void=self->GetB(Bx=Bx,By=By,Bz=Bz)
@@ -1036,14 +1037,14 @@ pro gxModel::Slice,parms,row,scanner=scanner
   sz=self->Size(/volume)
   dr=reform((*grid)[0,*,row,*])
   g=reform((*grid)[1:3,*,row,*])
-  vol_ind=transpose(reform(g,3,nx*nz))
+  vol_ind=transpose(reform(g,3,nx*nz))+1e-6;added epilon correction to fix borderline numerical errors
   missing=0
-  (self->GetVolume())->GetVertexAttributeData,'voxel_id',id
+  (self->GetVolume())->GetVertexAttributeData,'voxel_id',id 
   if n_elements(id) gt 0 then begin
     var=interpolate(id,fix(vol_ind[*,0]),fix(vol_ind[*,1]),fix(vol_ind[*,2]),missing=missing)
     idx=gx_name2idx(parms,'VoxelID')
     if (size(idx))[0] ne 0 then begin
-      (*scanner).parms[*,*,idx]=ulong(var)
+      (*scanner).parms[*,*,idx]=var
       assigned[idx]=1
     end
     idx=gx_name2idx(parms,'TubeID')
@@ -1060,6 +1061,14 @@ pro gxModel::Slice,parms,row,scanner=scanner
   idx=gx_name2idx(parms,'dR')
   if (size(idx))[0] ne 0 then begin
     (*scanner).parms[*,*,idx]=dr*gx_rsun()
+    assigned[idx]=1
+  end
+  
+  ;ASSIGN z
+  idx=gx_name2idx(parms,'z')
+  if (size(idx))[0] ne 0 then begin
+    vol=(self->R(/volume)-1)*gx_rsun(unit='km')
+    (*scanner).parms[*,*,idx]=interpolate(vol,fix(vol_ind[*,0]),fix(vol_ind[*,1]),fix(vol_ind[*,2]),missing=missing)
     assigned[idx]=1
   end
 
@@ -1129,7 +1138,6 @@ pro gxModel::Slice,parms,row,scanner=scanner
   if (size(idx))[0] ne 0 then begin
     vol=self->Box2Volume('bmed',/corona)
     if isa(vol)then begin
-      ;(*scanner).parms[*,*,idx]=interpolate(vol,vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
       (*scanner).parms[*,*,idx]=interpolate(vol,fix(vol_ind[*,0]),fix(vol_ind[*,1]),fix(vol_ind[*,2]),missing=missing)
       assigned[idx]=1
     end
@@ -1141,7 +1149,6 @@ pro gxModel::Slice,parms,row,scanner=scanner
     vol=self->Box2Volume('length',/corona)
     if isa(vol)then begin
       vol=gx_rsun()*vol/2
-      ;(*scanner).parms[*,*,idx]=interpolate(vol,vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
       (*scanner).parms[*,*,idx]=interpolate(vol,fix(vol_ind[*,0]),fix(vol_ind[*,1]),fix(vol_ind[*,2]),missing=missing)
       assigned[idx]=1
     end
@@ -1505,12 +1512,6 @@ function gxModel::ComputeBlines,inputSeeds,tr_height_km=tr_height_km,_extra=_ext
   box=self->BBOX()
   default,tr_height_km,0
   chromo_level=tr_height_km
-  ;Temporary DLL bug fix
-;   sz=self.Size()
-;   inputSeeds[0,*]=inputSeeds[0,*]>(tr_idx>1)<(sz[1]-(tr_idx>2))
-;   inputSeeds[1,*]=inputSeeds[1,*]>(tr_idx>1)<(sz[2]-(tr_idx>2))
-;   inputSeeds[2,*]=inputSeeds[2,*]>(tr_idx>1)<(sz[3]-(tr_idx>2))
-  ;End temporary DLL bug fix
 
   dll_path=gx_findfile('WWNLFFFReconstruction.dll',folder='gxbox')
 
@@ -1552,13 +1553,13 @@ pro gxModel::AddBLines,_extra=_extra
  inputSeeds=self->GenerateSeeds(_extra=_extra)
  nSeeds=n_elements(inputSeeds)/3 
  if nSeeds lt 1 then return
-      if self.lock then begin
+;      if self.lock then begin
         lines=self->ComputeBlines(inputSeeds)
         good=where(obj_valid(lines) eq 1,count)
         if count gt 0 then self->add,lines[good]
-      endif else begin
-        for i=0, nSeeds-1 do self->CreateBline,InputSeeds[*,i],/any
-      endelse
+;      endif else begin
+;        for i=0, nSeeds-1 do self->CreateBline,InputSeeds[*,i],/any
+;      endelse
 end  
 
 pro gxModel::RemoveBlines

@@ -17,7 +17,7 @@ chi2_max=chi2_max,xsize=xsize,ysize=ysize,metrics_log=metrics_log,_extra=_extra
    for k=0,2 do begin
      wset,win[k]
      plot,findgen(10),/nodata
-     gx_plot_label,0.2,0.5,'No solution here!',charsize=2
+     gx_plot_label,0.2,0.5,'No solution here!'
    endfor
    goto,exit_point
  endif

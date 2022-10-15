@@ -603,7 +603,7 @@ pro gxVolume::Update,select,data=data,plot_model_attributes=plot_model_attribute
     return
   endif
   if self.flags.newNT then begin
-    if dialog_message(['Volume n-T configuration needs to be updated!','Do you want to recompute n-T now?',$
+    if ~keyword_set(quiet) then if dialog_message(['Volume n-T configuration needs to be updated!','Do you want to recompute n-T now?',$
       'If you need to do more volume changes before this potentially time consuming action, you can later do it manualy by pressing the "Store/Compute n-T from EBTEL" button located in the Model tab'],$ 
       /question) eq 'Yes' then self->ComputeNT
   endif

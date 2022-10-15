@@ -1,6 +1,6 @@
 function gx_search4bestq, gxmpath=gxmpath,a_arr=a_arr,b_arr=b_arr,q_start=q_start, $
                      modDir=modDir,psDir=psDir,tmpDir=tmpDir,refdatapath=refdatapath,$
-                     ebtel_path=ebtel_path,renderer=renderer,$
+                     ebtel_path=ebtel_path,renderer=renderer,info=info,$
                      xc=xc,yc=yc,xfov=xfov,yfov=yfov,nx=nx,ny=ny,$
                      levels=levels,resize=resize,save_gxc=save_gxc,redo=redo,$
                      save_result=save_result,plot_best=plot_best,_extra=_extra
@@ -70,7 +70,7 @@ function gx_search4bestq, gxmpath=gxmpath,a_arr=a_arr,b_arr=b_arr,q_start=q_star
             q0_formula='q[0]'
             q_formula=string(a,b,format="('q0*(B/q[1])^(',g0,')/(L/q[2])^(',g0,')')")
             q_parms=[q[j], 100.0, 1.0000000d+009, 0.0, 0.0]
-            omap=gx_mwrender_ebtel(model,renderer,ebtel_path=ebtel_path,q_parms=q_parms,q_formula=q_formula,q0_formula=q0_formula,f_min=ref.freq*1d9,n_freq=1,gxcube=gxcube,_extra=_extra)
+            omap=gx_mwrender_ebtel(model,renderer,info=info,ebtel_path=ebtel_path,q_parms=q_parms,q_formula=q_formula,q0_formula=q0_formula,f_min=ref.freq*1d9,n_freq=1,gxcube=gxcube,_extra=_extra)
             if obj_valid(omap) then begin
                 map->setmap,0,omap->get(0,/map)
                 save,map,file=modfile
@@ -88,7 +88,11 @@ function gx_search4bestq, gxmpath=gxmpath,a_arr=a_arr,b_arr=b_arr,q_start=q_star
           add_q=(apply2 eq 1)?((result.res_done eq 0) and (result.chi_done  eq 0)):((result.res_done eq 0) or (result.chi_done  eq 0))
           if add_q eq 1 then begin
             nq=n_elements(q)
-            if result.res_done eq 0 then q=[q,result.q_res_best] else q=[q,result.q_chi_best]
+            if apply2 eq 1 then begin
+              if result.res_done eq 0 then q=[q,result.q_res_best] else q=[q,result.q_chi_best]
+            endif else begin
+              q=[q,result.q_res_best,result.q_chi_best]
+            endelse
             q=q[uniq(q,sort(q))]
             if n_elements(q) eq nq then begin
               if apply2 eq 1 then apply2=3 else force_done=1

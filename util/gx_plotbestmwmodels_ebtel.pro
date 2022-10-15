@@ -1,6 +1,6 @@
 pro gx_plotbestmwmodels_ebtel, result, psDir,res2_best=res2_best,chi2_best=chi2_best,$
 q_res2_best=q_res2_best,q_chi2_best=q_chi2_best, a=a,b=b,levels=levels,$
-renorm_q=renorm_q,charsize=charsize,maps_best=maps_best
+renorm_q=renorm_q,charsize=charsize,maps_best=maps_best,plot_chi=plot_chi,plot_res=plot_res
 if ~isa(result) then begin
   message,'No input structure provided!',/cont
   return
@@ -13,6 +13,7 @@ if not file_test(psDir) then file_mkdir,psDir
  ;----------------------------------------------------------------------------
  objMetricsArr=[[result.RES_BEST_METRICS],[result.CHI_BEST_METRICS]]
  psFilesArr=[psDir+'\BestRes.ps',psDir+'\BestChi.ps']
+ psPlotsArr=[keyword_set(plot_res),keyword_set(plot_chi)]
  modFilesArr=[[result.res2_best_file],[result.chi2_best_file]]
  a0=result.a
  b0=result.b
@@ -29,11 +30,12 @@ if not file_test(psDir) then file_mkdir,psDir
    R=(npix=(q0=(res=(res2=fltarr(nmod)))))
    chi2=res2
    chi=chi2
-   psObject = Obj_New("FSC_PSConfig", /Color, /Times, /Bold, Filename=psFilesArr[k],yoffset=0.5,xoffset=0.25,ysize=6.4,xsize=9.5,landscape=1,bits=8)
-   psKeys=psObject->GetKeywords()
-   psKeys.filename=psFilesArr[k]
-   Device, _Extra= psKeys
-    
+   if psPlotsArr[k] then begin
+     psObject = Obj_New("FSC_PSConfig", /Color, /Times, /Bold, Filename=psFilesArr[k],yoffset=0.5,xoffset=0.25,ysize=6.4,xsize=9.5,landscape=1,bits=8)
+     psKeys=psObject->GetKeywords()
+     psKeys.filename=psFilesArr[k]
+     Device, _Extra= psKeys
+   end
    default,pmulti,[0,3,2,0,0]
    !p.multi=pmulti
    !p.font=2
@@ -107,27 +109,29 @@ if not file_test(psDir) then file_mkdir,psDir
         chi2[i]=CHI2_MAP.roi_metrics
       
       filnam='rbin_'+file_basename(modFilesArr[i,k])
-      plot_map,modI,charsize=charsize,title=filnam
-      plot_map,modI,/over,levels=levels,/perc,color=0,thick=3
-      plot_map,obsI,/over,levels=levels,/perc,color=200,thick=3
-      get_map_coord,modI,x,y
-      sz=size(modI.data)
-      sx=sz[1]/100.
-      sy=sz[2]/100.
-      !p.font=-1
-      xyouts,x[10*sx,90*sy],y[10*sx,90*sy],strcompress(string(dx,dy,format="('!4D!3x=',f7.2,'; !4D!3y=',f7.2)"),/rem),charsize=1.1*charsize,color=255
-      !p.font=2
-      xyouts,x[10*sx,90*sy],y[10*sx,80*sy],string(R[i],format="(' R=',g0)"),charsize=charsize,color=255
-      xyouts,x[10*sx,90*sy],y[10*sx,70*sy],string(Q0[i],format="(' Q0=',g0)"),charsize=charsize,color=255
-      xyouts,x[10*sx,90*sy],y[10*sx,60*sy],string(a0[i],b0[i],format="(' (a; b)=(',g0,'; ',g0,')')"),charsize=charsize,color=255
-      xyouts,x[10*sx,90*sy],y[10*sx,10*sy],string(total(npix[i]),format="(' Mask_Npix=',I0)"),charsize=charsize,color=255
-      plot_map,RES_NORM_MAP,charsize=charsize,title='res_'+filnam ,dmax=d_res, dmin=-d_res 
-      xyouts,x[10*sx,90*sy],y[10*sx,90*sy],string(res[i],format="(' Res=',g0)"),charsize=charsize,color=25
-      xyouts,x[10*sx,90*sy],y[10*sx,80*sy],string(res2[i],format="(' Res!U2!N=',g0)"),charsize=charsize,color=25
-      xyouts,x[10*sx,90*sy],y[10*sx,70*sy],string(Q0[i],format="(' Q0=',g0)"),charsize=charsize,color=25
-      plot_map,CHI2_MAP,charsize=charsize,title='chi!U2!N_'+filnam ,dmax=d_res*20, dmin=0 ;-d_res*10
-      xyouts,x[10*sx,90*sy],y[10*sx,90*sy],string(chi[i],format="(' Chi=',g0)"),charsize=charsize,color=200
-      xyouts,x[10*sx,90*sy],y[10*sx,80*sy],string(chi2[i],format="(' Chi!U2!N=',g0)"),charsize=charsize,color=200
+      if psPlotsArr[k] then begin
+        plot_map,modI,charsize=charsize,title=filnam
+        plot_map,modI,/over,levels=levels,/perc,color=0,thick=3
+        plot_map,obsI,/over,levels=levels,/perc,color=200,thick=3
+        get_map_coord,modI,x,y
+        sz=size(modI.data)
+        sx=sz[1]/100.
+        sy=sz[2]/100.
+        !p.font=-1
+        xyouts,x[10*sx,90*sy],y[10*sx,90*sy],strcompress(string(dx,dy,format="('!4D!3x=',f7.2,'; !4D!3y=',f7.2)"),/rem),charsize=1.1*charsize,color=255
+        !p.font=2
+        xyouts,x[10*sx,90*sy],y[10*sx,80*sy],string(R[i],format="(' R=',g0)"),charsize=charsize,color=255
+        xyouts,x[10*sx,90*sy],y[10*sx,70*sy],string(Q0[i],format="(' Q0=',g0)"),charsize=charsize,color=255
+        xyouts,x[10*sx,90*sy],y[10*sx,60*sy],string(a0[i],b0[i],format="(' (a; b)=(',g0,'; ',g0,')')"),charsize=charsize,color=255
+        xyouts,x[10*sx,90*sy],y[10*sx,10*sy],string(total(npix[i]),format="(' Mask_Npix=',I0)"),charsize=charsize,color=255
+        plot_map,RES_NORM_MAP,charsize=charsize,title='res_'+filnam ,dmax=d_res, dmin=-d_res 
+        xyouts,x[10*sx,90*sy],y[10*sx,90*sy],string(res[i],format="(' Res=',g0)"),charsize=charsize,color=25
+        xyouts,x[10*sx,90*sy],y[10*sx,80*sy],string(res2[i],format="(' Res!U2!N=',g0)"),charsize=charsize,color=25
+        xyouts,x[10*sx,90*sy],y[10*sx,70*sy],string(Q0[i],format="(' Q0=',g0)"),charsize=charsize,color=25
+        plot_map,CHI2_MAP,charsize=charsize,title='chi!U2!N_'+filnam ,dmax=d_res*20, dmin=0 ;-d_res*10
+        xyouts,x[10*sx,90*sy],y[10*sx,90*sy],string(chi[i],format="(' Chi=',g0)"),charsize=charsize,color=200
+        xyouts,x[10*sx,90*sy],y[10*sx,80*sy],string(chi2[i],format="(' Chi!U2!N=',g0)"),charsize=charsize,color=200
+      end
      endfor
 
      for l=0,nmod-1 do begin
@@ -141,7 +145,7 @@ if not file_test(psDir) then file_mkdir,psDir
       obj_img[ii,jj,k]=ObjMetricsArr[l,k]
      endfor
   
-   if min(a0) lt max(a0) and min(b0) lt max(b0) then begin
+   if min(a0) lt max(a0) and min(b0) lt max(b0) and (psPlotsArr[k] eq 1) then begin
     !p.multi=[0,3,4,0,0]
     ymargin=[3,1]
     plot,a,res2_img[*,0,k],psym=-1,charsize=charsize,xtitle='a',ytitle='RES!U2!N',yrange=minmax(res2_img),/nodata,/xsty, xmargin=xmargin,ymargin=ymargin
@@ -249,22 +253,22 @@ if not file_test(psDir) then file_mkdir,psDir
  endif
  ymargin=[2,1]
  cposition=[0.07,0.98,0.31,1.0]
- tvplot,res2_best,a,b,charsize=charsize,ymargin=ymargin,title='RES!U2!N',xtitle='a',ytitle='b',/sample,/iso
+ tvplot,alog10(res2_best),a,b,charsize=charsize,ymargin=ymargin,title='LOG(RES!U2!N)',xtitle='a',ytitle='b',/sample,/iso
  plots,a[idx_res2[0]],b[idx_res2[1]],psym=2,color=250,symsize=symsize,thick=3
- gx_colorbar,minmax(res2_best),cposition=cposition-[0,0.02,0,0.02],charsize=2,font=!p.font
+ gx_colorbar,minmax(alog10(res2_best)),cposition=cposition-[0,0.02,0,0.02],charsize=2,font=!p.font
 
- tvplot,chi2_best,a,b,charsize=charsize,ymargin=ymargin,title='CHI!U2!N',xtitle='a',ytitle='b',/sample,/iso
+ tvplot,alog10(chi2_best),a,b,charsize=charsize,ymargin=ymargin,title='LOG(CHI!U2!N)',xtitle='a',ytitle='b',/sample,/iso
  plots,a[idx_chi2[0]],b[idx_chi2[1]],psym=2,color=250,symsize=symsize,thick=3
- gx_colorbar,minmax(chi2_best),cposition=cposition-[0,0.52,0,0.52],charsize=2,font=!p.font
+ gx_colorbar,minmax(alog10(chi2_best)),cposition=cposition-[0,0.52,0,0.52],charsize=2,font=!p.font
  
  cposition=[0.07,0.98,0.31,1.0]+[1,0,1,0]*0.335
- tvplot,keyword_set(renorm_q)?alog10(q_res2_best):q_res2_best,a,b,charsize=charsize,ymargin=ymargin,title='Q!D0!N RES!U2!N',xtitle='a',ytitle='b',/sample,/iso
+ tvplot,keyword_set(renorm_q)?alog10(q_res2_best):alog10(q_res2_best),a,b,charsize=charsize,ymargin=ymargin,title='LOG(Q!D0!N RES!U2!N)',xtitle='a',ytitle='b',/sample,/iso
  plots,a[idx_res2[0]],b[idx_res2[1]],psym=2,color=250,symsize=symsize,thick=3
- gx_colorbar,minmax(keyword_set(renorm_q)?alog10(q_res2_best):q_res2_best),cposition=cposition-[0,0.02,0,0.02],charsize=2,font=!p.font
+ gx_colorbar,minmax(keyword_set(renorm_q)?alog10(q_res2_best):alog10(q_res2_best)),cposition=cposition-[0,0.02,0,0.02],charsize=2,font=!p.font
  
- tvplot,keyword_set(renorm_q)?alog10(q_chi2_best):q_chi2_best,a,b,charsize=charsize,ymargin=ymargin,title='Q!D0!N CHI!U2!N',xtitle='a',ytitle='b',/sample,/iso
+ tvplot,keyword_set(renorm_q)?alog10(q_chi2_best):alog10(q_chi2_best),a,b,charsize=charsize,ymargin=ymargin,title='LOG(Q!D0!N CHI!U2!N)',xtitle='a',ytitle='b',/sample,/iso
  plots,a[idx_chi2[0]],b[idx_chi2[1]],psym=2,color=250,symsize=symsize,thick=3
- gx_colorbar,minmax(keyword_set(renorm_q)?alog10(q_chi2_best):q_chi2_best),cposition=cposition-[0,0.52,0,0.52],charsize=2,font=!p.font
+ gx_colorbar,minmax(keyword_set(renorm_q)?alog10(q_chi2_best):alog10(q_chi2_best)),cposition=cposition-[0,0.52,0,0.52],charsize=2,font=!p.font
   
  res2_best_b=a*0
  res2_min=a*0

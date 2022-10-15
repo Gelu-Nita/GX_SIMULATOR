@@ -25,7 +25,7 @@
 ; MODIFICATION HISTORY:
 ;     Written 03-Jan-2017 Gelu M. Nita
 ;
-pro gx_fits2map,filename,map,reform=reform
+pro gx_fits2map,filename,map,reform=reform,header=header
   if n_elements(filename) eq 0 then filename=dialog_pickfile(filter='*.f*')
   if ~file_exist(filename) then return
   break_file, filename, disk_log, dir, instr_name, ext

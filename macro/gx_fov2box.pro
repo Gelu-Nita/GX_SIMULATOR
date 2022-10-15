@@ -11,9 +11,9 @@
 ;/potential_only: set this keyword to gcompute only the potential extrapolation
 ;/save_potential: set this keyword to save the potential extrapolation box (which used to generate the boundary box for the following pipeline steps)
 ;/save_bounds: set this keyword to save the boundary box
-;/use_potential: set this keyword to skip the NLFFF extrapolation step (which is skip regardless this keyword on UNIX/LINUX platforms)
+;/use_potential: set this keyword to skip the NLFFF extrapolation step
 ;/nlfff_only: set this keyword to stop the pipeline script after the NLFFF box is computed 
-;/use_idl: set this keyword to use the IDL implementation of the magnetic field lines intersecting each volume voxel instead of using the NLFFFF DLL (which is skip regardless this keyword on UNIX/LINUX platforms)
+;/use_idl: set this keyword to use the IDL implementation of the magnetic field lines intersecting each volume voxel instead of using the NLFFFF library
 ;/generic_only: set this keyword to stop the script after the information related the computed volume magnetic lines are added to the box
 ;/euv: use this keyword to download the context SDO EUV maps and add tem as reference maps in the box structure
 ;/uv: use this keyword to download the context SDO UV maps and add tem as reference maps in the box structure
@@ -47,7 +47,8 @@ pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km
                         save_potential=save_potential,save_bounds=save_bounds,use_potential=use_potential, use_idl=use_idl,$
                         nlfff_only=nlfff_only, generic_only=generic_only,centre=centre,euv=euv,uv=uv,hmifiles=hmifiles,$
                         tr_height_km=tr_height_km,old_combo_format=old_combo_format,out_files=out_files,wConsole=wConsole,$
-                        entry_box=entry_box,jump2potential=jump2potential,jump2nlfff=jump2nlfff,jump2lines=jump2lines,jump2chromo=jump2chromo,info=info,_extra=_extra
+                        entry_box=entry_box,jump2potential=jump2potential,jump2nlfff=jump2nlfff,jump2lines=jump2lines,$
+                        jump2chromo=jump2chromo,info=info,lib_path=lib_path,_extra=_extra
  CATCH, Error_status
  IF Error_status NE 0 THEN BEGIN
     if n_elements(wConsole) ne 0 then console= long(wConsole)
@@ -58,7 +59,6 @@ pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km
     CATCH, /CANCEL
     return
  ENDIF
- 
  par=ROUTINE_INFO('gx_fov2box',/par)
  exec=''
  parms=n_elements(time)?{time:time}:{time:''}
@@ -116,9 +116,9 @@ pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km
   if n_elements(time) eq 0 then gx_message,'Required time input is missing!',wConsole
   if ~valid_time(time,err) then gx_message,err,wConsole 
   
-  if not keyword_set(tmp_dir) then tmp_dir = filepath('jsoc_cache',root = GETENV('IDL_TMPDIR'))
+  if not keyword_set(tmp_dir) then tmp_dir = (!version.os_family eq 'Windows')?'C:\jsoc_cache':filepath('jsoc_cache',root = curdir())
   if not file_test(tmp_dir) then file_mkdir, tmp_dir
-  if not keyword_set(out_dir) then cd, current = out_dir
+  if not keyword_set(out_dir) then out_dir = (!version.os_family eq 'Windows')?'C:\gx_models':filepath('gx_models',root = curdir())
   out_dir=out_dir+path_sep()+anytim(strreplace(time,'.','-'),/ccsds,/date)
   if not file_test(out_dir) then file_mkdir, out_dir 
   
@@ -182,7 +182,7 @@ pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km
   
   entry_line:
   if n_elements(entry_box) ne 0 then begin
-      box=entry_box
+      box=temporary(entry_box)
       if tag_exist(box,'bcube') then begin
         bx=box.bcube[*,*,*,0]
         by=box.bcube[*,*,*,1]
@@ -222,16 +222,19 @@ pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km
  
   if keyword_set(potential_only) then goto,exit_point
   
-  if !VERSION.OS_FAMILY NE 'Windows' or keyword_set(use_potential) then begin
+  if keyword_set(use_potential) then begin
     if size(pbox,/tname) eq 'STRUCT' then box=temporary(pbox)
     goto,compute_lines
-  endif
+  endif else begin
+    pbox=rem_tag(pbox,'refmaps')
+    free_var,pbox,/delete
+  endelse
   
   compute_nlfff:
+  lib_path=gx_nlfff_libpath()
   t0=systime(/seconds)
-  default,dll_path,gx_findfile('WWNLFFFReconstruction.dll',folder='gxbox\Magnetic-Field_Library')
   gx_message,'Performing NLFFF extrapolation', wConsole
-  return_code = gx_box_make_nlfff_wwas_field(dll_path, box,_extra=_extra)
+  return_code = gx_box_make_nlfff_wwas_field(lib_path, box,_extra=_extra)
   gx_message,strcompress(string(systime(/seconds)-t0,format="('NLFFF extrapolation performed in ',g0,' seconds')")), wConsole
   file=out_dir+path_sep()+box.id+'.sav'
   save,box,file=file
@@ -241,10 +244,11 @@ pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km
   if keyword_set(nlfff_only) then goto,exit_point
   
   compute_lines:
+  lib_path=gx_nlfff_libpath()
   gx_message,'Computing field lines for each voxel in the model..', wConsole
   default,tr_height_km,1000
   tr_height_sunradius=tr_height_km/(gx_rsun(unit='km'))
-  if keyword_set(use_idl) or !version.os_family ne 'Windows' then begin
+  if keyword_set(use_idl) then begin
     t0=systime(/seconds)
     model=gx_importmodel(box)
     model->computecoronalmodel,tr_height=tr_height_sunradius,/compute,_extra=_extra
@@ -258,10 +262,8 @@ pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km
         reduce_passed=~keyword_set(_extra.center_vox)
       endif else if tag_exist(_extra,'reduce_passed') then reduce_passed=_extra.reduce_passed
     end  
-    default,dll_path,gx_findfile('WWNLFFFReconstruction.dll',folder='gxbox\Magnetic-Field_Library')
-    gx_addlines2box, box,tr_height_km,reduce_passed=reduce_passed,dll_path=dll_path
+    gx_addlines2box, box,tr_height_km,reduce_passed=reduce_passed,dll_path=lib_path
   endelse
-  
   box.id=box.id+'.GEN'
   file=out_dir+path_sep()+box.id+'.sav'
   save,box,file=file

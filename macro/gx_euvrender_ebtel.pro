@@ -21,7 +21,7 @@ function gx_euvrender_ebtel,model,renderer,ebtel_path=ebtel_path,q_parms=q_parms
     if gx_ebtel_valid_path(ebtel_path) then if path ne ebtel_path then ebtel_path=gx_ebtel_path(ebtel_path)
   endif else ebtel_path=path
   message,'EBTEL path in use: '+file_basename(ebtel_path),/cont
-  default,q_parms,[0.000415, 100.00000, 1.0000000e+009, 1, 0.75]
+  default,q_parms,[0.000495, 100.00000, 1.0000000e+009, 1, 0.75]
   model->SetVertexData,'q0_coeff',q_parms
   volume=model->GetVolume()
   flags=volume->Setflags(/NTDEM)

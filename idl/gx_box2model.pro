@@ -150,6 +150,6 @@ endif
    XCOORD_CONV=XCOORD_CONV,YCOORD_CONV=YCOORD_CONV,ZCOORD_CONV=ZCOORD_CONV,$
    XRANGE=XRANGE,YRANGE=YRANGE,ZRANGE=ZRANGE,size=size,volume=volume,refmaps=refmaps
  if tag_exist(box,'id') then model->SetName,box.id
- if tag_exist(box,'execute') then model->SetId,box.execute 
+ if tag_exist(box,'execute') then model->SetId,str_replace(str_replace(box.execute,'/','\'),string(1b),'1');some bug fix
  return,model
 end

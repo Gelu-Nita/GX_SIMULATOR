@@ -23,7 +23,7 @@ end
 
 pro gxampp::CreatePanel,xsize=xsize,ysize=ysize
   device, get_screen_size=scr
-  if not exist(xsize) then xsize = fix (scr[0] * .35)
+  if not exist(xsize) then xsize = fix (scr[0] * .45)
   if not exist(ysize) then ysize = xsize *1.1
    
    wgxamppControl=self.wBase
@@ -44,7 +44,7 @@ pro gxampp::CreatePanel,xsize=xsize,ysize=ysize
      /bitmap,tooltip='Select directory where HMI data will be downloaded or looked for',uname='tmp_dir_select')
    geom = widget_info (wTmpBase, /geom)
    wTmpDirPath=widget_text(wTmpDirBase,scr_xsize=scr_xsize-geom.scr_xsize,uname='tmp_dir',/editable,$
-                           value=self.WinOS?'C:\jsoc_cache':(getenv('HOME')+'\jsoc_cache'))
+                           value=self.WinOS?'C:\jsoc_cache':(curdir()+'/jsoc_cache'))
    
   
    wOutDirBase=widget_base(wControlBase,/row,scr_xsize=scr_xsize,/frame)
@@ -54,7 +54,7 @@ pro gxampp::CreatePanel,xsize=xsize,ysize=ysize
      value=gx_bitmap(filepath('open.bmp', subdirectory=['resource', 'bitmaps'])), $
      /bitmap,tooltip='Select directory where the output models will be stored',uname='out_dir_select')
      
-   self.model_dir=self.WinOS?'C:\gx_models':(getenv('HOME')+'\gx_models')
+   self.model_dir=self.WinOS?'C:\gx_models':(curdir()+'/gx_models')
    wOutDirPath=widget_text(wOutDirBase,scr_xsize=scr_xsize-geom.scr_xsize,uname='out_dir',/editable,$
                            value=self.model_dir)
    
@@ -296,8 +296,8 @@ end
 
 pro gxampp::CheckOS
        if ~keyword_set(self.WinOS) then begin
-         widget_control, widget_info(self.wIDbase,find_by_uname='/use_potential'),set_button=1,sensitive=0
-         widget_control,  widget_info(self.wIDbase,find_by_uname='/nlfff_only'),set_button=0,sensitive=0
+         ;widget_control, widget_info(self.wIDbase,find_by_uname='/use_potential'),set_button=1,sensitive=0
+         ;widget_control,  widget_info(self.wIDbase,find_by_uname='/nlfff_only'),set_button=0,sensitive=0
        end
     end   
 pro gxampp::CopyBox,nokeys=nokeys

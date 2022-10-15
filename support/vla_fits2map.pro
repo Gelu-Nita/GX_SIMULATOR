@@ -64,11 +64,22 @@ case 1 of
             print, 'error when finding the stokes parameter!'
             return
         endelse
+        ; get beam info (in arcsec)
+        if  tag_exist(index,'bmaj') and $
+            tag_exist(index,'bmin') and $
+            tag_exist(index,'bpa') then begin
+            bmaj=index.bmaj*3600.
+            bmin=index.bmin*3600.
+            bpa=index.bpa
+            beam = string(bmaj, bmin, bpa, format='(F6.2,", ",F6.2,", ",F5.1)')
+        endif
+
 
         add_prop, map, id = index.telescop 
         add_prop, map, freq = freq
         add_prop, map, frequnit = 'GHz' 
         add_prop, map, stokes = stokes
+        add_prop, map, bmaj_bmin_bpa = beam
         map.roll_angle=0.
         map.id = index.telescop + ' ' + stokes + ' ' + strtrim(string(freq,format='(f6.3)'),2) + ' '+frequnit 
     end

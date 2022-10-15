@@ -62,30 +62,5 @@ pro los,parms,rowdata,info=info
    rowdata[*,0,1,2]=total(chromo_mask*n02dL,2,/double)
    rowdata[*,0,2,2]=1.5*(1.38064852e-16)*total(chromo_mask*n0TdL,2,/double)
    rowdata[*,0,3,2]=total(chromo_mask*nbdL,2,/double)
-;sz=size(rowdata,/dim)
-;Npix=sz[0]
-;Nchan=sz[2]
-;Nid=sz[3]
-;rowdata[*]=0
-;n0dL=parms[*,*,1]*parms[*,*,3]
-;n02dL=parms[*,*,1]*parms[*,*,3]^2
-;n0TdL=parms[*,*,1]*parms[*,*,2]*parms[*,*,3]
-;nbdL=parms[*,*,1]*parms[*,*,4]
-;voxel_id=ulong(parms[*,*,8])
-;corona_id=ARRAY_INDICES(voxel_id,where( voxel_id and gx_voxelid(/corona) ne 0,corona_count))
-;chromo_id=ARRAY_INDICES(voxel_id,where((voxel_id and gx_voxelid(/chromo,/corona,/tr,/euv)) eq gx_voxelid(/chromo),chromo_count))
-;tr_id=ARRAY_INDICES(voxel_id,where((voxel_id and gx_voxelid(/euv,/tr)) ne 0,tr_count) ) 
-;if corona_count gt 0 then begin
-;  rowdata[*,0,0,0]=total(n0dL[corona_id[0,*],corona_id[1,*]],2,/double)
-;  rowdata[*,0,1,0]=total(n02d[corona_id[0,*],corona_id[1,*]],2,/double)
-;  rowdata[*,0,2,0]=1.5*(1.38064852e-16)*total(n0TdL[corona_id[0,*],corona_id[1,*]],2,/double)
-;  rowdata[*,0,3,0]=total(nbdL[corona_id[0,*],corona_id[1,*]],2,/double)
-;endif
-;if tr_count gt 0 then begin
-; 
-;endif
-;if chromo_count gt 0 then begin
-; 
-;endif
 END
 

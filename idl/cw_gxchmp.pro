@@ -24,6 +24,13 @@ function gxchmp::INIT,wBase,uname=uname, GXMpath=GXMpath,RefDataPath=RefDataPath
   self.EBTELpath=EBTELpath
   default,renderer,gx_findfile(self.WinOS?'AR_GRFF_nonLTE.pro':'mwgrtransfer.pro',folder='')
   self.renderer=renderer
+  info_renderer=gx_rendererinfo(renderer)
+  valid=size(info_renderer,/tname) eq 'STRUCT'
+  if valid eq 1 then begin
+    self.renderer=renderer
+    ptr_free,self.info_renderer
+    self.info_renderer=ptr_new(info_renderer)
+  endif
   default,alist,''
   self.alist=alist
   default,blist,''
@@ -49,18 +56,19 @@ end
 pro gxchmp__define
   struct_hide,{gxchmp, inherits gxwidget,Id:0l,GXMpath:'',RefDataPath:'',modDir:'',psDir:'',TmpDir:'',EbtelPath:'',$
     renderer:'',alist:'',blist:'',qlist:'',levels:'',fov:'',res:'',completed:0l,$
-    RefDataStruct:ptr_new(),solution:obj_new(),bridges:obj_new(),tasks:obj_new(),WinOS:0l,displays:lonarr(5)}
+    RefDataStruct:ptr_new(),solution:obj_new(),bridges:obj_new(),tasks:obj_new(),WinOS:0l,displays:lonarr(5),info_renderer:ptr_new()}
 end
 
 pro objgxchmpKill,wBase
   widget_control,wBase,get_uvalue=obj
-  obj->GetProperty,bridges=bridges,solution=solution
+  obj->GetProperty,bridges=bridges,solution=solution,info_renderer=info_renderer
   if isa(bridges, 'OBJ') then obj_destroy,bridges
   if isa(solution, 'OBJ') then obj_destroy,solution
-  obj->GetProperty,GXMpath=GXMpath,RefDataPath=RefDataPath,modDir=modDir,psDir=psDir,$
+  if ptr_valid(info_renderer) then ptr_free,info_renderer
+  obj->GetProperty,GXMpath=GXMpath,RefDataPath=RefDataPath,modDir=modDir,psDir=psDir,tmpDir=tmpDir,$
     alist=alist,blist=blist,qlist=qlist,levels=levels,renderer=renderer,$
     fov=fov,res=res, ebtelpath=ebtelpath
-  save,GXMpath,RefDataPath,modDir,psDir,alist,blist,qlist,levels,renderer,fov,res,ebtelpath,file='gxchmp.ini'
+  save,GXMpath,RefDataPath,modDir,psDir,tmpDir,alist,blist,qlist,levels,renderer,fov,res,ebtelpath,file='gxchmp.ini'
   obj_destroy,obj
 end
 
@@ -88,7 +96,7 @@ pro gxchmp::Solution2PS
   tvlct,rgb_curr,/get
   widget_control,widget_info(self.wBase,find_by_uname='color_table'),get_uvalue=rgb
   if n_elements(rgb) gt 0 then tvlct,rgb
-  gx_plotbestmwmodels_ebtel, self.solution->ToArray(), self.psDir
+  gx_plotbestmwmodels_ebtel, self.solution->ToArray(), self.psDir,levels=self->str2arr(self.levels)
   tvlct,rgb_curr
 end
 
@@ -249,8 +257,8 @@ pro gxchmp::AddTasks
       q=minmax(self->list2dblarr(self.qlist))
     for i=0,n_elements(a)-1 do begin
       for j=0,n_elements(b)-1 do begin
-        self->tasks_remove, a[i], b[i]
-        self.tasks->add,{id:self.tasks->Count(),a:float(a[i]),b:float(b[j]),q:float(q),status:'pending'}
+        self->tasks_remove, a[i], b[j]
+        self.tasks->add,{id:self.tasks->Count(),a:float(a[i]),b:float(b[j]),q:float(q),status:'pending',completed:0b}
       endfor
     endfor
     self.alist=''
@@ -282,7 +290,7 @@ end
 pro gxchmp::GetProperty,GXMpath=GXMpath,RefDataPath=RefDataPath,modDir=modDir,psDir=psDir,$
                        RefDataStruct=RefDataStruct,TmpDir=TmpDir,alist=alist,blist=blist,qlist=qlist,$
                        levels=levels,solution=solution, tasks=tasks,EBTELpath=EBTELpath,$
-                       renderer=renderer,bridges=bridges,fov=fov,res=res,nBridges=nBridges,completed=completed,$
+                       renderer=renderer,bridges=bridges,fov=fov,res=res,nBridges=nBridges,completed=completed,info_renderer=info_renderer,$
                        _ref_extra=extra
     GXMpath=self.GXMpath
     RefDataPath=self.RefDataPath
@@ -303,6 +311,7 @@ pro gxchmp::GetProperty,GXMpath=GXMpath,RefDataPath=RefDataPath,modDir=modDir,ps
     res=self.res
     fov=self.fov
     completed=self.completed
+    info_renderer=self.info_renderer
     self->gxwidget::GetProperty,_extra=extra
 end
 
@@ -310,6 +319,9 @@ function gxchmp::str2arr,strlist
  compile_opt idl2, static
  if strcompress(strlist,/rem) eq '' then return, !null
  result=execute('list=['+strlist+']')
+ if n_elements(list) eq 0 then begin
+  answ=dialog_message(['Invalid syntax!', 'A comma separated list of numbers or a start:end:delta triad is expected.'],/error)
+ endif
  return,list
 end
 
@@ -343,10 +355,29 @@ function gxchmp::TasksTemplate
 end
 
 pro gxchmp::ExportTasks
-  file=dialog_pickfile(default_extension=['*.sav'],title='Please select a filename to save the curent task list',/write)
-  if file eq '' then return
-  tasks=self.tasks
-  save,tasks,file=file
+  tasks=obj_clone(self.tasks)
+  if ~obj_valid(tasks) then begin
+    answ=dialog_message('No tasks to be saved!',/info)
+    return
+  endif
+  l=tasks
+  completed=l.map(Lambda(l:l.completed eq 1))
+  if ~completed.IsEmpty() then begin
+    completed=where(completed.toarray(),count)
+    if count gt 0 then begin
+      tasks.remove, completed
+      file=dialog_pickfile(default_extension=['*.sav'],title='Please select a filename to save the not yet completed task list',/write)
+      if file eq '' then return
+      save,tasks,file=file
+    endif else  begin
+      answ=dialog_message('All tasks have been completed, do you have to save a copy of all tasks?',/question)
+      if strupvcase(answ) eq 'YES' then begin
+        file=dialog_pickfile(default_extension=['*.sav'],title='Please select a filename to save the current task list',/write)
+        if file eq '' then return
+        save,tasks,file=file
+      endif
+    endelse
+  end
 end
 
 pro gxchmp::ImportTasks
@@ -370,7 +401,7 @@ pro gxchmp::ImportTasks
           endif else begin
             for i=0,n_elements(a)-1 do begin
               self->tasks_remove, a[i], b[i]
-              self.tasks->add,{id:self.ID++,a:float(a[i]),b:float(b[i]),q:float([q1[i],q2[i]]),status:'pending'}
+              self.tasks->add,{id:self.ID++,a:float(a[i]),b:float(b[i]),q:float([q1[i],q2[i]]),status:'pending',completed:0b}
             endfor
           end  
          end
@@ -395,7 +426,7 @@ pro gxchmp::ImportTasks
                      b=tasks(k).(tags[1])
                      q=(tags[2] ne -1)?minmax(tasks(k).(tags[2])):[0.001,0.01]
                      self->tasks_remove, a, b
-                     self.tasks->add,{id:self.ID++,a:float(a),b:float(b),q:float(q),status:'pending'}
+                     self.tasks->add,{id:self.ID++,a:float(a),b:float(b),q:float(q),status:'pending',completed:0d}
                    endfor
                   endif  
                endfor
@@ -455,6 +486,7 @@ end
 pro gxchmp::AssignTask,bridge,task_id,OnStartSearch=OnStartSearch
     task=self.tasks[task_id]
     if ~keyword_set(OnStartSearch) then begin
+      bridge->SetVar,'info',*self.info_renderer
       calls=bridge->GetVar('calls')
       bridge->SetVar,'calls',calls+1
     endif else bridge->SetVar,'calls',0
@@ -516,6 +548,9 @@ pro gxchmp::AddResult,result
   match=self.Match(self.solution,result,count=count)
   for k=0,count-1 do self.solution->remove,match[k]
   self.solution->add,result
+  solfile=strcompress(self.tmpDir+path_sep()+'gxchmp_solution.sav')
+  result=self.solution->ToArray()
+  save,result,file=solfile
 end
   
   
@@ -558,6 +593,7 @@ return,strcompress(script)
 end
 
 pro gxchmp::OnStartSearch
+if self->check_fields() eq 0 then return
 if self.bridges->Count() eq 0 then begin
   answ=dialog_message('At least one parallel thread should be intialized before the search is started! Please do so and try again!',/info)
   return
@@ -577,6 +613,7 @@ while i lt ntasks do begin
    if (self.tasks[i]).status eq 'pending' then begin
      bridge=self.bridges->Get(position=j)
      self->AssignTask,bridge,i,/OnStartSearch
+     wait,1; to prevent disk access clash
      j++
    endif 
   i++
@@ -616,6 +653,7 @@ pro gxchmp::OnCallback,Status, Error,bridge
   endelse
   update_task:
   task.status=strcompress(string(msg,t_end-t_start,format="(a0,g0,'s')"))
+  task.completed=1
   self.tasks(task_id)=task
   self->UpdateTaskQueue
   self.completed+=1
@@ -649,7 +687,7 @@ pro gxchmp::OnEndSearch
   save,result,file=solfile
   self->message,'Solution temporary saved in '+solfile
   self->message,'Generating the best solutions plots...'
-  gx_plotbestmwmodels_ebtel, result, self.psDir,levels=self->str2arr(self.levels)
+  self->Solution2PS
   files=[strcompress(self.psDir+path_sep()+'BestRES.ps'),strcompress(self.psDir+path_sep()+'BestCHI.ps')]
   if n_elements(result) ge 4 then files=[files,strcompress(self.psDir+path_sep()+'Best of Bests.ps')]
   self->message,['Best solutions plots saved to:..',files]
@@ -928,7 +966,10 @@ pro gxchmp::CreatePanel,xsize=xsize,ysize=ysize
   wResultsBase=widget_base(wResultsPanel,/column,uname='results_base')
   wResultsToolbar=widget_base(wResultsBase,/toolbar,/row,scr_xsize=xsize)
   wSelectMetrics=cw_bgroup(wResultsToolbar,['Res2','Chi2'],set_value=0,/exclusive,uname='metrics_select',/row)
-  wLogMetrics=cw_bgroup(wResultsToolbar,['Log Scale'],uname='metrics_log',/non)
+  
+  wLogMetrics=cw_bgroup(widget_base(wResultsToolbar,/frame),['Log Scale'],uname='metrics_log',/non)
+  wcharsize=cw_objfield( widget_base(wResultsToolbar,/frame),value=!version.os_family eq 'Windows'?2:1,inc=0.1,min=0.1,max=5,label='Plot Charsize: ',font=!defaults.font,xtextsize=6,uname='charsize')
+
   wBestMetrics=widget_button(wResultsToolbar,value=gx_bitmap(filepath('find.bmp', subdirectory=subdirectory)), $
     /bitmap,tooltip='Display Best Metrics',uname='metrics_best')
   wDeleteSolution=widget_button(wResultsToolbar,value=gx_bitmap(filepath('delete.bmp', subdirectory=subdirectory)),tooltip='Discard the current solution',/bitmap,uname='remsol')
@@ -967,6 +1008,33 @@ pro gxchmp::CreatePanel,xsize=xsize,ysize=ysize
   self.displays=[wgrid, wmap, wres,  wchi,wtask]                                              
 end
 
+function gxchmp::check_fields
+  mismatch=[]
+  widget_control,widget_info(self.wBase,find_by_uname='GXMpath'),get_value=gxmpath
+  if gxmpath ne self.gxmpath then mismatch=[mismatch,'GX Model Path']
+  widget_control,widget_info(self.wBase,find_by_uname='refdatapath'),get_value=refdatapath
+  if refdatapath ne self.refdatapath then mismatch=[mismatch,'Reference Data Path']
+  widget_control,widget_info(self.wBase,find_by_uname='moddir'),get_value=moddir
+  if moddir ne self.moddir then mismatch=[mismatch,'Model Model Maps Repository']
+  widget_control,widget_info(self.wBase,find_by_uname='psdir'),get_value=psdir
+  if psdir ne self.psdir then mismatch=[mismatch,'PostScript Repository']
+  widget_control,widget_info(self.wBase,find_by_uname='tmpdir'),get_value=tmpdir
+  if tmpdir ne self.tmpdir then mismatch=[mismatch,'Temporary Directory']
+  widget_control,widget_info(self.wBase,find_by_uname='rendererpath'),get_value=renderer
+  if renderer ne self.renderer then mismatch=[mismatch,'Renderer Path']
+  widget_control,widget_info(self.wBase,find_by_uname='EBTELpath'),get_value=ebtelpath
+  if ebtelpath ne self.ebtelpath then mismatch=[mismatch,'EBTEL DEM Table Path']
+  widget_control,widget_info(self.wBase,find_by_uname='levels'),get_value=levels
+  if levels ne self.levels then mismatch=[mismatch,'ROI levels']
+  widget_control,widget_info(self.wBase,find_by_uname='fov'),get_value=fov
+  if fov ne self.fov then mismatch=[mismatch,'Model Maps FOV']
+  widget_control,widget_info(self.wBase,find_by_uname='res'),get_value=res
+  if res ne self.res then mismatch=[mismatch,'Model Maps Resolution']
+  if n_elements(mismatch) eq 0 then return,1
+  answ=dialog_message(['Input field(s) inconsistency detected:',mismatch,'Please check each field reported here and press <ENTER> to accepted the currently displayed values and try again!'],/info)
+  return,0
+end
+
 pro gxchmp::OnPallete
   tvlct,rgb_curr,/get
   xloadct,/silent,/block
@@ -981,6 +1049,8 @@ pro gxchmp::DisplaySolution,best=best
  if self.solution->IsEmpty() then begin
    thisP=!p
    thisD=!d.name
+   widget_control,widget_info(self.wBase,find_by_uname='charsize'), get_value=charsize
+   !p.charsize=charsize
    tvlct,rgb_curr,/get
    widget_control,widget_info(self.wBase,find_by_uname='color_table'),get_uvalue=rgb
    tvlct,rgb
@@ -1035,6 +1105,8 @@ pro gxchmp::DisplaySolution,best=best
  
  thisP=!p
  thisD=!d.name
+ thisX=!x
+ thisY=!y
  tvlct,rgb_curr,/get
  widget_control,widget_info(self.wBase,find_by_uname='color_table'),get_uvalue=rgb
  if n_elements(rgb) gt 0 then tvlct,rgb
@@ -1045,24 +1117,26 @@ pro gxchmp::DisplaySolution,best=best
  !p.charthick=2
  !p.font=-1
  !p.multi=0
- charsize=2
- xmargin=[6,6]
- ymargin=[6,6]
+ !x.margin=[6,6]
+ !y.margin=[6,6]
+ widget_control,widget_info(self.wBase,find_by_uname='charsize'), get_value=charsize
+ !p.charsize=charsize
  a=grid.a
  b=grid.b
  wset,wgrid
  if na gt 1 and nb gt 1 then begin
   bad=where(finite(metrics) eq 0,count)
   if count gt 0 then metrics[bad]=1.05*max(metrics,/nan)
-  tvplot,metrics,grid.a,grid.b,charsize=charsize,$
-  xmargin=xmargin,ymargin=ymargin,title=metrics_label,xtitle='a',ytitle='b',/sample;,/iso
+  tvplot,metrics,grid.a,grid.b,title=metrics_label,xtitle='a',ytitle='b',/sample
   oplot,grid.a[idx[[0,0]]],!y.crange,color=255,symsize=symsize,thick=3,linesty=2
   oplot,!x.crange,grid.b[idx[[1,1]]],color=255,symsize=symsize,thick=3,linesty=2
-  plot_map_colorbar,minmax(metrics),charsize=charsize
+  plot_map_colorbar,minmax(metrics)
  endif else erase
 
- gx_chmp2displays,obj_metrics,charsize=1.5,charthick=3,res_min=-1,res_max=1,win=[wmap,wres,wchi],metrics_log=metrics_log
+ gx_chmp2displays,obj_metrics,charthick=3,res_min=-1,res_max=1,win=[wmap,wres,wchi],metrics_log=metrics_log,levels=self->str2arr(self.levels)
  !p=thisP
+ !x=thisX
+ !y=thisY
  set_plot,thisD
  tvlct,rgb_curr
 end
@@ -1098,7 +1172,8 @@ pro gxchmp::PlotTasks
   !p.charthick=2
   !p.font=-1
   !p.multi=0
-  !p.charsize=2
+  widget_control,widget_info(self.wBase,find_by_uname='charsize'), get_value=charsize
+  !p.charsize=charsize
   wset,wplot
   erase
   a_sol=[]
@@ -1127,8 +1202,8 @@ pro gxchmp::PlotTasks
     if n_elements(a_task) gt 1 then plots,a_task,b_task,thick=3,color=red,psym=1
   endif 
   
-  gx_plot_label,1.05,0.1,string(n_elements(a_task),format="(i0,' pending tasks')"),color=red,charsize=2,charthick=2
-  gx_plot_label,1.05,0.2,string(n_elements(a_sol),format="(i0,' completed tasks')"),color=blue,charsize=2,charthick=2 
+  gx_plot_label,1.05,0.1,string(n_elements(a_task),format="(i0,' pending tasks')"),color=red,charthick=2,_extra=_extra
+  gx_plot_label,1.05,0.2,string(n_elements(a_sol),format="(i0,' completed tasks')"),color=blue,charthick=2,_extra=_extra
   !p=thisP
   set_plot,thisD
   tvlct,rgb_curr
@@ -1187,7 +1262,7 @@ function gxchmp::HandleEvent, event
       widget_control,widget_info(self.wBase,find_by_uname='refdatapath'),set_value=self.refdatapath
     end
     'rendererpath':begin
-                     widget_control,event.id,get_value=rendererpath
+                     widget_control,event.id,get_value=renderer
                      goto,rendererpath_select
                     end
     'rendererpath_select':begin
@@ -1196,8 +1271,13 @@ function gxchmp::HandleEvent, event
         path=cdir+path_sep()+'userslib'+path_sep()+'radio_nonflaring'+path_sep()+(self.WinOS?'windows':'unix')+path_sep()
         renderer=dialog_pickfile(filter='*.pro',TITLE='Please select a renderer IDL routine/wrapper',path=path,/must_exist)
         rendererpath_select:
-        valid=file_exist(renderer)
-        if valid eq 1 then self.renderer=renderer else answ=dialog_message('Not a valid renderer routine!')
+        info_renderer=gx_rendererinfo(renderer)
+        valid=size(info_renderer,/tname) eq 'STRUCT'
+        if valid eq 1 then begin
+          self.renderer=renderer 
+          ptr_free,self.info_renderer
+          self.info_renderer=ptr_new(info_renderer)
+        endif else answ=dialog_message('Not a valid renderer routine!')
         widget_control,widget_info(self.wBase,find_by_uname='rendererpath'),set_value=self.renderer 
        end
     'EBTELpath':begin
@@ -1251,10 +1331,12 @@ function gxchmp::HandleEvent, event
                    answ=dialog_message('Invalid syntax!')
                    widget_control,event.id,set_value=self.levels
                  endif else self.levels=levels[0]
+                 self->DisplaySolution
                end 
      'levels_reset':begin
                     self.levels='12,20,30,50,80'
                     widget_control,widget_info(self.wbase,find_by_uname='levels'),set_value=self.levels
+                    self->DisplaySolution
                     end  
                     
      'open':begin
@@ -1273,7 +1355,8 @@ function gxchmp::HandleEvent, event
                 endif
                if tag_exist(result,'mask') then begin
                   levels=self->str2arr(self.levels)
-                  levels[0]=result[0].mask
+                  levels=[result[0].mask,levels]
+                  levels=levels[uniq(levels,sort(levels))]
                   self.levels=self->arr2str(levels)
                   widget_control,widget_info(self.wbase,find_by_uname='levels'),set_value=self.levels
                 endif
@@ -1322,11 +1405,15 @@ function gxchmp::HandleEvent, event
                 if tag_exist(result,'res_best_metrics') then begin
                   fovmap=result[0].res_best_metrics
                   renderer=gx_findfile(fovmap->get(/renderer),folder='')
-                  valid=file_exist(renderer)
+                  info_renderer=gx_rendererinfo(renderer)
+                  valid=size(info_renderer,/tname) eq 'STRUCT'
                   if valid eq 1 then begin
                     self.renderer=renderer
+                    ptr_free,self.info_renderer
+                    self.info_renderer=ptr_new(info_renderer)
                     widget_control,widget_info(self.wBase,find_by_uname='rendererpath'),set_value=self.renderer
-                  endif
+                  endif else answ=dialog_message('Not a valid renderer routine!')
+                  widget_control,widget_info(self.wBase,find_by_uname='rendererpath'),set_value=self.renderer
                   keys=gx_getEBTELparms(fovmap->get(/gx_key),ebtel=ebtel_path)
                   ebtel_path=file_exist(ebtel_path)?ebtel_path:gx_findfile(ebtel_path,folder='')
                   if file_exist(ebtel_path) then begin
@@ -1359,7 +1446,6 @@ function gxchmp::HandleEvent, event
      'alist': begin
                  widget_control,  event.id,get_value=list
                  if n_elements(self->str2arr(list[0])) eq 0 then begin
-                   answ=dialog_message(['Invalid syntax!', 'A comma separated list of numbers is expected.'],/error)
                    widget_control,event.id,set_value=self.alist
                  endif else begin
                   self.alist=list[0]
@@ -1368,7 +1454,6 @@ function gxchmp::HandleEvent, event
       'blist': begin
                  widget_control,event.id,get_value=list
                  if n_elements(self->str2arr(list[0])) eq 0 then begin
-                   answ=dialog_message(['Invalid syntax!', 'A comma separated list of numbers is expected.'],/error)
                    widget_control,event.id,set_value=self.blist
                  endif else begin
                    self.blist=list[0]
@@ -1378,7 +1463,6 @@ function gxchmp::HandleEvent, event
        'qlist': begin
                  widget_control,event.id,get_value=list
                  if n_elements(self->str2arr(list[0])) eq 0 then begin
-                   answ=dialog_message(['Invalid syntax!', 'A comma separated list of numbers is expected.'],/error)
                    widget_control,event.id,set_value=self.qlist
                  endif else begin
                    self.qlist=list[0]
@@ -1414,7 +1498,8 @@ function gxchmp::HandleEvent, event
                 self->DisplaySolution
                end 
               end 
-     'metrics_log': self->DisplaySolution                                                          
+     'metrics_log': self->DisplaySolution    
+     'charsize':Self->DisplaySolution                                                      
      'fov': begin
              widget_control,event.id,get_value=fov
              if n_elements(fov) eq 0 then begin

@@ -1,6 +1,6 @@
 function gx_euvrender_ebtel_script,model,renderer,xc=xc,yc=yc,xfov=xfov, yfov=yfov,nx=nx,ny=ny,gxcube=gxcube
 if ~obj_valid(model) then begin
-  file=dialog_pickfile(filter=['*.gxm','*.sav'],/read,/must_exist,title='Please select a file to restore a saved gxModel striucture or object')
+  file=dialog_pickfile(filter=['*.gxm','*.sav'],/read,/must_exist,title='Please select a file to restore a saved gxModel structure or object')
   break_file, file, disk_log, dir, filnam, ext, fversion, node, /last_dot
   case ext of
     '.gxm':model=gx_read(file)

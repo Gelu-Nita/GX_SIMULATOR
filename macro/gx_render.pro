@@ -36,8 +36,8 @@ function gx_render,model,renderer,logfile=logfile,_extra=_extra
   rowdata=make_array([nx,info.pixdim],/float)
   dim=[nx,ny,info.pixdim]
   data=make_array(dim,/float)
-  freqlist=info.spectrum.x.axis
-  nfreq=n_elements(freqlist)
+  chanlist=info.spectrum.x.axis
+  nchan=n_elements(chanlist)
   if tag_exist(info,'nparms') then begin
     if ~ptr_valid(model->GetGrid())then begin
       xc=fovmap->get(/xc)
@@ -48,7 +48,7 @@ function gx_render,model,renderer,logfile=logfile,_extra=_extra
     endif
     nvox=(size(*(model->GetGrid()),/dim))[3]
     nparms=long(info.nparms.value)
-    nparms[0:2]=[nx,nvox,nfreq]
+    nparms[0:2]=[nx,nvox,nchan]
     info.nparms.value=nparms
   endif
   if tag_exist(info,'rparms') then rparms=info.rparms.value
