@@ -1,9 +1,0 @@
-[submodule "gxbox"]
-	path = gxbox
-	url = https://github.com/Sergey-Anfinogentov/GXBox_prep
-[submodule "sfq"]
-	path = sfq
-	url = https://github.com/Sergey-Anfinogentov/SFQ
-[submodule "common"]
-	path = nlfff/common
-	url = https://github.com/Alexey-Stupishin/Common
