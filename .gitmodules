@@ -4,3 +4,9 @@
 [submodule "sfq"]
 	path = sfq
 	url = https://github.com/Sergey-Anfinogentov/SFQ
+[submodule "nlfff/common"]
+	path = nlfff/common
+	url = https://github.com/Alexey-Stupishin/Common
+[submodule "nlfff/source"]
+	path = nlfff/source
+	url = https://github.com/Alexey-Stupishin/Magnetic-Field_Lib_Sources
