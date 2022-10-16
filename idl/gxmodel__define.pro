@@ -1513,9 +1513,9 @@ function gxModel::ComputeBlines,inputSeeds,tr_height_km=tr_height_km,_extra=_ext
   default,tr_height_km,0
   chromo_level=tr_height_km
 
-  dll_path=gx_findfile('WWNLFFFReconstruction.dll',folder='gxbox')
+  lib_path=gx_nlfff_libpath()
 
-  nonStored = gx_box_calculate_lines(dll_path, box $
+  nonStored = gx_box_calculate_lines(lib_path, box $
                            , status = status, physLength = physLength, avField = avField $
                            , startIdx = startIdx, endIdx = endIdx, seedIdx = seedIdx $
                            , inputSeeds = inputSeeds, maxLength = maxLength $
@@ -1553,13 +1553,9 @@ pro gxModel::AddBLines,_extra=_extra
  inputSeeds=self->GenerateSeeds(_extra=_extra)
  nSeeds=n_elements(inputSeeds)/3 
  if nSeeds lt 1 then return
-;      if self.lock then begin
         lines=self->ComputeBlines(inputSeeds)
         good=where(obj_valid(lines) eq 1,count)
         if count gt 0 then self->add,lines[good]
-;      endif else begin
-;        for i=0, nSeeds-1 do self->CreateBline,InputSeeds[*,i],/any
-;      endelse
 end  
 
 pro gxModel::RemoveBlines

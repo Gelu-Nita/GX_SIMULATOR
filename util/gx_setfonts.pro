@@ -8,7 +8,7 @@ pro gx_setfonts,font=font
       device, get_screen_size=scr
       if scr[0] lt 3200 then !defaults.font='lucida console*12' else !defaults.font='lucida console*24'
       set_plot,dname
-    endif else defaults.font=''
+    endif else !defaults.font=''
   endif else !defaults.font=font
   font=!defaults.font
   Widget_Control, DEFAULT_FONT=!defaults.font
