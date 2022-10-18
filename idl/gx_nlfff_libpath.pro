@@ -11,6 +11,7 @@ function gx_nlfff_libpath,update=update
         spawn, 'cp -R '+src_root+' '+getenv('IDL_TMPDIR')
         cd, make_path, current=cdr
         spawn, 'make'
+        cd, '../../idl'
         spawn,'cp -R WWNLFFFReconstruction.so '+binary_path
         cd, cdr
         spawn,'rm -r '+filepath('nlfff',root=getenv('IDL_TMPDIR'))
