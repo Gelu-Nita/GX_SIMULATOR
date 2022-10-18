@@ -78,11 +78,7 @@ pro gx_RenderIrregularMulti, NLOS, dx, dy, dz, LOSarr, $
  exit_point=dblarr(3, NLOS)
  
 ;------------------ main code
- dirpath=file_dirname((routine_info('gx_renderirregularmulti', /source)).path, /mark)
- if !version.os_family eq 'Windows' then $
-  lib=dirpath+'RenderIrregular'+((!version.arch eq 'x86_64') ? '64' : '32')+'.dll' $
- else lib=dirpath+'RenderIrregular.so' 
-
+ lib=gx_render_libpath() 
  res=call_external(lib, 'RENDER_MULTI', $
                    NLOS, Nx, Ny, Nz, dx, dy, dz, $
                    x1, x2, y1, y2, z1, z2, $
