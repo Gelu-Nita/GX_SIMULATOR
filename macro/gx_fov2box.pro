@@ -13,7 +13,6 @@
 ;/save_bounds: set this keyword to save the boundary box
 ;/use_potential: set this keyword to skip the NLFFF extrapolation step
 ;/nlfff_only: set this keyword to stop the pipeline script after the NLFFF box is computed 
-;/use_idl: set this keyword to use the IDL implementation of the magnetic field lines intersecting each volume voxel instead of using the NLFFFF library
 ;/generic_only: set this keyword to stop the script after the information related the computed volume magnetic lines are added to the box
 ;/euv: use this keyword to download the context SDO EUV maps and add tem as reference maps in the box structure
 ;/uv: use this keyword to download the context SDO UV maps and add tem as reference maps in the box structure
@@ -33,18 +32,16 @@
 ; /sfq: to use SFQ disambiguation
 ; /old_combo_format: to generate combo models using the format used before May 2020 (for testing purposes)
 ;_extra keywords that may be used when computing the coronal magnetic field lines properties
-; Options available on Linux/Uix platforms, or if /use_idl is set:
-;   /center_vox: use this keyword to compute lines that pass exactly through the center of each volume voxel (more computationaly intensive) 
-;   as oposed to the faster option (default on Unix/LINUX), which assigns the same <B>-L properties to all voxels crossed by an already computed field line
-; Options available only on indows platforms, id use_idl=0 (default on Windows OS)
-;   reduce_passed=0 (default); equivalent to /center_vox described above
-;   reduce_passed=1; mark as already passed all voxels intersected by some closed field line
-;   reduced_passed=2; mark as already passed all voxels intersected by some open field line
-;   reduced_passed=3; mark as already passed all voxels intersected by a closed or open field line
+;   reduce_passed=0; computes lines that pass exactly through the center of each volume voxel (more computationally intensive)
+;   reduce_passed=1; marks as already passed all voxels intersected by some closed field line
+;   reduce_passed=2; marks as already passed all voxels intersected by some open field line
+;   reduce_passed=3; marks as already passed all voxels intersected by a closed or open field line
+;   /center vox: the same as reduce_passed=0: use this keyword to compute lines that pass exactly through the center of each volume voxel (more computationaly intensive)
+;   as opposed to the faster option (default on Unix/LINUX), which assigns the same <B>-L properties to all voxels crossed by an already computed field line
 
 pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km, out_dir = out_dir, tmp_dir = tmp_dir,$
                         empty_box_only=empty_box_only,save_empty_box=save_empty_box,potential_only=potential_only,$
-                        save_potential=save_potential,save_bounds=save_bounds,use_potential=use_potential, use_idl=use_idl,$
+                        save_potential=save_potential,save_bounds=save_bounds,use_potential=use_potential,$
                         nlfff_only=nlfff_only, generic_only=generic_only,centre=centre,euv=euv,uv=uv,hmifiles=hmifiles,$
                         tr_height_km=tr_height_km,old_combo_format=old_combo_format,out_files=out_files,wConsole=wConsole,$
                         entry_box=entry_box,jump2potential=jump2potential,jump2nlfff=jump2nlfff,jump2lines=jump2lines,$
@@ -59,6 +56,7 @@ pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km
     CATCH, /CANCEL
     return
  ENDIF
+ setenv, 'WCS_RSUN=6.96d8'
  par=ROUTINE_INFO('gx_fov2box',/par)
  exec=''
  parms=n_elements(time)?{time:time}:{time:''}
@@ -192,10 +190,15 @@ pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km
         box=add_tag(box,temporary(by),'by',/no_copy,/duplicate)
         box=add_tag(box,temporary(bz),'bz',/no_copy,/duplicate)
       endif 
-      box.id=strjoin((strsplit(box.id,'.',/extract))[0:4],'.')
       box.execute+=' & gx_fov2box'+(size(file,/tname) eq 'STRING'?',empty_box='+"'"+file+"'":'')+exec
-      if keyword_set(jump2potential) then goto,compute_potential
-      if keyword_set(jump2nlfff) then goto,compute_nlfff
+      if keyword_set(jump2potential) then begin
+        box.id=strjoin((strsplit(box.id,'.',/extract))[0:4],'.')
+        goto,compute_potential
+      endif
+      if keyword_set(jump2nlfff) then begin
+        box.id=strjoin((strsplit(box.id,'.',/extract))[0:4],'.')
+        goto,compute_nlfff
+      endif
       if keyword_set(jump2lines) then goto,compute_lines
       if keyword_set(jump2chromo) then goto,compute_chromo
   endif
@@ -248,22 +251,13 @@ pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km
   gx_message,'Computing field lines for each voxel in the model..', wConsole
   default,tr_height_km,1000
   tr_height_sunradius=tr_height_km/(gx_rsun(unit='km'))
-  if keyword_set(use_idl) then begin
-    t0=systime(/seconds)
-    model=gx_importmodel(box)
-    model->computecoronalmodel,tr_height=tr_height_sunradius,/compute,_extra=_extra
-    gx_copylines2box,model,box
-    obj_destroy,model
-    gx_message,strcompress(string(systime(/seconds)-t0,format="('Field line computation performed in ',g0,' seconds')")), wConsole
-  endif else begin
-    reduce_passed=1
-    if size(_extra,/tname) eq 'STRUCT' then begin
-      if tag_exist(_extra,'center_vox') then begin
-        reduce_passed=~keyword_set(_extra.center_vox)
-      endif else if tag_exist(_extra,'reduce_passed') then reduce_passed=_extra.reduce_passed
-    end  
-    gx_addlines2box, box,tr_height_km,reduce_passed=reduce_passed,dll_path=lib_path
-  endelse
+  reduce_passed=1b
+  if size(_extra,/tname) eq 'STRUCT' then begin
+    if tag_exist(_extra,'center_vox') then begin
+      reduce_passed=byte(~keyword_set(_extra.center_vox))
+    endif else if tag_exist(_extra,'reduce_passed') then reduce_passed=byte(_extra.reduce_passed)
+  end  
+  gx_addlines2box, box,tr_height_km,reduce_passed=reduce_passed,lib_path=lib_path
   box.id=box.id+'.GEN'
   file=out_dir+path_sep()+box.id+'.sav'
   save,box,file=file

@@ -885,6 +885,8 @@ pro gxchmp::CreatePanel,xsize=xsize,ysize=ysize
     
        
   scr_xsize=scr_xsize/2
+  right_base=widget_base(right_base,/column,xsize=scr_xsize,ysize=scr[1],$
+    x_scroll_size=scr_xsize,y_scroll_size=ysize,/scroll)
   wTaskBase=widget_base(right_base,title='GXCHMP Task Base',/column)
   wLabelBase=widget_base(wTaskBase,/row,scr_xsize=scr_xsize,/frame)
   wLabelBase=widget_base(wLabelBase,/row)

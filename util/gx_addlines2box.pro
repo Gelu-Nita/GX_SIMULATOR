@@ -1,4 +1,4 @@
-pro gx_addlines2box, box,tr_height_km, status=status, physLength=physLength, avField=avField, startIdx=startIdx, endIdx=endIdx,dll_path=dll_path,elapsed_time=elapsed_time,_extra = _extra
+pro gx_addlines2box, box,tr_height_km, status=status, physLength=physLength, avField=avField, startIdx=startIdx, endIdx=endIdx,lib_path=lib_path,elapsed_time=elapsed_time,_extra = _extra
   t0=systime(/seconds)
   if tag_exist(box,'bx') then begin
     dim=size(box.bx,/dim)
@@ -17,10 +17,8 @@ pro gx_addlines2box, box,tr_height_km, status=status, physLength=physLength, avF
   if not tag_exist(box,'dr') then box=add_tag(box,[1000,1000,1000]/gx_rsun(unit='km'),'dr',/no_copy,/duplicate)
   default,tr_height_km,1000
   chromo_level=tr_height_km
-  if n_elements(dll_path) eq 0 then begin
-    dll_path= gx_findfile('WWNLFFFReconstruction.dll',folder='gxbox\Magnetic-Field_Library')
-  end
-  rc=gx_box_calculate_lines(dll_path, box, status=status, physLength=physLength, avField=avField, startIdx=startIdx, endIdx=endIdx,chromo_level=chromo_level,_extra = _extra) 
+  if n_elements(lib_path) eq 0 then lib_path=gx_nlfff_libpath()
+  rc=gx_box_calculate_lines(lib_path, box, status=status, physLength=physLength, avField=avField, startIdx=startIdx, endIdx=endIdx,chromo_level=chromo_level,_extra = _extra) 
   elapsed_time=systime(/seconds)-t0
   message,strcompress(string(elapsed_time,format="('Field line computation performed using DLL implementation in ',g0,' seconds')")),/cont
   idx=where((status and 4L) eq 4L)

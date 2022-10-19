@@ -25,6 +25,8 @@ pro chmp_self
       renderer:'',alist:'',blist:'',qlist:'',levels:'',fov:'',res:'',completed:0l,$
       RefDataStruct:ptr_new(),solution:obj_new(),bridges:obj_new(),tasks:obj_new(),WinOS:0l,quiet:0L}
     if file_exist('gxchmp.ini') and ~keyword_set(fresh) then restore,'gxchmp.ini'
+    if alist eq '' then alist='1.0'
+    if blist eq '' then blist='0.75'
     self.WinOS=(!version.os_family eq 'Windows')
     default,modDir,curdir()+path_sep()+'moddir'
     self.modDir=modDir
