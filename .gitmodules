@@ -10,3 +10,6 @@
 [submodule "nlfff/idl"]
 	path = nlfff/idl
 	url = https://github.com/Alexey-Stupishin/Magnetic-Field_Library
+[submodule "nlfff/common"]
+	path = nlfff/common
+	url = https://github.com/Alexey-Stupishin/Common
