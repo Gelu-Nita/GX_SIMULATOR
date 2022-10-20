@@ -1,7 +1,7 @@
 pro AR_GRFF_nonLTE_DDEM,parms,rowdata,path,parmin,datain,info=info
  if n_elements(path) eq 0 then begin
   dirpath=file_dirname((ROUTINE_INFO('AR_GRFF_nonLTE_DDEM',/source)).path,/mark)+'binaries\'
-  path=dirpath+(!version.memory_bits eq 64?'AR_GRFF_nonLTE_64_DDEM':'AR_GRFF_nonLTE_32_DDEM')
+  path=dirpath+(!version.memory_bits eq 64?'AR_GRFF_nonLTE_DDEM_64':'AR_GRFF_nonLTE_DDEM_32')
  end
  if arg_present(info) then begin
     if n_elements(parms) gt 0 then dummy=temporary(parms)
