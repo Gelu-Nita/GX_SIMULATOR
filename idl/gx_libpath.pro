@@ -1,4 +1,4 @@
-function gx_libpath,name,update=update,unix=unix
+function gx_libpath,name,update=update,unix=unix,source=source
   ;Returns the precompiled WinOS name*.dll 
   ;returns the path to name*.so library on Linux if found in the var/tmp/gx_binaries, 
   ;or build it, if not found or /update is requested 
@@ -11,10 +11,11 @@ function gx_libpath,name,update=update,unix=unix
     lib_path64=lib_path64 ne !null?lib_path64:gx_findfile(name+'*.dll')
     lib_path=(!version.arch eq 'x86_64')?lib_path64:lib_path32
   endif else begin
+     source_lib_path=gx_findfile(name+'*.so')
+     if keyword_set(source) then return,source_lib_path
      tmpdir=getenv('IDL_TMPDIR')
      binary_path=filepath('gx_binaries',root=tmpdir)
      if not file_test(binary_path) then file_mkdir, binary_path
-     source_lib_path=gx_findfile(name+'*.so')
      lib_path=filepath(file_basename(source_lib_path),root=binary_path)
      if keyword_set(update) and file_test(lib_path) then spawn,'rm '+lib_path
      if ~file_test(lib_path) then begin
@@ -25,7 +26,6 @@ function gx_libpath,name,update=update,unix=unix
      tmp_lib_path=filepath(str_replace( source_lib_path,file_dirname(root_path)+path_sep(),''),root=tmpdir)
      spawn,'rm -r '+tmp_lib_path
      cd, make_path, current=cdr
-     print,curdir()
      spawn, 'make'
      cd,cdr
      if file_test(tmp_lib_path) then file_copy,tmp_lib_path,lib_path,/overwrite,/force
