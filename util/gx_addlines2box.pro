@@ -17,7 +17,7 @@ pro gx_addlines2box, box,tr_height_km, status=status, physLength=physLength, avF
   if not tag_exist(box,'dr') then box=add_tag(box,[1000,1000,1000]/gx_rsun(unit='km'),'dr',/no_copy,/duplicate)
   default,tr_height_km,1000
   chromo_level=tr_height_km
-  if n_elements(lib_path) eq 0 then lib_path=gx_nlfff_libpath()
+  if n_elements(lib_path) eq 0 then lib_path=gx_libpath('nlfff')
   rc=gx_box_calculate_lines(lib_path, box, status=status, physLength=physLength, avField=avField, startIdx=startIdx, endIdx=endIdx,chromo_level=chromo_level,_extra = _extra) 
   elapsed_time=systime(/seconds)-t0
   message,strcompress(string(elapsed_time,format="('Field line computation performed using DLL implementation in ',g0,' seconds')")),/cont
