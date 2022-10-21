@@ -234,7 +234,7 @@ pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km
   endelse
   
   compute_nlfff:
-  lib_path=gx_libpath('WWNLFF')
+  lib_path=gx_libpath('nlfff')
   t0=systime(/seconds)
   gx_message,'Performing NLFFF extrapolation', wConsole
   return_code = gx_box_make_nlfff_wwas_field(lib_path, box,_extra=_extra)
@@ -247,7 +247,7 @@ pro gx_fov2box,time, center_arcsec=center_arcsec, size_pix=size_pix, dx_km=dx_km
   if keyword_set(nlfff_only) then goto,exit_point
   
   compute_lines:
-  lib_path=gx_libpath('WWNLFF')
+  lib_path=gx_libpath('nlfff')
   gx_message,'Computing field lines for each voxel in the model..', wConsole
   default,tr_height_km,1000
   tr_height_sunradius=tr_height_km/(gx_rsun(unit='km'))
