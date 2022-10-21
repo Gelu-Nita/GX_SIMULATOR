@@ -3,7 +3,7 @@ function gx_libpath,root,update=update,unix=unix,source=source
   ;returns the path to name*.so library on Linux if found in the var/tmp/gx_binaries, 
   ;or build it, if not found or /update is requested 
   ;use /unix to force the unix branch on windows system, for testing purposes 
-  if n_elements(root) eq 0 then return,!null
+  if n_elements(root) eq 0 then return,!null 
   root_path=(file_search(getenv('gxpath'),root))[0]
   if ~file_test(root_path) then begin
     message,'fatal error: the root path provided does not exist! no valid library path to be returned!',/cont
@@ -16,6 +16,7 @@ function gx_libpath,root,update=update,unix=unix,source=source
   endif else begin
     tmpdir=getenv('IDL_TMPDIR')
     binary_path=filepath('gx_binaries',root=tmpdir)
+    if ~file_test(filepath('gx_binaries',root=tmpdir)) then file_mkdir,binary_path
     source_lib=(file_search(root_path,'*.so',/fold))[0]
     if file_test(source_lib) then begin
       libname=file_basename(source_lib)
@@ -47,11 +48,18 @@ function gx_libpath,root,update=update,unix=unix,source=source
     cd,file_dirname(makefile),current=cdr
     spawn,'make'
     cd,cdr
+    source_existed=file_test(source_lib)
     source_lib=(file_search(make_root,'*.so',/fold))[0]
     if file_test(source_lib) then begin
-      file_move,source_lib,binary_path,/overwrite
-      message,file_basename(source_lib)+ ' succesfully built and copied to '+binary_path,/cont
+      file_copy,source_lib,binary_path,/overwrite
+      libname=file_basename(source_lib)
+      if ~source_existed then begin
+        binpath=filepath('binaries'+path_sep(),root=root_path)
+        if ~file_test(binpath) then file_mkdir,binpath
+        file_copy,source_lib,binpath,/overwrite,/force
+      endif
       lib_path=(file_search(binary_path,libname,/fold))[0]
+      message,libname+ ' succesfully built and copied to '+binary_path,/cont
     endif else begin
       if libname ne '' then begin
         message,libname +' could not be built on this system! The distribution library was copied instead to '+binary_path,/cont
