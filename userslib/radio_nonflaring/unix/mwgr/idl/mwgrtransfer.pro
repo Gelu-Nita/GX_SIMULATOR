@@ -1,21 +1,5 @@
-pro MWTransfer_user,parms,rowdata,path,parmin,datain,info=info
- 
- if n_elements(path) eq 0 then begin
-  dirpath=getenv('HOME')+'/mwtransfer/gs'
-  path=dirpath+'/MWTransfer.so'
-  if ~file_test(path) then begin
-   file_mkdir, dirpath
-   src_path=file_dirname((ROUTINE_INFO('mwtransfer_user',/source)).path)
-   spawn, 'cp '+src_path+'/*.h '+dirpath
-   spawn, 'cp '+src_path+'/*.cpp '+dirpath
-   spawn, 'cp '+src_path+'/makefile '+dirpath
-   cd, dirpath, current=cdr
-   spawn, 'rm *.o'
-   spawn, 'make'
-   cd, cdr
-  endif
- endif
- 
+pro MWGRTransfer,parms,rowdata,path,parmin,datain,info=info
+ if n_elements(path) eq 0 then path=gx_libpath('grff_dem')
  if arg_present(info) then begin
     if n_elements(parms) gt 0 then dummy=temporary(parms)
     if n_elements(info) eq 0 then begin
@@ -36,9 +20,9 @@ pro MWTransfer_user,parms,rowdata,path,parmin,datain,info=info
       free_lun,lun
     endif else parms=info.parms  
     Nvox=1L
-    dummy_parmin=parms.value
-    dummy_datain=fltarr(7,parms[18].value)
-    test_call=call_external(path,'GET_MW',Nvox,dummy_parmin,dummy_datain,/F_VALUE,/unload )
+    dummy_parmin=1d0*parms.value
+    dummy_datain=dblarr(7,parms[18].value)
+    test_call=call_external(path,'GET_MW',Nvox,dummy_parmin,dummy_datain,/unload )
     info={parms:parms,$
           pixdim:[parms[18].value,2,3],$
           spectrum:{x:{axis:reform(dummy_datain[0,*]),label:'Frequency',unit:'GHz'},$
@@ -55,11 +39,13 @@ pro MWTransfer_user,parms,rowdata,path,parmin,datain,info=info
    Nvox=sz[1]  
    Nparms=sz[2]
    rowdata[*]=0
-   if n_elements(datain) eq 0 then datain=fltarr(7,Nfreq)
-   if n_elements(parmin) eq 0 then parmin=fltarr(Nparms,Nvox)
+   if n_elements(datain) eq 0 then datain=dblarr(7,Nfreq)
+   if n_elements(parmin) eq 0 then parmin=dblarr(Nparms,Nvox)
    for pix=0, Npix-1 do begin
          parmin[*,*]=transpose(parms[pix,*,*])
-         RESULT=call_external(path,'GET_MW',Nvox,parmin,datain,/F_VALUE,/unload )
+         ;parmin=reverse(parmin,2)
+         datain[*]=0.0 ;####
+         RESULT=call_external(path,'GET_MW',Nvox,parmin,datain,/unload )
          rowdata[pix,*,0,0]=datain[5,*];eL
          rowdata[pix,*,1,0]=datain[6,*];eR
          rowdata[pix,*,0,1]=datain[1,*];wL
