@@ -16,6 +16,7 @@ function gx_libpath,root,update=update,unix=unix,source=source
   endif else begin
     tmpdir=getenv('HOME')
     binary_path=filepath('gx_binaries',root=tmpdir)
+    log=filepath(root+'.log',root=binary_path)
     if ~file_test(filepath('gx_binaries',root=tmpdir)) then file_mkdir,binary_path
     source_lib=(file_search(root_path,'*.so',/fold))[0]
     if file_test(source_lib) then begin
@@ -46,7 +47,7 @@ function gx_libpath,root,update=update,unix=unix,source=source
     endif else libname=''
     makefile=(file_search(make_root,'makefile',/fold))[0]
     cd,file_dirname(makefile),current=cdr
-    spawn,'make'
+    spawn,'make >> '+log
     cd,cdr
     source_existed=file_test(source_lib)
     source_lib=(file_search(make_root,'*.so',/fold))[0]
