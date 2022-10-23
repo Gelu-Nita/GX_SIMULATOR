@@ -14,7 +14,7 @@ function gx_libpath,root,update=update,unix=unix,source=source
     lib_path=file_search(root_path,(!version.arch eq 'x86_64')?'*64*.dll':'*32*.dll')
     lib_path=(lib_path ne '')?lib_path:file_search(root_path,'*.dll')  
   endif else begin
-    tmpdir=getenv('IDL_TMPDIR')
+    tmpdir=getenv('HOME')
     binary_path=filepath('gx_binaries',root=tmpdir)
     if ~file_test(filepath('gx_binaries',root=tmpdir)) then file_mkdir,binary_path
     source_lib=(file_search(root_path,'*.so',/fold))[0]
