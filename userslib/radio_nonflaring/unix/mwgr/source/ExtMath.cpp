@@ -1,7 +1,6 @@
 #include <math.h>
 #include <float.h>
 #include <stdlib.h>
-#include <malloc.h>
 #include "ExtMath.h"
 
 double LnGamma(double xx)

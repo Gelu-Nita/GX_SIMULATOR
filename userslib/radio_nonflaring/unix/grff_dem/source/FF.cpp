@@ -1,6 +1,6 @@
 #include <math.h>
 #include <float.h>
-#include <malloc.h>
+#include <stdlib.h>
 #include "ExtMath.h"
 #include "Plasma.h"
 #include "Coulomb.h"
