@@ -4,7 +4,7 @@
 #ifndef LINUX
 #include <ppl.h>
 #else
-#include <omp.h>
+#include <$CPPFLAGS/omp.h>
 #endif
 
 #define arrN 1000
