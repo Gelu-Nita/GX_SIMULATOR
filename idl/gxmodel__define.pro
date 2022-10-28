@@ -1513,7 +1513,7 @@ function gxModel::ComputeBlines,inputSeeds,tr_height_km=tr_height_km,_extra=_ext
   default,tr_height_km,0
   chromo_level=tr_height_km
 
-  lib_path=gx_nlfff_libpath()
+  lib_path=gx_libpath('nlfff')
 
   nonStored = gx_box_calculate_lines(lib_path, box $
                            , status = status, physLength = physLength, avField = avField $
