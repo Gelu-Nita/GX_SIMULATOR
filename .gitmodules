@@ -5,5 +5,5 @@
 	path = sfq
 	url = https://github.com/Sergey-Anfinogentov/SFQ
 [submodule "nlfff2"]
-	path = nlfff2
+	path = nlfff
 	url = https://github.com/Alexey-Stupishin/Magnetic-Field_Library
