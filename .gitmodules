@@ -7,3 +7,6 @@
 [submodule "nlfff"]
 	path = nlfff
 	url = https://github.com/Alexey-Stupishin/Magnetic-Field_Library
+[submodule "nlfff2"]
+	path = nlfff2
+	url = https://github.com/Alexey-Stupishin/Magnetic-Field_Library
