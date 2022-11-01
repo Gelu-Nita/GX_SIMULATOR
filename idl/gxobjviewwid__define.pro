@@ -213,7 +213,10 @@ case strupcase(widget_info(event.id,/uname)) of
 	                    oSelected->GetProperty,Parent=model,name=name
 	                    if obj_isa(model,'GXMODEL') then begin
 	                      model->GetProperty,wParent=wParent
-                        widget_control,widget_info(wParent,find_by_uname=name),/destroy
+	                      wid=widget_info(wParent,find_by_uname=name)
+                        if widget_valid(wid) then begin
+                          widget_control,wid,/destroy
+                        endif else if obj_valid(oSelected) then obj_destroy,oSelected
                         model->SetRoi
 	                      self->Draw
 	                    end

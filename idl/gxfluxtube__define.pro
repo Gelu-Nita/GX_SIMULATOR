@@ -2060,30 +2060,32 @@ PRO gxFluxTube::SelectPADistribution,index
 END
 
 PRO gxFluxtube::DisplayB2B0ratio
-  self.centerline->GetVertexAttributeData,'B',Bvec
-  self.centerline->GetVertexAttributeData,'s',s
-  l=delta(s)
-  B=dblarr(n_elements(s))
-  for i=0,n_elements(B)-1 do B[i]=norm(Bvec[*,i])
-  m=min(abs(self.s0-s),s0_idx)
-  B0=B[s0_idx]
-  B2B0=B/B0
   wdraw=widget_info(self.wparent,find_by_uname='GXFLUXTUBE:draw_clg')
-  widget_control,wdraw,Get_Value=window
-  wset,window
-  pmulti=!p.multi
-  !p.multi=[0,2,1]
-    alpha=self.centerline->GetAlpha()
-    plot,s/l,alpha,back=255,color=0,xtitle='s/l',ytitle='alpha',/xsty,thick=2
-    oplot,[1,1]*s[self.centerindex]/l,!y.crange,color=0
-    oplot,!x.crange,[0,0],color=0
-    mom=moment(alpha,sdev=sdev)
-    oplot,!x.crange,mom[[0,0]],color=10
-    gx_plot_label,0.1,0.7,strcompress(string(mom[0],sdev,format="('!4a!3=',g10.3,'!9+!3',g10.3)")),color=0
-    plot,s/l,B2B0,back=255,color=0,xtitle='s/l',ytitle='B/B!D0!N',/xsty,thick=2
-    oplot,[1,1]*self.s0/l,!y.crange,color=0
-    oplot,!x.crange,[1,1],color=0
-  !p.multi=pmulti
+    if widget_valid(wdraw) then begin
+    self.centerline->GetVertexAttributeData,'B',Bvec
+    self.centerline->GetVertexAttributeData,'s',s
+    l=delta(s)
+    B=dblarr(n_elements(s))
+    for i=0,n_elements(B)-1 do B[i]=norm(Bvec[*,i])
+    m=min(abs(self.s0-s),s0_idx)
+    B0=B[s0_idx]
+    B2B0=B/B0
+    widget_control,wdraw,Get_Value=window
+    wset,window
+    pmulti=!p.multi
+    !p.multi=[0,2,1]
+      alpha=self.centerline->GetAlpha()
+      plot,s/l,alpha,back=255,color=0,xtitle='s/l',ytitle='alpha',/xsty,thick=2
+      oplot,[1,1]*s[self.centerindex]/l,!y.crange,color=0
+      oplot,!x.crange,[0,0],color=0
+      mom=moment(alpha,sdev=sdev)
+      oplot,!x.crange,mom[[0,0]],color=10
+      gx_plot_label,0.1,0.7,strcompress(string(mom[0],sdev,format="('!4a!3=',g10.3,'!9+!3',g10.3)")),color=0
+      plot,s/l,B2B0,back=255,color=0,xtitle='s/l',ytitle='B/B!D0!N',/xsty,thick=2
+      oplot,[1,1]*self.s0/l,!y.crange,color=0
+      oplot,!x.crange,[1,1],color=0
+    !p.multi=pmulti
+  end
 END
 
 

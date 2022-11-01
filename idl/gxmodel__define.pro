@@ -1613,13 +1613,13 @@ Pro gxModel::CreateFluxtube,centerline
  void=obj_new('gxWidget',Widget_Base(wComponentTab,title=name,uname=name),fluxtube,_extra=_extra)
  widget_control,wComponentTab,SET_TAB_CURRENT=widget_info(wComponentTab,/N_CHILDREN)-1
  self->SetRoi
- fluxtube->DisplayB2B0ratio
- fluxtube->Update_N_nth
- fluxtube->Update_N_th
- fluxtube->Update_Theta_c
- fluxtube->Update_Theta_b
- fluxtube->Update_dMu
- fluxtube->Update_a4
+; fluxtube->DisplayB2B0ratio
+; fluxtube->Update_N_nth
+; fluxtube->Update_N_th
+; fluxtube->Update_Theta_c
+; fluxtube->Update_Theta_b
+; fluxtube->Update_dMu
+; fluxtube->Update_a4
 end
 
 Function gxModel::FullROI
