@@ -17,7 +17,6 @@ function gxWidget::INIT,wParent,subject,frame=frame,name=name,_extra=_extra
  void=self->IDLexWidget::Init(wParent,frame=frame)
  widget_control,self.wIDBase,set_uvalue=self.subject
  self.subject->SetProperty,wParent=wParent
- jump:
  self.wBase = widget_base( $
     self.wIDBase, $
     /column, $
@@ -26,6 +25,7 @@ function gxWidget::INIT,wParent,subject,frame=frame,name=name,_extra=_extra
     notify_realize='IDLexWidget__OnRealize', $
     uname=name,_extra=_extra)
   self->CreatePanel,_extra=_extra
+ jump:
  return,1
 end
 ;------------------------------------------------------------

@@ -1610,8 +1610,10 @@ Pro gxModel::CreateFluxtube,centerline
  self->Add,fluxtube
  self.FluxTubeCount+=1
  wComponentTab=widget_info(self.wparent,find_by_uname='GXMODEL:COMPONENTTAB')
- void=obj_new('gxWidget',Widget_Base(wComponentTab,title=name,uname=name),fluxtube,_extra=_extra)
+ wbase=Widget_Base(wComponentTab,title=name,uname=name)
  widget_control,wComponentTab,SET_TAB_CURRENT=widget_info(wComponentTab,/N_CHILDREN)-1
+ void=obj_new('gxWidget',wBase,fluxtube,_extra=_extra)
+ if ~obj_valid(void) then widget_control,wBase,/destroy
  self->SetRoi
 ; fluxtube->DisplayB2B0ratio
 ; fluxtube->Update_N_nth

@@ -55,7 +55,7 @@ FUNCTION gxFluxTube::INIT,centerline=centerline,_extra=_extra
   self.centerline->SetProperty,top=line[*,s]
  endif else m=min((line[0,*]-top[0])^2+(line[1,*]-top[1])^2+(line[2,*]-top[2])^2,s)
  self.centerindex=s
- r=min((parent->Size())[1:3])/32>1
+ r=min((parent->Size())[1:3])/32>3
  self.a=r
  self.b=r
  self.phi=0
