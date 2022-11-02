@@ -254,12 +254,12 @@ function gxROI::ComputeGrid
   self.grid=ptr_new(temporary(grid))
   status = gx_progmeter(prog_id,/DESTROY)
   flags=(self.parent->GetVolume())->setflags(newGrid=0)
-  message,strcompress('ComputeScanGrid execution time: '+string(systime(/s)-t0)),/cont
+  message,strcompress('ComputeScanGrid execution time: '+string(systime(/s)-t0)),/info
   if (gx_progmeter(prog_id,1.0) eq 'Cancel') then goto,escape
   return,flags.newGrid
   escape:
   status = gx_progmeter(prog_id,/DESTROY)
-  message,'Grid computation aborted',/cont
+  message,'Grid computation aborted',/info
   flags=(self.parent->GetVolume())->getflags()
   return,flags.newGrid
 end
@@ -379,12 +379,12 @@ function gxROI::ComputeGrid_old,model=model
   self.grid=ptr_new(temporary(grid))
   status = gx_progmeter(prog_id,/DESTROY)
   flags=(self.parent->GetVolume())->setflags(newGrid=0)
-  message,strcompress('ComputeScanGrid execution time: '+string(systime(/s)-t0)),/cont
+  message,strcompress('ComputeScanGrid execution time: '+string(systime(/s)-t0)),/info
   if (gx_progmeter(prog_id,1.0) eq 'Cancel') then goto,escape
   return,flags.newGrid
   escape:
   status = gx_progmeter(prog_id,/DESTROY)
-  message,'Grid computation aborted',/cont
+  message,'Grid computation aborted',/info
   flags=(self.parent->GetVolume())->getflags()
   return,flags.newGrid
 end

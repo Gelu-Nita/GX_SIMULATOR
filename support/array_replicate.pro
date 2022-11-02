@@ -13,7 +13,7 @@
 function array_replicate,arr,dim1,dim2,dim3,dim4,dim5,dim6,dim7,dim8
   catch, error_status
   if error_status ne 0 then begin
-      message, !error_state.msg,/cont
+      message, !error_state.msg,/info
       return,[]
   endif
   dim=[]

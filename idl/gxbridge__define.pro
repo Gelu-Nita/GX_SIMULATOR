@@ -17,7 +17,7 @@ pro gxBridge::Reset
   self->Execute,'ebtel=GETENV("ebtel")'
   if self->GetVar('ebtel') ne ebtel then begin
     self->Execute,'setenv, "ebtel='+ebtel+'"'
-    self->Execute,'message,"ebtel enviroment variable set to '+ebtel+'",/cont'
+    self->Execute,'message,"ebtel enviroment variable set to '+ebtel+'",/info'
   endif
 end
 

@@ -126,14 +126,14 @@ end
 function objStatusBar::AbortButton
   quit=widget_event(self.wAbort,/nowait)
   if (quit.id eq self.wAbort) then ret = 'Cancel' else ret=''
-  if ret ne '' then message,'Action aborted!',/cont
+  if ret ne '' then message,'Action aborted!',/info
   return,ret
 end
 
 pro objStatusBarKill,wBase
   widget_control,wBase,get_uvalue=obj
   obj_destroy,obj
-  message,'StatusBar Destroyed',/cont
+  message,'StatusBar Destroyed',/info
 end
 
 pro objStatusBar__define

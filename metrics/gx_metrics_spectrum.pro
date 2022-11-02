@@ -42,7 +42,7 @@
 function gx_metrics_spectrum, data_model, data_obs, data_sdev,range_idx=range_idx,n_free=n_free
   
   if ~isa(data_model,/array) or ~isa(data_obs,/array) then begin
-    message, 'Model and Observational Data must be array variables',/cont
+    message, 'Model and Observational Data must be array variables',/info
     return,!null
   endif
  
@@ -63,7 +63,7 @@ function gx_metrics_spectrum, data_model, data_obs, data_sdev,range_idx=range_id
   
   if isa(data_sdev) then begin
     if (n_elements(data_model) ne n_elements(data_sdev)) then begin
-     message,'Provided SDEV data, not matching model and data array sizes, will be ignored!',/cont 
+     message,'Provided SDEV data, not matching model and data array sizes, will be ignored!',/info 
     endif else data_sdev_d=double(data_sdev)
   endif
   

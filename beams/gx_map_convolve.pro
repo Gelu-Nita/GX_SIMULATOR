@@ -4,14 +4,14 @@ pro gx_map_convolve,map,beam,spp,beam_array=beam_array,nofft=nofft,widthIn=width
   width or=1; force it to be odd
   sz=size(beam)
   if ~valid_map(map) then begin
-    message,'No valid map input, nothing to convolve. Operation aborted!',/cont
+    message,'No valid map input, nothing to convolve. Operation aborted!',/info
     return
   endif
   dim=size(map.data,/dim)
   case sz[0] of
     2:begin 
       if n_elements(spp) eq 0 then begin
-        message,'No beam pixel size provided. Operation aborted!',/cont
+        message,'No beam pixel size provided. Operation aborted!',/info
         return
       endif
       beam2=congrid(beam, spp*sz[1]/map.dx, spp*sz[2]/map.dy, /center, cubic=-0.5) ;making a new beam with data_pixsz resolution 
@@ -22,7 +22,7 @@ pro gx_map_convolve,map,beam,spp,beam_array=beam_array,nofft=nofft,widthIn=width
        Gauss2Drot, [x,y], beam, beam2,/noreform
       end
     else:begin
-          message,'No beam array, nor beam ellipse provided, Operation aborted!',/cont
+          message,'No beam array, nor beam ellipse provided, Operation aborted!',/info
           return
          end
   endcase

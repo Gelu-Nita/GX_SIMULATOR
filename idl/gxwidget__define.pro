@@ -16,7 +16,8 @@ function gxWidget::INIT,wParent,subject,frame=frame,name=name,_extra=_extra
  self.subject=subject
  void=self->IDLexWidget::Init(wParent,frame=frame)
  widget_control,self.wIDBase,set_uvalue=self.subject
- self.subject->SetProperty,wParent=wParent
+ self.subject->GetProperty,wParent=parent
+ if n_elements(parent) ne 0 then self.subject->SetProperty,wParent=wParent
  self.wBase = widget_base( $
     self.wIDBase, $
     /column, $

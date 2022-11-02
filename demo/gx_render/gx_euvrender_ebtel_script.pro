@@ -6,7 +6,7 @@ if ~obj_valid(model) then begin
     '.gxm':model=gx_read(file)
     '.sav':model=gx_importmodel(file)
     else: begin
-            message,'Unknown file type selected! Returning an invalid map object',/info,/cont
+            message,'Unknown file type selected! Returning an invalid map object',/info
             return,obj_new()
           end  
   endcase

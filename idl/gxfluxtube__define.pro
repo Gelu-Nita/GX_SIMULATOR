@@ -2249,7 +2249,7 @@ END
 PRO gxFLUXTUBE::upload_fparms,filename
   catch, error_status
   if error_status ne 0 then begin
-      message, !error_state.msg,/cont
+      message, !error_state.msg,/info
       return
   endif
   if ~file_exist(filename) then begin
@@ -2278,7 +2278,7 @@ END
 PRO gxFLUXTUBE::remove_fparms
   catch, error_status
   if error_status ne 0 then begin
-    message, !error_state.msg,/cont
+    message, !error_state.msg,/info
     return
   endif
   ptr_free,self.fparms
@@ -2289,7 +2289,7 @@ END
 PRO gxFLUXTUBE::export_spine_parms
   catch, error_status
   if error_status ne 0 then begin
-    message, !error_state.msg,/cont
+    message, !error_state.msg,/info
     return
   endif
   self->ExportSpineParms

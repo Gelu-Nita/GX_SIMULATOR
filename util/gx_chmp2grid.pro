@@ -1,6 +1,6 @@
 function gx_chmp2grid, result,best=best
 if ~isa(result) then begin
-  message,'No input structure provided!',/cont
+  message,'No input structure provided!',/info
   return,!null
 endif
 compile_opt idl2

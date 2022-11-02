@@ -15,7 +15,7 @@ pro chmp_help
   print,'% IDL-> chmp, /quiet; to turn off run-time execution progress messages
   print,'% IDL-> chmp, /loud; to turn on run-time execution progress messages
   print,'% IDL-> chmp, /exit; to abort all active tasks, flush the pending task queue, and exit the application
-  gx_message,'% Any logical combination of the arguments and keywords listed above should result in a valid single-line calling sequence',/cont,/info,level=-1
+  gx_message,'% Any logical combination of the arguments and keywords listed above should result in a valid single-line calling sequence',/info,level=-1
 end
 
 pro chmp_self
@@ -162,16 +162,16 @@ pro chmp_abort
     code=allbridges[i]->Status(error=error)
     if code eq 1 then begin
       active+=1
-      message,strcompress(string(0,format="('Working on aborting the active task on Bridge # ', g0,', please wait....')")),/cont
+      message,strcompress(string(0,format="('Working on aborting the active task on Bridge # ', g0,', please wait....')")),/info
       allbridges[i]->Abort
       id=allbridges[i]->GetVar('id')
-      message,strcompress(string(id,format="('Bridge # ', g0,' execution aborted on user request!')")),/cont
+      message,strcompress(string(id,format="('Bridge # ', g0,' execution aborted on user request!')")),/info
     endif
   end
-  if active eq 0 then message, 'No active tasks, nothing to be aborted!',/cont else $
-    message,'All active tasks aborted on user request!',/cont
+  if active eq 0 then message, 'No active tasks, nothing to be aborted!',/info else $
+    message,'All active tasks aborted on user request!',/info
   chmp_flush_queue
-  message,'All pending tasks have been deleted from memory on user request!',/cont
+  message,'All pending tasks have been deleted from memory on user request!',/info
   chmp_status,/bridges
 end
 
@@ -344,7 +344,7 @@ function chmp_checklist,anylist
 common chmp, self
 chmp_self
 if self.active then begin
-  message,'Currently busy, request ignored!',/info,/cont
+  message,'Currently busy, request ignored!',/info
   chmp_status
   return,!null
 endif
@@ -415,7 +415,7 @@ function chmp_ready
   if ~isa(self) then return,0
   if self.Bridges->Count() eq 0 then begin
     message,'Not parallel computing bridge initialized yet!'+$
-      string(10b)+'use "chmp, N" to initialize at least one!',/info,/cont
+      string(10b)+'use "chmp, N" to initialize at least one!',/info
     return,0  
   endif
  ;-------------------------------------------------------------------- 
@@ -428,7 +428,7 @@ function chmp_ready
  if ~valid_ref then begin
    chmp_status,/refdatapath
    message,'Not a valid path or a valid data referance file structure defined,'+$
-     string(10b)+'use "chmp, refdatapath=reference data path" to define one!',/info,/cont
+     string(10b)+'use "chmp, refdatapath=reference data path" to define one!',/info
    return,0  
  endif
  ;------------------------------------
@@ -442,7 +442,7 @@ function chmp_ready
  if ~valid_gxm then begin
    chmp_status,/gxmpath
    message,'Not a valid path or a valid GX model file structure defined,'+$
-     string(10b)+'use "chmp, gxmpath=model path" to define one!',/info,/cont
+     string(10b)+'use "chmp, gxmpath=model path" to define one!',/info
    return,0  
  endif
  ;----------------------------------------
@@ -467,7 +467,7 @@ pro chmp_add,result
   matched:
   if count gt 0 then begin
     self.solution[i]=result[0]
-    message,string(self.solution[i].a,self.solution[i].b,format="('Already existent [a=',g0,',b=',g0,'] solution replaced by a new one!')"),/cont
+    message,string(self.solution[i].a,self.solution[i].b,format="('Already existent [a=',g0,',b=',g0,'] solution replaced by a new one!')"),/info
   endif else self.solution->Add,result[0]
 end
 
@@ -590,7 +590,7 @@ pro chmp, nthreads,fresh=fresh, _extra=_extra
       obj_destroy,self.bridges
       obj_destroy,self.solution
       self=!null
-      message,'Bye!',/cont,/info
+      message,'Bye!',/info
       return
     endif
   endif
@@ -640,7 +640,7 @@ pro chmp, nthreads,fresh=fresh, _extra=_extra
           if tag_exist(ref,'a_beam') then valid=1
         endif else valid=0
       endif else valid=0
-      if valid eq 1 then self.refdatapath=refdatapath else message,'Not a valid path or a valid data referance file structure!',/info,/cont
+      if valid eq 1 then self.refdatapath=refdatapath else message,'Not a valid path or a valid data referance file structure!',/info
     endif
     if ~keyword_set(status) then chmp_status,/refdatapath
   end
@@ -655,7 +655,7 @@ pro chmp, nthreads,fresh=fresh, _extra=_extra
           valid=1
         endif else valid=0
       endif else valid=0
-      if valid eq 1 then self.GXMpath=gxmpath else message,'Not a valid path or a valid GX model file structure!',/info,/cont
+      if valid eq 1 then self.GXMpath=gxmpath else message,'Not a valid path or a valid GX model file structure!',/info
     endif
     if ~keyword_set(status) then chmp_status,/gxmpath
   endif
@@ -664,7 +664,7 @@ pro chmp, nthreads,fresh=fresh, _extra=_extra
     info=gx_rendererinfo(renderer)
     valid=isa(info)?1:0
     if valid eq 1 then self.renderer=renderer else $
-      message,'Not a valid renderer!',/info,/cont
+      message,'Not a valid renderer!',/info
     if ~keyword_set(status) then chmp_status,/renderer
   endif
 
@@ -698,7 +698,7 @@ pro chmp, nthreads,fresh=fresh, _extra=_extra
     if isa(ebtelpath,/string) then begin
       if ebtelpath ne '' then path=gx_findfile(file_basename(ebtelpath),folder='') else path=!null
       if isa(path,/string)then self.ebtelpath=path else $
-        message, 'No EBTEL table named "'+file_basename(ebtelpath)+'" found in '+file_dirname(self.ebtelpath),/cont
+        message, 'No EBTEL table named "'+file_basename(ebtelpath)+'" found in '+file_dirname(self.ebtelpath),/info
     endif
     chmp_status,/ebtelpath
   endif

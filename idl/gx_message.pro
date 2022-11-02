@@ -7,5 +7,5 @@ pro gx_message,msg,wConsole,overwrite=overwrite,prompt=prompt,_extra=_extra
       txt=[txt,prompt+msg]
     endif else txt=prompt+msg
     widget_control,console,set_value=txt
-  endif else message,msg,level=-1,/cont,_extra=_extra
+  endif else message,msg,level=-1,/info,_extra=_extra
 end

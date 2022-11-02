@@ -77,7 +77,7 @@ function gx_search4bestq, gxmpath=gxmpath,a_arr=a_arr,b_arr=b_arr,q_start=q_star
                 obj_destroy,omap
             endif
             if (isa(gxcube) and keyword_set(save_gxc)) then save,gxcube,file=gxcDir+path_sep()+strcompress(string(a,b,q[j],ref.freq,format="('a',f7.2,'b',f7.2,'q',g0,'f',g0,'GHz.gxc')"),/rem)
-          endif else gx_message, modfile+' already exists, no reprocessing requested!',/info,/cont
+          endif else gx_message, modfile+' already exists, no reprocessing requested!',/info
         endfor
         result=gx_processmwmodels_ebtel(ab=[a,b],ref=ref,$
           modDir=modDir,psDir=psDir,$
@@ -103,7 +103,7 @@ function gx_search4bestq, gxmpath=gxmpath,a_arr=a_arr,b_arr=b_arr,q_start=q_star
      final_result=[final_result,result]   
  endfor
  endfor
- gx_message, string(n_elements(a_arr)*n_elements(b_arr),(systime(/s)-t0)/3600,format="('Computed ',i2,' sets in ',g0,' hours')"),/info,/cont
+ gx_message, string(n_elements(a_arr)*n_elements(b_arr),(systime(/s)-t0)/3600,format="('Computed ',i2,' sets in ',g0,' hours')"),/info
  obj_destroy,map
  result=final_result
  if size(save_result,/tname) eq 'STRING' then save,result,file=strcompress(tmpDir+path_sep()+save_result)

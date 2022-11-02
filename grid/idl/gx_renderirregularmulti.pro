@@ -78,7 +78,7 @@ pro gx_RenderIrregularMulti, NLOS, dx, dy, dz, LOSarr, $
  exit_point=dblarr(3, NLOS)
  
 ;------------------ main code
- lib=gx_libpath('Render') 
+ lib=gx_libpath('grid') 
  res=call_external(lib, 'RENDER_MULTI', $
                    NLOS, Nx, Ny, Nz, dx, dy, dz, $
                    x1, x2, y1, y2, z1, z2, $

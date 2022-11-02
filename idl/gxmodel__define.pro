@@ -985,7 +985,7 @@ end
 function gxModel::concatenate_aparms
   catch, error_status
   if error_status ne 0 then begin
-    message, !error_state.msg,/cont
+    message, !error_state.msg,/info
     return,!null
   endif
  fluxtubes=self->get(/all,is='gxfluxtube',count=count)
@@ -1894,16 +1894,16 @@ pro gxModel::upgrade_combo_model,verbose=verbose
   ;15-May-2020
   IsCombo=self->IsCombo(bsize=bsize,csize=csize,chromo_layers=chromo_layers, corona_base=corona_base)
   if IsCombo then begin
-    if keyword_set(verbose) then message,'This is a properly formated combo model, nothing to be upgraded!',/cont
+    if keyword_set(verbose) then message,'This is a properly formated combo model, nothing to be upgraded!',/info
     return
   endif
   if chromo_layers eq 0 then begin
-    if keyword_set(verbose) then message,'This is a not a combo model, nothing to be upgraded!',/cont
+    if keyword_set(verbose) then message,'This is a not a combo model, nothing to be upgraded!',/info
     return
   endif else begin
     dz=self->GetVertexData('dz')
     if n_elements(dz) eq 0 then begin
-      if keyword_set(verbose) then message,'This is a not a combo model, nothing to be upgraded!',/cont
+      if keyword_set(verbose) then message,'This is a not a combo model, nothing to be upgraded!',/info
       return
     endif
   endelse
@@ -1913,10 +1913,10 @@ pro gxModel::upgrade_combo_model,verbose=verbose
   'which will be reset to the GX Simulator default values..',$
   'Do you want to upgrade this model, or to keep its original format? '],/question)
   if strupcase(answ) eq 'NO' then begin
-     message,'Keeping the old combo model format!',/cont
+     message,'Keeping the old combo model format!',/info
      return
   endif
-  message,'Upgrading this combo model the new combo model format!',/cont
+  message,'Upgrading this combo model the new combo model format!',/info
   box=self->BBOX()
   dz=self->GetVertexData('dz')
   self.ZCOORD_CONV[1]=dz[0,0,bsize[3]-1]

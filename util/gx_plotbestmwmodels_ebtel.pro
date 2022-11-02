@@ -2,7 +2,7 @@ pro gx_plotbestmwmodels_ebtel, result, psDir,res2_best=res2_best,chi2_best=chi2_
 q_res2_best=q_res2_best,q_chi2_best=q_chi2_best, a=a,b=b,levels=levels,$
 renorm_q=renorm_q,charsize=charsize,maps_best=maps_best,plot_chi=plot_chi,plot_res=plot_res
 if ~isa(result) then begin
-  message,'No input structure provided!',/cont
+  message,'No input structure provided!',/info
   return
 endif
 compile_opt idl2

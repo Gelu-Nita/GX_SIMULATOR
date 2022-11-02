@@ -20,7 +20,7 @@ pro gx_addlines2box, box,tr_height_km, status=status, physLength=physLength, avF
   if n_elements(lib_path) eq 0 then lib_path=gx_libpath('nlfff')
   rc=gx_box_calculate_lines(lib_path, box, status=status, physLength=physLength, avField=avField, startIdx=startIdx, endIdx=endIdx,chromo_level=chromo_level,_extra = _extra) 
   elapsed_time=systime(/seconds)-t0
-  message,strcompress(string(elapsed_time,format="('Field line computation performed using DLL implementation in ',g0,' seconds')")),/cont
+  message,strcompress(string(elapsed_time,format="('Field line computation performed using DLL implementation in ',g0,' seconds')")),/info
   idx=where((status and 4L) eq 4L)
   oidx=where(((status and 2L) eq 2l) and ((status and 4L) eq 0))
   bmed=avField[idx]

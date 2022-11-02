@@ -293,7 +293,7 @@ pro gx_simulator_event,event
                        ;widget_control,event.top,redraw=0 
                        t0=systime(/s)               
                        void=obj_new('gxwidget',wParent,model)
-                       message,string(systime(/s)-t0,format="('Model uploaded in' , f0.2 ,' seconds')"),/cont
+                       message,string(systime(/s)-t0,format="('Model uploaded in' , f0.2 ,' seconds')"),/info
                        ;widget_control,event.top,redraw=1  
                        if ~obj_isa(void,'gxwidget') then begin
                         answ=dialog_message('GX model initialization failed. Operation aborted!')

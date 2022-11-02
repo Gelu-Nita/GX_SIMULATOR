@@ -28,7 +28,7 @@
 function gx_getospex, infile=infile, outfile=outfile
 
 if ~file_exist(infile) then begin
-  message, /cont, 'Input file does not exist: ' + infile + ' Aborting.'
+  message, /info, 'Input file does not exist: ' + infile + ' Aborting.'
   return, -1
 endif
 

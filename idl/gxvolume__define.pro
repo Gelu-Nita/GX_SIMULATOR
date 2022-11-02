@@ -448,7 +448,7 @@ pro gxVolume::UpdateVoxelId,force=force
  
  start_time=systime(/s)
   if ~keyword_set(force) then if ~self.flags.NewID then begin
-    message,'Same voxel ID, nothing to compute',/cont
+    message,'Same voxel ID, nothing to compute',/info
     return
   endif
   prog_id = gx_progmeter(/INIT,label='VoxelID Update Progress')
@@ -830,7 +830,7 @@ pro gxVolume::Update,select,data=data,plot_model_attributes=plot_model_attribute
    defined:
    if keyword_set(getdata) then return
    
-   message,strcompress(self.select+' range: ['+arr2str(minmax(data)))+']',/cont
+   message,strcompress(self.select+' range: ['+arr2str(minmax(data)))+']',/info
    IsCombo=self.parent->IsCombo(csize=csize,bsize=bsize,chromo_layers=chromo_layers, corona_base=corona_base)
    if ~keyword_set(chromo_view) and chromo_layers gt 0 then begin
     data[*,*,0:chromo_layers-1]=0
@@ -984,9 +984,9 @@ pro gxVolume::ComputeNT,question=question,quiet=quiet,force=force,NTDEM=NTDEM,NT
   newNT=self->NewNT(newkey)
   self->SetVertexAttributeData,'NTkey',newkey
   flags=self->setflags(NewNT=0)
-  if ~keyword_set(quiet) then message,string(newkey),/cont
+  if ~keyword_set(quiet) then message,string(newkey),/info
   skip:
-  if ~keyword_set(quiet) and size(msg,/tname) eq 'STRING' then message,msg,/cont
+  if ~keyword_set(quiet) and size(msg,/tname) eq 'STRING' then message,msg,/info
 end
 
 pro gxVolume::ComputeN0T0,tube_id=tube_id
@@ -1087,6 +1087,7 @@ pro gxVolume::ComputeN0T0,tube_id=tube_id
     if keyword_set(hide) then goto,skip_tube
     base->GetVertexAttributeData,'n_th',n_th
     base->GetVertexAttributeData,'N_IDX',n_idx
+    if (n_elements(n_th) eq 0) or (n_elements(n_idx) eq 0) or (n_elements(n_th) ne n_elements(n_idx)) then goto,skip_tube
     p0[n_idx]=(box_ct0*box_cn)[n_idx]+T0*n_th
     ;------------------------------
     owned=where(p0 gt p,ocount)
@@ -1310,7 +1311,7 @@ end
 function gxVolume::setflags,_extra=flags
   
   if n_elements(flags) eq 0 then begin
-    message,'No flag provided',/cont
+    message,'No flag provided',/info
     return,self.flags
   endif
   

@@ -54,17 +54,17 @@
 
 function gx_metrics_image, data_model, data_obs, data_sdev,mask=mask,apply2=apply2,n_free=n_free
   if ~isa(data_model) or ~isa(data_obs) then begin
-    message, 'Model Data, Observational Data, or both, not provided',/cont
+    message, 'Model Data, Observational Data, or both, not provided',/info
     return,!null
   endif
   
   if ~isa(data_model,/array) or ~isa(data_obs,/array) then begin
-    message, 'Model and Observational Data must be array variables',/cont
+    message, 'Model and Observational Data must be array variables',/info
     return,!null
   endif
   
   if ~array_equal((size(data_model))[0:2],(size(data_obs))[0:2]) then begin
-    message, 'Model and Observational Data must be arrays of equal size!',/cont
+    message, 'Model and Observational Data must be arrays of equal size!',/info
     return,!null
   endif
   
@@ -94,7 +94,7 @@ function gx_metrics_image, data_model, data_obs, data_sdev,mask=mask,apply2=appl
             img_mask=byte(data_obs*0)
             img_mask[mask]=1b
           endif else begin
-            message,'Provided mask indices are incompatible with modell and data array sizes, no mask will be applied!',/cont
+            message,'Provided mask indices are incompatible with modell and data array sizes, no mask will be applied!',/info
           endelse
         endif
       endelse
@@ -109,7 +109,7 @@ function gx_metrics_image, data_model, data_obs, data_sdev,mask=mask,apply2=appl
   
   if isa(data_sdev) then begin
     if ~array_equal((size(data_model,/dim)),(size(data_sdev,/dim))) then begin
-     message,'Provided SDEV data, not matching model and data array sizes, will be ignored!',/cont 
+     message,'Provided SDEV data, not matching model and data array sizes, will be ignored!',/info 
     endif else data_sdev_d=double(data_sdev)
   endif
   

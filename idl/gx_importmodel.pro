@@ -13,7 +13,7 @@ function gx_ImportModel,source,box=box
    if ~file_exist(source)  then return, obj_new()            
    endif
    if ~(size(source,/tname) eq 'STRING' or size(source,/tname) eq 'STRUCT') then begin
-    message,'Input variable is neither a file name, nor a structure, operation aborted!' ,/cont
+    message,'Input variable is neither a file name, nor a structure, operation aborted!' ,/info
     return, obj_new()
    endif
    if size(source,/tname) eq 'STRING' then begin
@@ -49,7 +49,7 @@ function gx_ImportModel,source,box=box
     valid=(validBxByBz eq 1) or (validB eq 1)
     if ~valid then begin
      message,'Invalid datacube file:'+$
-     'No structure having the required Bx,By and Bz or Bcube tags has been found!',/cont,/info
+     'No structure having the required Bx,By and Bz or Bcube tags has been found!',/info
      return,obj_new()
     end
     if tag_exist(box,'index') and tag_exist(box,'base') then begin

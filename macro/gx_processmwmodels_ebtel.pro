@@ -68,7 +68,7 @@ function gx_processmwmodels_ebtel,ab=ab,ref=ref,$
  ;either in a modDir directory, or in an modFiles path array pointing to a subset of selected models
  ;++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++                      
  if ~isa(ref) or ~isa(modDir) or ~isa(psDir) then begin
-  message,'Undefined reference data info structure and/or figure directories!',/cont,/info
+  message,'Undefined reference data info structure and/or figure directories!',/info
   return, !null
  endif
 

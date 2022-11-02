@@ -14,7 +14,7 @@ pro gx_setparm,info, name,value,found=found
   if ~((size(info,/tname) eq 'STRUCT') $
    and (size(name,/tname) eq 'STRING') $ 
    and isa(value,/number)) then begin
-    message,'No valid input parameters provided, no action performed!',/cont
+    message,'No valid input parameters provided, no action performed!',/info
     return
   endif
   

@@ -2,18 +2,18 @@ function gx_gxcube2maps,gxcube,map
   ;map input should be provaded to add the gxcube maps to an existing map object
   default,map,obj_new('map')
   if ~obj_valid(map) then begin
-    message,'Invalid mapcontainer provided!',/cont
+    message,'Invalid mapcontainer provided!',/info
     goto,invalid_input
   endif
   
   if size(gxcube,/tname) eq 'STRUCT'  then begin
     if ~tag_exist(gxcube,'renderer') or ~tag_exist(gxcube,'data') $
       or ~tag_exist(gxcube,'info') or ~tag_exist(gxcube,'fovmap') then begin
-      message,'Invalid gxcube input structure!',/cont
+      message,'Invalid gxcube input structure!',/info
       goto,invalid_input
     end
   endif else begin
-    message,'None or invalid gxcube input structure provided!',/cont
+    message,'None or invalid gxcube input structure provided!',/info
     goto,invalid_input
   endelse
 

@@ -9,13 +9,13 @@ function gx_ebtel_path,path,default=default,has_ddm=has_ddm,quiet=quiet
   default_path:
   path=gx_findfile('ebtel.sav')
   if ~gx_ebtel_valid_path(path,has_ddm=has_ddm,quiet=quiet) then begin
-    message,'No valid ebtel path provided, no action taken! '+path,/cont
+    message,'No valid ebtel path provided, no action taken! '+path,/info
   endif
   set_env:
   setenv,'ebtel='+path
   exit_point:
   path=GETENV('ebtel')
   valid=gx_ebtel_valid_path(path,has_ddm=has_ddm,quiet=quiet)
-  if ~keyword_set(quiet) then message,'ebtel environment  path is set to '+path,/cont
+  if ~keyword_set(quiet) then message,'ebtel environment  path is set to '+path,/info
   return,path
 end

@@ -2,22 +2,22 @@
 function gx_render,model,renderer,logfile=logfile,_extra=_extra
   t0=systime(/s)
   if ~isa(model) then begin
-    message,'None or invalid model provided! Operation aborted!',/cont
+    message,'None or invalid model provided! Operation aborted!',/info
     return,!null
   endif else begin
     if ~obj_valid(model) then begin
-      message,'None or invalid model provided! Operation aborted!',/cont
+      message,'None or invalid model provided! Operation aborted!',/info
       return,!null
     endif else begin
       if ~obj_isa(model,'gxmodel') then begin
-        message,'Invalid gx model provided! Operation aborted!',/cont
+        message,'Invalid gx model provided! Operation aborted!',/info
         return,!null
       end  
     endelse
   endelse
   info=gx_rendererinfo(renderer)
   if ~isa(info) then begin
-    message,'Invalid renderer routine! Operation aborted!',/cont
+    message,'Invalid renderer routine! Operation aborted!',/info
     return,!null
   endif
   if isa(_extra) then begin

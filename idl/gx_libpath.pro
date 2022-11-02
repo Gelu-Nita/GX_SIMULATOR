@@ -6,7 +6,7 @@ function gx_libpath,root,update=update,unix=unix,source=source
   if n_elements(root) eq 0 then return,!null 
   root_path=(file_search(getenv('gxpath'),root))[0]
   if ~file_test(root_path) then begin
-    message,'fatal error: the root path provided does not exist! no valid library path to be returned!',/cont
+    message,'fatal error: the root path provided does not exist! no valid library path to be returned!',/info
     return,!null
   endif
   lib_path=''
@@ -29,16 +29,16 @@ function gx_libpath,root,update=update,unix=unix,source=source
     if ~file_test(makefile) then begin
       if libname ne '' then lib_path=(file_search(binary_path,libname,/fold))[0]
       if file_test(lib_path) then begin
-        message,'warning: no makefile found! The distribution library was copyed instead to '+binary_path,/cont
+        message,'warning: no makefile found! The distribution library was copyed instead to '+binary_path,/info
         return,lib_path
       endif else begin
-        message,'fatal error: no distributed library or makefile found, no valid library path to be returned!',/cont
+        message,'fatal error: no distributed library or makefile found, no valid library path to be returned!',/info
         return,!null
       endelse
     endif
     make_root=filepath(file_basename(root_path),root=tmpdir)
     if file_test(make_root) then spawn,('rm -r '+make_root)
-    message,'copying "'+root_path +'" to "'+make_root+'"',/cont
+    message,'copying "'+root_path +'" to "'+make_root+'"',/info
     file_copy,root_path,tmpdir,/overwrite,/force,/recursive
     source_lib=(file_search(make_root,'*.so',/fold))[0]
     if file_test(source_lib) then begin
@@ -60,12 +60,12 @@ function gx_libpath,root,update=update,unix=unix,source=source
         file_copy,source_lib,binpath,/overwrite,/force
       endif
       lib_path=(file_search(binary_path,libname,/fold))[0]
-      message,libname+ ' succesfully built and copied to '+binary_path,/cont
+      message,libname+ ' succesfully built and copied to '+binary_path,/info
     endif else begin
       if libname ne '' then begin
-        message,libname +' could not be built on this system! The distribution library was copied instead to '+binary_path,/cont
+        message,libname +' could not be built on this system! The distribution library was copied instead to '+binary_path,/info
         lib_path=(file_search(binary_path,libname,/fold))[0]
-      endif else message, 'fatal error: distributed library or makefile missing, no valid library path to be returned!',/cont
+      endif else message, 'fatal error: distributed library or makefile missing, no valid library path to be returned!',/info
     endelse
     if file_test(make_root) then spawn,('rm -r '+make_root)
   endelse
