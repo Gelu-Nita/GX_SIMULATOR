@@ -1603,12 +1603,36 @@ end
 
 
 Pro gxModel::CreateFluxtube,centerline
- count=self.FluxTubeCount+1
- name=string(count,format="('Flux Tube',i2)")
+ fluxtubes=self->get(/all,isa='gxfluxtube',count=count)
+ if count gt 0 then begin
+  idx=[]
+  for i=0, count-1 do begin
+    if obj_valid(fluxtubes[i]) then begin
+      fluxtubes[i]->GetProperty,name=name
+      name=str2arr(name, del=' ')
+      idx=[idx,fix(name[-1])]
+    endif
+  endfor
+  case n_elements(idx) of
+    0: idx=1
+    1: idx=2
+  else: begin
+         idx=idx[sort(idx)]
+         list=[1:idx[-1]]
+         matched_idx=idx[-1]+1
+         for k=0,n_elements(list)-1 do begin
+          if (where(idx eq list[k]))[0] eq -1 then matched_idx=list[k]
+         endfor 
+         idx=matched_idx    
+        end
+  endcase
+ endif else idx=1
+ name=strcompress(string(idx,format="('Flux Tube ',i0)"))
  fluxtube=Obj_NEW('GXFLUXTUBE',centerline=centerline,name=name)
  if ~obj_valid(fluxtube) then message,'Flux tube creation failed!'
  self->Add,fluxtube
- self.FluxTubeCount+=1
+ fluxtubes=self->get(/all,isa='gxfluxtube',count=count)
+ self.FluxTubeCount=count
  wComponentTab=widget_info(self.wparent,find_by_uname='GXMODEL:COMPONENTTAB')
  wbase=Widget_Base(wComponentTab,title=name,uname=name)
  widget_control,wComponentTab,SET_TAB_CURRENT=widget_info(wComponentTab,/N_CHILDREN)-1
