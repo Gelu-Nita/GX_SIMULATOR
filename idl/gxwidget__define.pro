@@ -4,8 +4,8 @@ function gxWidget::INIT,wParent,subject,frame=frame,name=name,_extra=_extra
   if error_stat ne 0 then begin
       catch, /cancel
       MESSAGE, /INFO, !ERROR_STATE.MSG
+      if !ERROR_STATE.NAME eq 'IDL_M_KEYWORD_BAD' then goto,skip_parent
       if !ERROR_STATE.NAME eq 'IDL_M_SUCCESS' then goto,jump
-      if !ERROR_STATE.NAME eq 'IDL_M_KEYWORD_BAD' then goto,jump
       if !ERROR_STATE.NAME eq 'IDL_M_MATHERROR_DETECTED' then goto,jump
       if !ERROR_STATE.BLOCK eq 'IDL_MBLK_CORE' then goto,jump
       if widget_valid(self.wIDBase) then widget_control,self.wIDBase,/destroy
@@ -16,8 +16,8 @@ function gxWidget::INIT,wParent,subject,frame=frame,name=name,_extra=_extra
  self.subject=subject
  void=self->IDLexWidget::Init(wParent,frame=frame)
  widget_control,self.wIDBase,set_uvalue=self.subject
- self.subject->GetProperty,wParent=parent
- if n_elements(parent) ne 0 then self.subject->SetProperty,wParent=wParent
+ self.subject->SetProperty,wParent=wParent
+ skip_parent:
  self.wBase = widget_base( $
     self.wIDBase, $
     /column, $
