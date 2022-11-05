@@ -1673,8 +1673,8 @@ end
      'GXFLUXTUBE:P_TH':Begin
                      widget_control,event.id,get_value=p_th
                      self.subject->SetProperty,p_th=p_th
-                     self.subject->Update_N_nth
-                     self.subject->UpdateDisplays,/n_nth
+                     self.subject->Update_N_th
+                     self.subject->UpdateDisplays,/n_th
                     End               
      'GXFLUXTUBE:Q_NTH':Begin
                      widget_control,event.id,get_value=q_nth
