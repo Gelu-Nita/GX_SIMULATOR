@@ -1,8 +1,7 @@
-function gx_libpath,root,update=update,unix=unix,source=source
+function gx_libpath,root,update=update,unix=unix
   ;Returns the precompiled WinOS name*.dll 
   ;returns the path to name*.so library on Linux if found in the var/tmp/gx_binaries, 
   ;or build it, if not found or /update is requested 
-  ;use /unix to force the unix branch on windows system, for testing purposes 
   if n_elements(root) eq 0 then return,!null 
   root_path=(file_search(getenv('gxpath'),root))[0]
   if ~file_test(root_path) then begin
@@ -14,11 +13,24 @@ function gx_libpath,root,update=update,unix=unix,source=source
     lib_path=file_search(root_path,(!version.arch eq 'x86_64')?'*64*.dll':'*32*.dll')
     lib_path=(lib_path ne '')?lib_path:file_search(root_path,'*.dll')  
   endif else begin
-    tmpdir=getenv('HOME')
+    tmpdir=keyword_set(unix)?curdir():getenv('HOME')
     binary_path=filepath('gx_binaries',root=tmpdir)
     log=filepath(root+'.log',root=binary_path)
     if ~file_test(filepath('gx_binaries',root=tmpdir)) then file_mkdir,binary_path
-    source_lib=(file_search(root_path,'*.so',/fold))[0]
+    source_lib=(file_search(root_path,'*.so',/fold))
+    if n_elements(source_lib) ne 1 then begin
+      linux_lib=(arm_lib=(x86_lib=''))
+      arm_idx=where((strmatch(source_lib,'*arm*') eq 1),arm_count)
+      if arm_count then arm_lib=source_lib[arm_idx]
+      x86_idx=where((strmatch(source_lib,'*x86*') eq 1),x86_count)
+      if x86_count then x86_lib=source_lib[x86_idx]
+      linux_idx=where((strmatch(source_lib,'*x86*') eq 0) and (strmatch(source_lib,'*arm*') eq 0),linux_count)
+      if linux_count then linux_lib=source_lib[linux_idx]
+      source_lib=linux_lib
+      if !version.os eq 'darwin' then begin
+        source_lib=(!version.arch eq "x86_64")?x86_lib:arm_lib
+      endif else source_lib=linux_lib
+    endif else source_lib=source_lib[0]
     if file_test(source_lib) then begin
       libname=file_basename(source_lib)
       lib_path=filepath(libname,root=binary_path)
