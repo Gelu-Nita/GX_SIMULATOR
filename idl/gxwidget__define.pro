@@ -16,7 +16,6 @@ function gxWidget::INIT,wParent,subject,frame=frame,name=name,_extra=_extra
  self.subject=subject
  void=self->IDLexWidget::Init(wParent,frame=frame)
  widget_control,self.wIDBase,set_uvalue=self.subject
- if (self.subject eq subject) then goto,skip_parent
  self.subject->SetProperty,wParent=wParent
  skip_parent:
  self.wBase = widget_base( $

@@ -47,20 +47,20 @@ pro los,parms,rowdata,info=info
     corona_mask[corona_id]=1
    endif
    rowdata[*]=0
- 
+   ;the factor of 3 takes into account contribution from protons to the thermal energy
    rowdata[*,0,0,0]=total(corona_mask*n0dL,2,/double)
    rowdata[*,0,1,0]=total(corona_mask*n02dL,2,/double)
-   rowdata[*,0,2,0]=1.5*(1.38064852e-16)*total(corona_mask*n0TdL,2,/double)
+   rowdata[*,0,2,0]=3*(1.38064852e-16)*total(corona_mask*n0TdL,2,/double)
    rowdata[*,0,3,0]=total(corona_mask*nbdL,2,/double)
    
    rowdata[*,0,0,1]=total(tr_mask*n0dL,2,/double)
    rowdata[*,0,1,1]=total(tr_mask*n02dL,2,/double)
-   rowdata[*,0,2,1]=1.5*(1.38064852e-16)*total(tr_mask*n0TdL,2,/double)
+   rowdata[*,0,2,1]=3*(1.38064852e-16)*total(tr_mask*n0TdL,2,/double)
    rowdata[*,0,3,1]=total(tr_mask*nbdL,2,/double)
 
    rowdata[*,0,0,2]=total(chromo_mask*n0dL,2,/double)
    rowdata[*,0,1,2]=total(chromo_mask*n02dL,2,/double)
-   rowdata[*,0,2,2]=1.5*(1.38064852e-16)*total(chromo_mask*n0TdL,2,/double)
+   rowdata[*,0,2,2]=3*(1.38064852e-16)*total(chromo_mask*n0TdL,2,/double)
    rowdata[*,0,3,2]=total(chromo_mask*nbdL,2,/double)
 END
 
