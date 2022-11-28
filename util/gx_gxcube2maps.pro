@@ -1,5 +1,5 @@
-function gx_gxcube2maps,gxcube,map
-  ;map input should be provaded to add the gxcube maps to an existing map object
+function gx_gxcube2maps,gxcube,map,idx=idx
+  ;map input should be provided to add the gxcube maps to an existing map object
   default,map,obj_new('map')
   if ~obj_valid(map) then begin
     message,'Invalid mapcontainer provided!',/info
@@ -21,6 +21,7 @@ function gx_gxcube2maps,gxcube,map
     message,'Invalid FOV map GXCUBE tag!'
     goto,invalid_input
   endif
+  
  info=gxcube.info
  fovmap=gxcube.fovmap
  chan=(((info).spectrum).x.axis)

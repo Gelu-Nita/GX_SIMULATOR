@@ -35,6 +35,7 @@ xy= GET_SCREEN_SIZE(RESOLUTION=resolution)
 if xy[0] lt 3200 then fontsize=12 else fontsize=24
 !defaults.font=strcompress('lucida console*'+string(fontsize),/rem)
 Widget_Control, DEFAULT_FONT=!defaults.font
+file=GETENV('IDL_TMPDIR')+GETENV('USER')+'GX_Simulator.log'
   if ~file_exist(file) then begin
     file=dialog_pickfile(Title='Please choose a GX Simulator log file to upload',filter='*.gxl')
     if ~file_exist(file) then return
