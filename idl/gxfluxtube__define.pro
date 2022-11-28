@@ -565,6 +565,7 @@ PRO gxFluxTube::Draw_N_th
   s0=l*self.s0
   self.centerline->GetProperty,XCOORD_CONV=XCOORD_CONV,YCOORD_CONV=YCOORD_CONV,ZCOORD_CONV=ZCOORD_CONV,data=line
   wdraw=widget_info(self.wparent,find_by_uname='GXFLUXTUBE:draw_th')
+  if ~widget_valid(wdraw) then return
   widget_control,wdraw,get_value=window
   wset,window
   tvlct,rgb_curr,/get
@@ -880,6 +881,7 @@ End
 
 
 pro gxFluxtube::UpdateDisplays,n_th=n_th,n_nth=n_nth,energy=energy,mu=mu,b2b0=b2B0,em=em,all=all
+  if ~widget_valid(self.wparent) then return
   self->SynchronizeDuplicateFields
   if keyword_set(B2B0) or keyword_set(all) then self->DisplayB2B0ratio
   if keyword_set(n_th) or keyword_set(all) then self->Draw_N_TH
@@ -951,6 +953,7 @@ end
 pro gxFluxtube::Draw_N_NTH
   if ~widget_valid(self.wparent) then return
   wdraw=widget_info(self.wparent,find_by_uname='GXFLUXTUBE:draw_nth')
+  if ~widget_valid(wdraw) then return
   a=self.a
   b=self.b
   p=self.p_nth

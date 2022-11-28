@@ -1662,6 +1662,7 @@ function gxModel::refmaps
 end
 
 function gxModel::GetTime,seconds=seconds
+ if valid_map(self.GetFovMap()) then time=(self.GetFovMap())->get(/time) else $
  time=(*self.refmaps)->get(2,/time)
  if keyword_set(seconds) then time=anytim(time)
  return,time
@@ -1788,6 +1789,10 @@ end
 function gxModel::GetRoi,scanbox=scanbox
  if keyword_set(scanbox) then return,self->GetByName('ScanBox')
  return,self.roi
+end
+
+pro gxModel::ComputeGrid
+(self->GetByName('ScanBox'))->ComputeGrid
 end
 
 function gxModel::Scanbox

@@ -6,7 +6,7 @@ function fastccorrelate2,im1,im2
   imm1=im1-m
   m=total(im2)/(nx*ny)
   imm2=im2-m
-  res=float(fft(fft(imm1,-1)*conj(fft(imm2,-1)),+1))
+  res=double(fft(fft(imm1,-1)*conj(fft(imm2,-1)),+1))
   norm=sqrt(total(imm1^2))*sqrt(total(imm2^2))
   ;norm=norm/(1.-findgen(nt)/float(nt))
   res=(nx*ny)*res;/norm
@@ -29,6 +29,7 @@ end
 ;   The function returns shifts between two images as a 2-element array
 ; 
 ; :Author: Sergey Anfinogentov (anfinogentov@iszf.irk.ru)
+; 23-Nov-2022 Gelu Nita (gnita@njit.edu): changed floatto double in fascorrelate2
 ;-
 function gx_align_image, image, ref_image, replace = replace
 

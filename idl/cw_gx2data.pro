@@ -184,7 +184,10 @@ function gx2data::HandleEvent, event
     'MODEL:SELECT': begin
                       obj_destroy,self.gxmap
                       self.gxmap=obj_clone(self.select_map())
-                      if valid_map(self.gxmap) then widget_control,widget_info(event.handler,find_by_uname='MODEL:ID'),set_value=self.gxmap->get(/id)
+                      if valid_map(self.gxmap) then begin
+                        widget_control,widget_info(event.handler,find_by_uname='MODEL:ID'),set_value=self.gxmap->get(/id)
+                        widget_control,widget_info(event.handler,find_by_uname='BEAM:TIME'),set_value=self.gxmap->get(/time)
+                      endif
                     end
     'REF:SELECT': begin
                       obj_destroy,self.refmap
@@ -264,7 +267,8 @@ function gx2data::HandleEvent, event
                         if valid_map(map) then begin
                           cmap=map->get(/map)
                           beam=self.beam->get(/data)
-                          cmap.data=convol(cmap.data, beam, /edge_zero)
+                          ;cmap.data=convol(cmap.data, beam, /edge_zero)
+                          cmap.data=convol_fft(cmap.data, beam);to be consistent with gx_chmpp
                           cmap.id='Convolved '+cmap.id
                           omap=obj_new('map')
                           omap->setmap,0,cmap
