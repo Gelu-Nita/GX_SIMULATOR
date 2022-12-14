@@ -194,7 +194,7 @@ field=cw_objArray(fov_base,label='YRANGE',value=[-1000.0,1000.0],unit='"',inc=1,
  wChromo=widget_button(font=font,wProgressBase,value='GENERATE CHROMO+CORONAL MODEL',uname='CHROMO',sensitive=1)
  wCHROMO2GX=widget_button(font=font,wProgressBase,value='SEND CHROMO+CORONAL MODEL TO THE SIMULATOR',uname='CHROMO2GX',sensitive=1)
  wSAVECHROMO=widget_button(font=font,wProgressBase,value='SAVE CHROMO+CORONAL MODEL TO FILE',uname='SAVECHROMO',sensitive=1)
- self.bridge=obj_new('gxBridge',userdata=self,out=GETENV('IDL_TMPDIR')+strcompress('ExtrapolationBridge.log',/rem))
+ self.bridge=obj_new('gxBridge',userdata=self,out=GETENV('IDL_TMPDIR')+GETENV('USER')+strcompress('ExtrapolationBridge.log',/rem))
 ; wADVANCED=widget_button(font=font,wProgressBase,value='ADVANCED',uname='ADVANCED',sensitive=0)
  widget_control,wScroll,set_slider_max=64*self.levels-1
  if self->ValidExtrapolator(file,template) then begin
