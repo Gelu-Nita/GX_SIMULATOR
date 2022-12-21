@@ -135,6 +135,7 @@ pro gxampp::CreatePanel,xsize=xsize,ysize=ysize
    wGenerate=widget_button(toolbar,value=gx_bitmap(filepath('gears.bmp', subdirectory=['resource', 'bitmaps'])), $
      /bitmap,tooltip='Update Script',uname='update_script',sensitive=1)
    wExecute=widget_button(toolbar,value=gx_bitmap(gx_findfile('play.bmp')),tooltip='Execute Script',/bitmap,uname='execute')
+   wSave=widget_button(toolbar,value=gx_bitmap(filepath('save.bmp', subdirectory=['resource', 'bitmaps'])),tooltip='Save execution script',/bitmap,uname='savescript') 
    wModel2gx=widget_button(toolbar,value=gx_bitmap(filepath('importf.bmp', subdirectory=['resource', 'bitmaps'])), $
     /bitmap,tooltip='Import Model Data',uname='model2gx',sensitive=0)
    wSave=widget_button(toolbar,value=gx_bitmap(filepath('save.bmp', subdirectory=['resource', 'bitmaps'])),tooltip='Save execution log',/bitmap,uname='savelog') 
@@ -185,7 +186,19 @@ function gxampp::HandleEvent, event
                 close,lun
                 free_lun,lun
                endif
-              end    
+              end  
+    'savescript':begin
+                widget_control,widget_info(self.wIDBase,find_by_uname='script'),get_value=text
+                file=dialog_pickfile(filter='*.txt',$
+                  DEFAULT_EXTENSION='txt',/write,$
+                  title='Please select a location to save the AMPP execution script')
+                if file ne '' then begin
+                  openw,lun,file,/get
+                  printf,lun,text
+                  close,lun
+                  free_lun,lun
+                endif
+              end            
               
     'tmp_dir':begin
                 widget_control,event.id,get_value=tmp_dir

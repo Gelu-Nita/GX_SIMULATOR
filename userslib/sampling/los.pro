@@ -17,7 +17,7 @@ pro los,parms,rowdata,info=info
       info={parms:parms,$
       pixdim:[1,4,3],$,2
       spectrum:{x:{axis:[0],label:'',unit:'' },$
-      y:{label:['n0_L', 'EM', 'Wth','nb_L'],unit:['cm^-2','cm^-5','erg/cm^2','cm^-2']}},$
+      y:{label:['EM', 'Wth','n0_L', 'nb_L'],unit:['cm^-5','erg/cm^2','cm^-2','cm^-2']}},$
       channels:['Corona', 'Transition Region', 'Chromosphere']}                          
     return
  end
@@ -48,19 +48,19 @@ pro los,parms,rowdata,info=info
    endif
    rowdata[*]=0
    ;the factor of 3 takes into account contribution from protons to the thermal energy
-   rowdata[*,0,0,0]=total(corona_mask*n0dL,2,/double)
-   rowdata[*,0,1,0]=total(corona_mask*n02dL,2,/double)
-   rowdata[*,0,2,0]=3*(1.38064852e-16)*total(corona_mask*n0TdL,2,/double)
+   rowdata[*,0,0,0]=total(corona_mask*n02dL,2,/double)
+   rowdata[*,0,1,0]=3*(1.38064852e-16)*total(corona_mask*n0TdL,2,/double)
+   rowdata[*,0,2,0]=total(corona_mask*n0dL,2,/double)
    rowdata[*,0,3,0]=total(corona_mask*nbdL,2,/double)
    
-   rowdata[*,0,0,1]=total(tr_mask*n0dL,2,/double)
-   rowdata[*,0,1,1]=total(tr_mask*n02dL,2,/double)
-   rowdata[*,0,2,1]=3*(1.38064852e-16)*total(tr_mask*n0TdL,2,/double)
+   rowdata[*,0,0,1]=total(tr_mask*n02dL,2,/double)
+   rowdata[*,0,1,1]=3*(1.38064852e-16)*total(tr_mask*n0TdL,2,/double)
+   rowdata[*,0,2,1]=total(tr_mask*n0dL,2,/double)
    rowdata[*,0,3,1]=total(tr_mask*nbdL,2,/double)
 
-   rowdata[*,0,0,2]=total(chromo_mask*n0dL,2,/double)
-   rowdata[*,0,1,2]=total(chromo_mask*n02dL,2,/double)
-   rowdata[*,0,2,2]=3*(1.38064852e-16)*total(chromo_mask*n0TdL,2,/double)
+   rowdata[*,0,0,2]=total(chromo_mask*n02dL,2,/double)
+   rowdata[*,0,1,2]=3*(1.38064852e-16)*total(chromo_mask*n0TdL,2,/double)
+   rowdata[*,0,2,2]=total(chromo_mask*n0dL,2,/double)
    rowdata[*,0,3,2]=total(chromo_mask*nbdL,2,/double)
 END
 
