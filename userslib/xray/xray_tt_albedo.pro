@@ -12,7 +12,7 @@
 ; Eduard@Glasgow & Gelu@njit 19-June-2018 changed albedo matrix interpolation
 
 
-pro xray_tt_albedo,parms,rowdata,xray_cs=xray_cs,albedo=albedo,info=info
+pro xray_tt_albedo,parms,rowdata,rparms,xray_cs=xray_cs,albedo=albedo,info=info
   if arg_present(info) then begin
     if n_elements(info) eq 0 then begin
       Parms=Replicate({Name:'unused',Value:0d,Unit:'',Hint:''},28)
@@ -45,8 +45,11 @@ pro xray_tt_albedo,parms,rowdata,xray_cs=xray_cs,albedo=albedo,info=info
       Parms[26].Name='a'           & Parms[26].Value=1            & Parms[26].Unit='none'    & Parms[26].Hint='chromo anisotropy ratio'
       Parms[27].Name='hc_angle'    & Parms[27].Value=45           & Parms[27].Unit='degrees' & Parms[27].Hint='Heliocentric angle (0-90 deg)'
       ; corrected by Eduard@glasgow after converstation with Gelu Nita about Parms.unit
-
-    endif else parms=info.parms
+      rparms=[{name:'relative_abundance',value:1d,unit:'(cm^2)',user:1.0,hint:'Relative to coronal abundance for Chianti'}]
+     endif else begin
+      parms=info.parms
+      rparms=info.rparms
+     endelse
     E1=Parms[15].value
     dEph=Parms[16].value
     Eph=10^(Alog10(E1)+findgen(Parms[18].value)*dEph)
@@ -57,6 +60,7 @@ pro xray_tt_albedo,parms,rowdata,xray_cs=xray_cs,albedo=albedo,info=info
     EE=EE + min(dEph)*0.5
     ;electron energies so that max(ee) =10 x max(eph)
     info={parms:parms,$
+      rparms:rparms,$
       pixdim:[parms[18].value,2],$
       spectrum:{x:{axis:Eph,label:'Energy',unit:'keV'},$
       y:{label:['Direct Flux','Albedo Flux','Flux'],unit:replicate('1/(s cm^2 keV)',3)}}}
@@ -135,11 +139,10 @@ pro xray_tt_albedo,parms,rowdata,xray_cs=xray_cs,albedo=albedo,info=info
   end
   ;End albedo computation
   for r=0, nrows-1 do begin
-    rparms=transpose(parms[r,*,*])
-    point_in=where(rparms[2,*] gt 0, Nvox);added
+    tparms=transpose(parms[r,*,*])
+    point_in=where(tparms[2,*] gt 0, Nvox);added
     if Nvox gt 0 then begin
-      parmin=rparms[*,point_in];added
-
+      parmin=tparms[*,point_in];added
 
       e_dataout[*]  =0
       e_data_tt[*]  =0
@@ -148,7 +151,7 @@ pro xray_tt_albedo,parms,rowdata,xray_cs=xray_cs,albedo=albedo,info=info
       Ve= sqrt(2.*EE*1.6e-9/9.8d-28)
       Te_thr=0.09 ; keV
       ; lowest temperature that can be calculated for thermal plasma SXR emission
-      abun =1.0
+      abun =rparms[0]
       ; fractional element abunadences with respect to coronal
 
       ; constant KK is defined for Coloumb log =20,

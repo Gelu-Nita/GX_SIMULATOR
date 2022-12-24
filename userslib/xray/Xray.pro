@@ -3,11 +3,12 @@
 ; April 2012, cs devided by 511 kev fixed 
 ; modified by Eduard@Glasgow 27 July 2017  - added soft x-ray calculations using f_vth from RHESSI OSPEX
 ; see also https://hesperia.gsfc.nasa.gov/ssw/packages/xray/idl/f_thick_warm.pro
+; modified by Gelu@NJIT 24 Dec 2022  - added relative_abundances user input
 
 
 
 
-pro xray,parms,rowdata,xray_cs=xray_cs,info=info
+pro xray,parms,rowdata,rparms,xray_cs=xray_cs,info=info
  if arg_present(info) then begin
      if n_elements(info) eq 0 then begin
        Parms=Replicate({Name:'unused',Value:0d,Unit:'',Hint:''},20)
@@ -31,7 +32,11 @@ pro xray,parms,rowdata,xray_cs=xray_cs,info=info
        Parms[17].Name='Dist_E'      & Parms[17].Value=3            & Parms[17].Unit='none'    & Parms[17].Hint='Type of distribution over energy'
        Parms[18].Name='N_E'         & Parms[18].Value=101          & Parms[18].Unit='none'    & Parms[18].Hint='Number of energy channels'
        Parms[19].Name='VoxelID'    & Parms[19].Value=0            & Parms[19].Unit='0/1/2' & Parms[19].Hint='chromo/TR/corona'
-     endif else parms=info.parms
+       rparms=[{name:'relative_abundance',value:1d,unit:'(cm^2)',user:1.0,hint:'Relative to coronal abundance for Chianti'}]
+     endif else begin
+      parms=info.parms
+      rparms=info.rparms
+     endelse
      E1=Parms[15].value  
      dEph=Parms[16].value
      Eph=10^(Alog10(E1)+findgen(Parms[18].value)*dEph)
@@ -42,6 +47,7 @@ pro xray,parms,rowdata,xray_cs=xray_cs,info=info
      EE=EE + min(dEph)*0.5
      ;electron energies so that max(ee) =10 x max(eph)
      info={parms:parms,$
+           rparms:rparms,$
            pixdim:[parms[18].value],$
            spectrum:{x:{axis:Eph,label:'Energy',unit:'keV'},$
                     y:{label:'Flux',unit:'1/(s cm^2 keV)'}}}                          
@@ -50,11 +56,12 @@ pro xray,parms,rowdata,xray_cs=xray_cs,info=info
    sz=size(rowdata,/dim)
    nrows=sz[0]
    rowdata[*]=0
+   abun=rparms[0]
    for r=0, nrows-1 do begin
-   rparms=transpose(parms[r,*,*])
-   point_in=where(rparms[2,*] gt 0, Nvox);added
+   tparms=transpose(parms[r,*,*])
+   point_in=where(tparms[2,*] gt 0, Nvox);added
    if Nvox gt 0 then begin
-   parmin=rparms[*,point_in];added
+   parmin=tparms[*,point_in];added
  
    E1=parmin[15,0] 
    logdE=parmin[16,0]
@@ -144,13 +151,13 @@ pro xray,parms,rowdata,xray_cs=xray_cs,info=info
     ;eph_dataout+=xray_cs#(e_dataout*DE)
     ;EM49=E_dist_norm*1d-49
     ;f_vth Valid range is 1.01 - 998.0 MegaKelvin or 0.0870317 - 85.9977 keV
-    IF (Te GT Te_thr) THEN eph_dataout+=f_vth(eph_2n, [EM49[i],Te,1.])
+    IF (Te GT Te_thr) THEN eph_dataout+=f_vth(eph_2n, [EM49[i],Te,abun])
     IF (Te LE Te_thr) THEN eph_dataout+=xray_cs#(e_dataout*DE)
  
     ;f_vth(e, [EM49,Te,1.])
     ; EM49 is Emission measure
     ; Te temperature
-    ; 1 is the element abundances (enhancement factor)
+    ; abun is the element abundances (enhancement factor)
     ; 
    ENDIF
    
@@ -236,7 +243,7 @@ pro xray,parms,rowdata,xray_cs=xray_cs,info=info
    
    ;f_vth Valid range is 1.01 - 998.0 MegaKelvin or 0.0870317 - 85.9977 keV
    
-   IF (Te GT Te_thr) THEN eph_dataout+=f_vth(eph_2n, [EM49[i],Te,1.])
+   IF (Te GT Te_thr) THEN eph_dataout+=f_vth(eph_2n, [EM49[i],Te,abun])
    IF (Te LE Te_thr) THEN eph_dataout+=xray_cs#(e_dist*DE)
 
    ; electron flux for 3D maxwellian

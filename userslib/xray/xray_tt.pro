@@ -7,8 +7,9 @@
 ;Parms[19].Name='VoxelID' & Parms[19].Value=0 & Parms[19].Unit='0/1/2' & Parms[19].Hint='chromo/TR/corona'
 ;
 ;gnita@njit 07-Dec-2017 change explicit TR index from 2L to gx_voxelid(/tr) to allow future redefinition if needed
+;modified by Gelu@NJIT 24 Dec 2022  - added relative_abundances user input
 
-pro xray_tt,parms,rowdata,xray_cs=xray_cs,info=info
+pro xray_tt,parms,rowdata,rparms,xray_cs=xray_cs,info=info
  if arg_present(info) then begin
      if n_elements(info) eq 0 then begin
        Parms=Replicate({Name:'unused',Value:0d,Unit:'',Hint:''},20)
@@ -33,8 +34,11 @@ pro xray_tt,parms,rowdata,xray_cs=xray_cs,info=info
        Parms[18].Name='N_E'         & Parms[18].Value=101          & Parms[18].Unit='none'    & Parms[18].Hint='Number of energy channels'
        Parms[19].Name='VoxelID'    & Parms[19].Value=0            & Parms[19].Unit='1/2/4' & Parms[19].Hint='chromo/TR/corona'
        ; corrected by Eduard@glasgow after converstation with Gelu Nita about Parms.unit 
-
-     endif else parms=info.parms
+        rparms=[{name:'relative_abundance',value:1d,unit:'(cm^2)',user:1.0,hint:'Relative to coronal abundance for Chianti'}]
+     endif else begin
+      parms=info.parms
+      rparms=info.rparms
+     endelse
      E1=Parms[15].value  
      dEph=Parms[16].value
      Eph=10^(Alog10(E1)+findgen(Parms[18].value)*dEph)
@@ -45,6 +49,7 @@ pro xray_tt,parms,rowdata,xray_cs=xray_cs,info=info
      EE=EE + min(dEph)*0.5
      ;electron energies so that max(ee) =10 x max(eph)
      info={parms:parms,$
+           rparms:rparms,$
            pixdim:[parms[18].value],$
            spectrum:{x:{axis:Eph,label:'Energy',unit:'keV'},$
                     y:{label:'Flux',unit:'1/(s cm^2 keV)'}}}                          
@@ -54,10 +59,10 @@ pro xray_tt,parms,rowdata,xray_cs=xray_cs,info=info
    nrows=sz[0]
    rowdata[*]=0
    for r=0, nrows-1 do begin
-   rparms=transpose(parms[r,*,*])
-   point_in=where(rparms[2,*] gt 0, Nvox);added
+   tparms=transpose(parms[r,*,*])
+   point_in=where(tparms[2,*] gt 0, Nvox);added
    if Nvox gt 0 then begin
-   parmin=rparms[*,point_in];added
+   parmin=tparms[*,point_in];added
  
    E1=parmin[15,0] 
    logdE=parmin[16,0]
@@ -84,7 +89,7 @@ pro xray_tt,parms,rowdata,xray_cs=xray_cs,info=info
    
    Te_thr=0.09 ; keV
    ; lowest temperature that can be calculated for thermal plasma SXR emission
-   abun =1.0
+   abun =rparms[0]
    ; fractional element abunadences with respect to coronal
    
    ; constant KK is defined for Coloumb log =20, 
