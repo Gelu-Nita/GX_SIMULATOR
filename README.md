@@ -12,9 +12,11 @@ https://git-scm.com/
 #### CD to the location where you want to copy the GX_Simulator package and issue the following sequence of commands
 
 ```bash
+rm -rf gx_simulator
 git clone https://github.com/Gelu-Nita/GX_SIMULATOR gx_simulator
 cd gx_simulator
 git submodule update --init --recursive --remote
+logout
 ```
 
 #### Delete the content of your SSW/packages/gx_simulator folder and move there the content of the cloned GitHub GX_SIMULATOR folder created in the previous step 
