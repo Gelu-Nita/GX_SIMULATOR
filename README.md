@@ -19,5 +19,5 @@ git submodule update --init --recursive --remote
 logout
 ```
 
-#### Delete the content of your SSW/packages/gx_simulator folder and move there the content of the cloned GitHub GX_SIMULATOR folder created in the previous step 
+#### Add GX_SIMULATOR to your SSW_INSTR list by editig the appropriate SSWIDL script
 
