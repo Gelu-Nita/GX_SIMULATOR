@@ -9,7 +9,7 @@ https://git-scm.com/
 
 #### Launch the Git Bash terminal
 
-#### CD to the location where you want to copy the GX_Simulator package and issue the following sequence of commands
+#### CD to your SSW/packages/ installation folder and issue the following sequence of commands
 
 ```bash
 rm -rf gx_simulator
