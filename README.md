@@ -16,7 +16,6 @@ rm -rf gx_simulator
 git clone https://github.com/Gelu-Nita/GX_SIMULATOR gx_simulator
 cd gx_simulator
 git submodule update --init --recursive --remote
-logout
 ```
 
 #### Add GX_SIMULATOR to your SSW_INSTR list by editig the appropriate SSWIDL script
