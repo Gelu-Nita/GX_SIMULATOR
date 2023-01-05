@@ -371,7 +371,7 @@ pro gxchmp::ExportTasks
       save,tasks,file=file
     endif else  begin
       answ=dialog_message('All tasks have been completed, do you have to save a copy of all tasks?',/question)
-      if strupvcase(answ) eq 'YES' then begin
+      if strupcase(answ) eq 'YES' then begin
         file=dialog_pickfile(default_extension=['*.sav'],title='Please select a filename to save the current task list',/write)
         if file eq '' then return
         save,tasks,file=file
