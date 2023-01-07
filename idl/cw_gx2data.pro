@@ -79,8 +79,8 @@ pro gx2data::CreatePanel,xsize=xsize,ysize=ysize
    wCHMP=WIDGET_BUTTON(wBeam, VALUE='Help on the expected GX_CHMP compatible reference structure', uname='BEAM:CHMPHELP',font=font)
    wNORH=WIDGET_BUTTON(wBeam, VALUE='Import reference map and PSF parameters from NORH Fits', uname='BEAM:NORH',font=font,/separator)
    wSSRT=WIDGET_BUTTON(wBeam, VALUE='Generate SSRT PSF Parameters', uname='BEAM:SSRT',font=font)
-    wConvolve=WIDGET_BUTTON(wBeam, VALUE='Convolve map displayed on the left panel', uname='CONVOLVE',font=font,/separator)
    wMetrics=Widget_Button(toolbar,/menu,value='Metrics')
+   wConvolve=WIDGET_BUTTON(wMetrics, VALUE='Convolve map displayed on the left panel', uname='CONVOLVE',font=font,/separator)
    wCompute=WIDGET_BUTTON(wMetrics, VALUE='Compute Metrics', uname='COMPUTE',font=font)
    
    wlabel=widget_label(wControlBase,value=' ',font=font,/align_left)
