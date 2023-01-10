@@ -8,7 +8,7 @@ pro gx_ampp_event,event
   endcase
 end
 
-pro gx_ampp,wgxampp,font=font
+pro gx_ampp,wgxampp,font=font,_extra=_extra
   gx_setfonts,font=font
   device, get_screen_size=scr
   if !version.os_family eq 'Windows' then begin
@@ -19,7 +19,7 @@ pro gx_ampp,wgxampp,font=font
   tlb=widget_base(title='GX Automatic Production Pipeline Interface',/column,$
     mbar=mbar, /tlb_size_events, $
     /tlb_kill,uname='gx_ampp')
-  wgxampp=cw_gxampp(tlb)
+  wgxampp=cw_gxampp(tlb,_extra=_extra)
   widget_control,tlb,/realize
   XMANAGER, 'gx_ampp',tlb ,/no_block
 end

@@ -260,12 +260,11 @@ function gx2data::HandleEvent, event
                         phi=parms[2]
                         dx=parms[3]
                         dy=parms[4]
-                        widget_control,widget_info(event.handler,find_by_uname='BEAM:CORR'),get_value=corr
                         width=size(omap->get(/data),/dimensions)<50
                         ;ensure that width is odd
                         if width[0] mod 2 eq 0 then width[0]+=1
                         if width[1] mod 2 eq 0 then width[1]+=1
-                        widget_control,widget_info(event.handler,find_by_uname='BEAM:CORR'),set_value=[width,beam_corr]
+                        widget_control,widget_info(event.handler,find_by_uname='BEAM:CORR'),set_value=[max(width),beam_corr]
                         beam=gx_psf(beam_corr*[a,b]/[dx,dy],phi,width)
                         omap->setmap,2,make_map(beam,dx=dx,dy=dy,time=time)
                         omap->set,2,id=omap->get(/id)+' Synthetic Beam'

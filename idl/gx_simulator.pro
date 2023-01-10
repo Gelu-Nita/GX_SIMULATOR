@@ -359,7 +359,7 @@ pro gx_simulator_event,event
 end
 
 
-pro gx_simulator,nthreads_or_model,main_base=main_base,expert=expert,_extra=_extra
+pro gx_simulator,nthreads_or_model,main_base=main_base,expert=expert,xsize=xsize,ysize=ysize,_extra=_extra
 if (XREGISTERED('gx_simulator') ne 0) then begin
   answ=dialog_message('Only one instance of GX Simulator may run in the same IDL session!')
   return
