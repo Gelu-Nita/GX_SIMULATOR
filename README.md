@@ -20,3 +20,39 @@ git submodule update --init --recursive --remote
 
 #### Add GX_SIMULATOR to your SSW_INSTR list by editig the appropriate SSWIDL script
 
+## Additional actions required on Mac systems
+- [ ] if not already installed, install libomp via homebrew: 
+
+```bash 
+brew install libomp 
+```
+
+- [ ] add to your shell startup script (.cshrc) this instruction:
+
+```idl
+setenv,'CPATH=/opt/homebrew/opt/libomp/include/'
+```
+- [ ] if already existent, remove the previous version of RenderIrregular.so 
+  
+```bash 
+rm /Users/#your name#/gx_binaries/RenderIrregular.so
+```
+- [ ] start an IDL session
+
+```bash
+sswidl
+``` 
+- [ ] verify that GX_SIMULATOR ia ready to be launched:
+
+```idl
+print, gx_libpath('grid')
+```
+- [ ] if succesfull, the console should display:
+
+```idl
+/Users/#your name#/gx_binaries/RenderIrregular.so
+```
+
+ 
+
+
