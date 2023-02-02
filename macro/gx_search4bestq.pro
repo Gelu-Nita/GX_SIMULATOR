@@ -36,7 +36,7 @@ function gx_search4bestq, gxmpath=gxmpath,a_arr=a_arr,b_arr=b_arr,q_start=q_star
   ;+++++++++++++++++++++++++++++++++++++++++++++
   default,renderer,gx_findfile((!version.os_family eq 'Windows')?'AR_GRFF_nonLTE.pro':'mwgrtransfer.pro',folder='')
   ;+++++++++++++++++++++++++++++++++++++++++++++
-  restore,refdatapath
+  ref=gx_ref2chmp(refdatapath,freq=freq,chan=chan,err_msg=err_msg,_extra=_extra)
   ;+++++++++++++++++++++++++++++++++++++++++++++
   if not file_test(modDir) then file_mkdir,modDir
   if keyword_set(save_gxc) then begin
@@ -59,6 +59,12 @@ function gx_search4bestq, gxmpath=gxmpath,a_arr=a_arr,b_arr=b_arr,q_start=q_star
      done_chi=0b
      apply2=1
      force_done=0
+     if n_elements(freq) ne 0 then begin
+       if isa(_extra,'STRUCT') then begin
+         if ~tag_exist(_extra,'f_min') then _extra=create_struct(_extra,'f_min',freq*1d9)
+         if ~tag_exist(_extra,'n_freq') then _extra=create_struct(_extra,'n_freq',1)
+       endif else _extra={f_min:freq*1d9,n_freq:1}
+     endif
      REPEAT BEGIN; until done       
         for j=0,n_elements(q)-1 do begin
           modfile=modDir+path_sep()+strcompress(string(a,b,q[j],format="('i_a',f7.2,'b',f7.2,'q',g0,'.map')"),/rem)
@@ -70,16 +76,24 @@ function gx_search4bestq, gxmpath=gxmpath,a_arr=a_arr,b_arr=b_arr,q_start=q_star
             q0_formula='q[0]'
             q_formula=string(a,b,format="('q0*(B/q[1])^(',g0,')/(L/q[2])^(',g0,')')")
             q_parms=[q[j], 100.0, 1.0000000d+009, 0.0, 0.0]
-            omap=gx_mwrender_ebtel(model,renderer,info=info,ebtel_path=ebtel_path,q_parms=q_parms,q_formula=q_formula,q0_formula=q0_formula,f_min=ref.freq*1d9,n_freq=1,gxcube=gxcube,_extra=_extra)
+            if n_elements(freq) gt 0 then begin
+             omap=gx_mwrender_ebtel(model,renderer,info=info,ebtel_path=ebtel_path,$
+                 q_parms=q_parms,q_formula=q_formula,q0_formula=q0_formula,$
+                 gxcube=gxcube,_extra=_extra)
+            endif else begin
+              omap=gx_euvrender_ebtel(model,renderer,info=info,ebtel_path=ebtel_path,$
+                q_parms=q_parms,q_formula=q_formula,q0_formula=q0_formula,$
+                gxcube=gxcube,_extra=_extra)
+            endelse
             if obj_valid(omap) then begin
                 map->setmap,0,omap->get(0,/map)
                 save,map,file=modfile
                 obj_destroy,omap
             endif
-            if (isa(gxcube) and keyword_set(save_gxc)) then save,gxcube,file=gxcDir+path_sep()+strcompress(string(a,b,q[j],ref.freq,format="('a',f7.2,'b',f7.2,'q',g0,'f',g0,'GHz.gxc')"),/rem)
+            if (isa(gxcube) and keyword_set(save_gxc)) then save,gxcube,file=gxcDir+path_sep()+strcompress(string(a,b,q[j],freq,format="('a',f7.2,'b',f7.2,'q',g0,'f',g0,'GHz.gxc')"),/rem)
           endif else gx_message, modfile+' already exists, no reprocessing requested!',/info
         endfor
-        result=gx_processmwmodels_ebtel(ab=[a,b],ref=ref,$
+        result=gx_processmodels_ebtel(ab=[a,b],ref=ref,$
           modDir=modDir,psDir=psDir,$
           levels=levels,resize=resize,$
           file_arr=file_arr,apply2=apply2,done=force_done,$

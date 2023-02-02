@@ -1,5 +1,5 @@
 ;this macro may be used to compute EUV emission from adjustable EBTEL models programatically, outside the GX_Simulator GUI
-function gx_euvrender_ebtel,model,renderer,ebtel_path=ebtel_path,q_parms=q_parms,$
+function gx_euvrender_ebtel,model,renderer,info=info,ebtel_path=ebtel_path,q_parms=q_parms,$
   q0_formula=q0_formula,q_formula=q_formula,gxcube=gxcube,map=map,use_dem=use_dem,has_used_ddm=has_used_ddm,_extra=_extra
   if ~isa(model) then begin
     message,'None or nvalid model provided! Operation aborted!',/info
@@ -27,7 +27,7 @@ function gx_euvrender_ebtel,model,renderer,ebtel_path=ebtel_path,q_parms=q_parms
   flags=volume->Setflags(/NTDEM)
   default, q0_formula, 'q[0]'
   q0_formula=volume->SetQ0(q0_formula,/quiet)
-  default, q_formula, 'q[0]*(B/q[1])^q[3](L/q[2])^q[4]'
+  default, q_formula, 'q[0]*(B/q[1])^q[3]*(L/q[2])^q[4]'
   q_formula=volume->SetQ(q_formula,/quiet)
   message,'EBTEL heating rate formula in use: '+q_formula,/info
   volume->Update,/nt,use_dem=use_dem,has_used_ddm=has_used_ddm

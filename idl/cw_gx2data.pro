@@ -74,9 +74,9 @@ pro gx2data::CreatePanel,xsize=xsize,ysize=ysize
    wControlBase=widget_base(wControlPanel,/column,xsize=xsize)
    toolbar= widget_base(wControlBase, /row,/toolbar)
    geom = widget_info (wControlPanel, /geom)
-   wBeam=Widget_Button(toolbar,/menu,value='PSF Actions')
-   wCHMP=WIDGET_BUTTON(wBeam, VALUE='Import GX_CHMP compatible reference structure', uname='BEAM:CHMP',font=font)
-   wCHMP=WIDGET_BUTTON(wBeam, VALUE='Help on the expected GX_CHMP compatible reference structure', uname='BEAM:CHMPHELP',font=font)
+   wBeam=Widget_Button(toolbar,/menu,value='Reference Data Import')
+   wCHMP=WIDGET_BUTTON(wBeam, VALUE='Import reference data', uname='BEAM:CHMP',font=font)
+   wCHMP=WIDGET_BUTTON(wBeam, VALUE='Help on the expected reference data format', uname='BEAM:CHMPHELP',font=font)
    wNORH=WIDGET_BUTTON(wBeam, VALUE='Import reference map and PSF parameters from NORH Fits', uname='BEAM:NORH',font=font,/separator)
    wSSRT=WIDGET_BUTTON(wBeam, VALUE='Generate SSRT PSF Parameters', uname='BEAM:SSRT',font=font)
    wMetrics=Widget_Button(toolbar,/menu,value='Metrics')
@@ -208,69 +208,34 @@ function gx2data::HandleEvent, event
                       if valid_map(self.beam) then widget_control,widget_info(event.handler,find_by_uname='BEAM:ID'),set_value=self.beam->get(/id)
                     end   
     'BEAM:CHMPHELP':begin
-                     answ=dialog_message(['The expected tags for a GX_CHMP compatible reference structure are:',$
-                     'A_BEAM          Gauss sigma A, arcsecs',$
-                     'B_BEAM          Gauss sigma B, arcsecs',$
-                     'PHI_BEAM        A axis rotation angle, degrees',$
-                     'CORR_BEAM       optional correction factor for A and B',$
-                     'FREQ            Frequency, GHz, only for radio maps',$
-                     'MAPS            [Data, SDEV] array of two map structures'],/info)
+                     dummy=gx_ref2chmp(/help,/quiet,err=msg)
+                     answ=dialog_message(msg,/info)
                     end
     'BEAM:CHMP':begin
-                  file=dialog_pickfile(Title='Select a norh fits file to import a GX_FIT compatible data refrence structure',/read,filter='*.sav',/must)
+                  file=dialog_pickfile(Title='Select a GX_CHMP compatible data reference file',/read,filter=['*.sav','*.map'],/must)
                   if file ne '' then begin
-                    osav=obj_new('idl_savefile',file)
-                    names=osav->names()
-                    valid=1
-                    for i=0,n_elements(names)-1 do begin
-                      osav->restore,names[i]
-                      e=execute('result=size('+names[i]+',/tname)')
-                      if result eq 'STRUCT' then begin
-                        e=execute('ref=temporary('+names[i]+')')
-                        if tag_exist(ref,'A_BEAM') then a=ref.a_beam else valid=0
-                        if tag_exist(ref,'B_BEAM') then b=ref.b_beam else valid=0
-                        if tag_exist(ref,'PHI_BEAM') then phi=ref.phi_beam else valid=0
-                        if tag_exist(ref,'CORR_BEAM') then beam_corr=ref.corr_beam else corr=1
-                        if tag_exist(ref,'MAPS') then begin
-                          if valid_map(ref.maps[0]) then data=ref.maps[0] else valid=0
-                          if (valid eq 1) and (n_elements(ref.maps) ge 2) then begin
-                            if valid_map(ref.maps[1]) then sdev=ref.maps[1] else valid=0
-                          endif else valid=0
-                        endif else valid=0
-                      endif
-                    endfor
-                    if valid eq 0 then begin
-                      answ=dialog_message(['Unexpected file format! The expected tags for a GX_CHMP compatible reference structure are:',$
-                        'A_BEAM          Gauss sigma A, arcsecs',$
-                        'B_BEAM          Gauss sigma B, arcsecs',$
-                        'PHI_BEAM        A axis rotation angle, degrees',$
-                        'CORR_BEAM       optional orrection factor for A and B',$
-                        'FREQ            Frequency, GHz, only for radio maps',$
-                        'MAPS            [Data, SDEV] array of two map structures'],/error)
-                     endif else begin
-                        omap=obj_new('map')
-                        omap->setmap,0,data
-                        omap->setmap,1,sdev
-                        parms=[a,b,phi,data.dx,data.dy]
-                        time=atime(data.time)
-                        widget_control,widget_info(event.handler,find_by_uname='BEAM:PARMS'),set_value=parms
-                        widget_control,widget_info(event.handler,find_by_uname='BEAM:TIME'),set_value=time
-                        a=parms[0]
-                        b=parms[1]
-                        phi=parms[2]
-                        dx=parms[3]
-                        dy=parms[4]
-                        width=size(omap->get(/data),/dimensions)<50
-                        ;ensure that width is odd
-                        if width[0] mod 2 eq 0 then width[0]+=1
-                        if width[1] mod 2 eq 0 then width[1]+=1
-                        widget_control,widget_info(event.handler,find_by_uname='BEAM:CORR'),set_value=[max(width),beam_corr]
-                        beam=gx_psf(beam_corr*[a,b]/[dx,dy],phi,width)
-                        omap->setmap,2,make_map(beam,dx=dx,dy=dy,time=time)
-                        omap->set,2,id=omap->get(/id)+' Synthetic Beam'
-                        widget_control,widget_info(widget_info(event.top,find_by_uname='GXMAPCONTAINER:MENU'),/parent),get_uvalue=oMapContainer
-                        oMapContainer->add,omap,'REF '+omap->get(/id)+' '+omap->get(/time)
-                     endelse
+                    ref=gx_ref2chmp(file,err=msg,/quiet)
+                    if ~valid_map(ref) then begin
+                      ;just in case a,b , and phi were not found, try generating the beam using the GUI input parameters
+                      widget_control,widget_info(event.handler,find_by_uname='BEAM:PARMS'),get_value=parms
+                      widget_control,widget_info(event.handler,find_by_uname='BEAM:CORR'),get_value=width_corr 
+                      ref=gx_ref2chmp(file,a=parms[0],b=parms[1],phi=parms[2],corr=width_corr[1],err=msg,/quiet)
+                      if valid_map(ref) then begin
+                      default,msg,['WARNING: ']
+                      answ=dialog_message([msg,['No a, b, phi and corr beam parameters found in the input file,',$ 
+                                'the GUI input parametes were used instead to generate a beam map!']],/info)
+                      end       
+                    endif
+                    if valid_map(ref) then begin
+                      time=atime(ref->get(/time))
+                      parms=[ref->get(/a_beam),ref->get(/b_beam),ref->get(/phi_beam),ref->get(/dx),ref->get(/dy)]
+                      widget_control,widget_info(event.handler,find_by_uname='BEAM:PARMS'),set_value=parms
+                      widget_control,widget_info(event.handler,find_by_uname='BEAM:TIME'),set_value=time
+                      widget_control,widget_info(widget_info(event.top,find_by_uname='GXMAPCONTAINER:MENU'),/parent),get_uvalue=oMapContainer
+                      oMapContainer->add,ref,'REF '+ref->get(/id)+' '+ref->get(/time)
+                      width=size(ref->get(2,/data),/dimensions)
+                      widget_control,widget_info(event.handler,find_by_uname='BEAM:CORR'),set_value=[max(width),ref->get(/corr_beam)] 
+                    endif else answ=dialog_message(msg,/error)
                   endif
                 end  
                 

@@ -57,30 +57,61 @@ function metrics_root,q,metrics,metrics_thresh,done=done
 end
 
 
-function gx_processmwmodels_ebtel,ab=ab,ref=ref,$
+function gx_processmodels_ebtel,ab=ab,ref=ref,$
                        modDir=modDir,modFiles=modFiles,psDir=psDir,$
                        levels=levels,resize=resize,$
-                       file_arr=file_arr,q_arr=q_arr,$
+                       file_arr=file_arr,q_arr=q_arr,corr_beam=corr_beam,$
                        apply2=apply2,charsize=charsize,_extra=_extra
  ;++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  ;This routine provides a means to search for the best EBTEL GX model to data match 
- ;in a set of GX microwave maps obtained using the gx_mwrender_ebtel macro, which are looked for 
+ ;in a set of GX microwave maps obtained using the gx_mwrender_ebtel gx_euvrender_ebtel macros, which are looked for 
  ;either in a modDir directory, or in an modFiles path array pointing to a subset of selected models
  ;++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++                      
- if ~isa(ref) or ~isa(modDir) or ~isa(psDir) then begin
-  message,'Undefined reference data info structure and/or figure directories!',/info
-  return, !null
- endif
+ ;check validity of input data
+ if ~isa(modDir,'STRING') then begin
+   message,'Undefined model repository, operation aborted!',/info
+   return, !null
+ endif else begin
+   if ~(file_info(modDir)).exists or ~(file_info(modDir)).directory then begin
+     message,moddir+' is not a valid model repository path, operation aborted!',/info
+     return, !null
+   endif
+ endelse
 
- loadct,39
+ if ~isa(psDir,'STRING') then begin
+   message,'Undefined output postcript directory, operation aborted!',/info
+   return, !null
+ endif else begin
+   if ~(file_info(psDir)).exists or ~(file_info(psDir)).directory then begin
+     message,psDir+' is not a valid directory path, operation aborted!',/info
+     return, !null
+   endif
+ endelse
+
+ if ~valid_map(ref) then begin
+  invalid_ref:
+  err_msg=['Undefined reference data map object, operation aborted!',$
+     'Use gx_ref2chmp.pro to create a valid reference data map object']  
+  message,'',/info
+  box_message,err_msg
+  return, !null
+ endif else begin
+  if ref->get(0,/count) lt 2 then goto, invalid_ref
+  _obsI=ref->get(0,/map)
+  _obsIsdev=ref->get(1,/map)
+  a_beam=ref->get(0,/a_beam)
+  b_beam=ref->get(0,/b_beam)
+  phi_beam=ref->get(0,/phi_beam)
+  ref_freq=ref->get(0,/freq)
+  ref_chan=ref->get(0,/chan)
+  corr_beam=~is_number(corr_beam)?ref->get(0,/corr_beam):1
+  if n_elements(ref_freq) eq 0 and n_elements(ref_chan) eq 0 then begin
+    message,'Required FREQ or CHAN reference data are missing!',/info
+    goto,invalid_ref
+  endif
+ endelse
  ;+++++++++++++++++++++++++++++++++++
- ref.maps=ref.maps
- a_beam=ref.a_beam
- b_beam=ref.b_beam
- phi=ref.phi_beam
- _obsI=ref.maps[0]
- _obsIsdev=ref.maps[1]
- ;++++++++++++++++++++++++++++++++++++++++++++++++
+
  if ~isa(levels) then levels=[12,20,30,50,80]
  if n_elements(ab) eq 2 then begin
    if moddir ne '' then modFiles=find_files(string(ab,format="('*a',f0.2,'b',f0.2,'*.map')"),modDir)
@@ -92,6 +123,8 @@ function gx_processmwmodels_ebtel,ab=ab,ref=ref,$
  formula0=(id0=(setfiles0=strarr(nmod)))
  dx0=(dy0=(width0=0))
  thisDevice = !D.Name
+ tvlct,rgb,/get
+ loadct,39
  set_plot,'ps'
  map=obj_new()
  for i=0,nmod-1 do begin
@@ -153,22 +186,35 @@ function gx_processmwmodels_ebtel,ab=ab,ref=ref,$
         map->setmap,k,rmap
       endfor
     endif
-
-    dx=map->get(/dx)
-    dy=map->get(/dy)
-    width=size(map->get(/data),/dimensions)
-    ;ensure that width is odd
-    if width[0] mod 2 eq 0 then width[0]+=1
-    if width[1] mod 2 eq 0 then width[1]+=1
-
-    obsBeam=gx_psf([a_beam,b_beam]/[dx,dy],phi,width)
     
-    freq=map->get(/freq)
-    for k=1,map->get(/count)-1 do freq=[freq,map->get(k,/freq)]
-    m=min(abs(freq-ref.freq),modidx)
+    if ~isa(obsBeam) then begin
+      if isa(a_beam) and isa(b_beam) and isa(phi_beam)then begin
+        dx=map->get(/dx)
+        dy=map->get(/dy)
+        width=size(map->get(/data),/dimensions)
+        ;ensure that width is odd
+        if width[0] mod 2 eq 0 then width[0]+=1
+        if width[1] mod 2 eq 0 then width[1]+=1
+        if ~is_number(corr_beam) then corr_beam=1
+        obsBeam=gx_psf(corr_beam*[a_beam,b_beam]/[dx,dy],phi_beam,width)
+      endif
+    end  
+    
+    if n_elements(ref_freq) gt 0 then begin
+      freq=map->get(/freq)
+      for k=1,map->get(/count)-1 do freq=[freq,map->get(k,/freq)]
+      m=min(abs(freq-ref_freq),modidx)
+    endif
+    
+    if n_elements(ref_chan) gt 0 then begin
+      chan=map->get(/chan)
+      for k=1,map->get(/count)-1 do chan=[chan,map->get(k,/chan)]
+      m=min(abs(chan-ref_chan),modidx)
+    endif
+    
     modI=map->get(modidx,/map)
     obj_destroy,map
-    modI.data=convol_fft(modI.data, ObsBeam)  
+    if n_elements(ObsBeam) gt 0 then modI.data=convol_fft(modI.data, ObsBeam)  
     modI0=modI
     _obsI0=_obsI
     _obsIsdev0=_obsIsdev
@@ -365,6 +411,7 @@ function gx_processmwmodels_ebtel,ab=ab,ref=ref,$
  endrep until ncomp eq 0
  close_lun,/all
  set_plot,thisDevice
+ tvlct,rgb
  return,result
 end
 

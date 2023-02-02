@@ -1,5 +1,5 @@
 function gxchmp::INIT,wBase,uname=uname, GXMpath=GXMpath,RefDataPath=RefDataPath,modDir=modDir,psDir=psDir,$
-                       RefDataStruct=RefDataStruct,TmpDir=TmpDir,alist=alist,blist=blist,qlist=qlist,$
+                       TmpDir=TmpDir,alist=alist,blist=blist,qlist=qlist,$
                        levels=levels,solution=solution, renderer=renderer,EBTELpath=EBTELpath,$
                        fov=fov,res=res,_extra=_extra
   compile_opt hidden
@@ -56,7 +56,7 @@ end
 pro gxchmp__define
   struct_hide,{gxchmp, inherits gxwidget,Id:0l,GXMpath:'',RefDataPath:'',modDir:'',psDir:'',TmpDir:'',EbtelPath:'',$
     renderer:'',alist:'',blist:'',qlist:'',levels:'',fov:'',res:'',completed:0l,$
-    RefDataStruct:ptr_new(),solution:obj_new(),bridges:obj_new(),tasks:obj_new(),WinOS:0l,displays:lonarr(5),info_renderer:ptr_new()}
+    solution:obj_new(),bridges:obj_new(),tasks:obj_new(),WinOS:0l,displays:lonarr(5),info_renderer:ptr_new()}
 end
 
 pro objgxchmpKill,wBase
@@ -288,7 +288,7 @@ pro gxchmp::UpdateTaskQueue
 end          
 
 pro gxchmp::GetProperty,GXMpath=GXMpath,RefDataPath=RefDataPath,modDir=modDir,psDir=psDir,$
-                       RefDataStruct=RefDataStruct,TmpDir=TmpDir,alist=alist,blist=blist,qlist=qlist,$
+                       TmpDir=TmpDir,alist=alist,blist=blist,qlist=qlist,$
                        levels=levels,solution=solution, tasks=tasks,EBTELpath=EBTELpath,$
                        renderer=renderer,bridges=bridges,fov=fov,res=res,nBridges=nBridges,completed=completed,info_renderer=info_renderer,$
                        _ref_extra=extra
@@ -297,7 +297,6 @@ pro gxchmp::GetProperty,GXMpath=GXMpath,RefDataPath=RefDataPath,modDir=modDir,ps
     modDir=self.modDir
     psDir=self.psDir
     TmpDir=self.tmpDir
-    RefDataStruct=self.RefDataStruct
     renderer=self.renderer
     solution=self.solution
     tasks=self.tasks
@@ -552,9 +551,42 @@ pro gxchmp::AddResult,result
   result=self.solution->ToArray()
   save,result,file=solfile
 end
+
+pro gxchmp::Debug
+  wScript=widget_info(self.wIDBase,find_by_uname='script')
+  if widget_valid(wScript) then begin
+   if (self.tasks)->Count() gt 0 then begin
+      widget_control,wScript,get_value=script
+      script='result'+strmid(script[0],stregex(script,'='))
+      widget_control,/hourglass
+      valid=execute(script)
+      if isa(result) then self->AddResult,result
+      self->DisplaySolution,/best
+   endif else widget_control,wScript,set_value=self->GetScript() 
+  end  
+end
+
+pro gxchmp::SaveScript
+  wScript=widget_info(self.wIDBase,find_by_uname='script')
+  if widget_valid(wScript) then begin
+    if (self.tasks)->Count() gt 0 then begin
+      widget_control,wScript,get_value=script
+      file=dialog_pickfile(filter='*.txt',$
+        DEFAULT_EXTENSION='txt',/write,$
+        title='Please select a location to save the selected task script')
+      if file ne '' then begin
+        openw,lun,file,/get
+        printf,lun,script
+        close,lun
+        free_lun,lun
+      endif
+    endif else widget_control,wScript,set_value=self->GetScript()  
+    endif
+end
   
   
 function gxchmp::GetScript,task_id=task_id
+if self.tasks->Count() eq 0 then return,'No tasks in the execution queue!'
 script='result=gx_search4bestq('
 script+='  gxmpath="'+self.gxmpath+'"'
 script+=', modDir="'+self.moddir+'"'
@@ -588,6 +620,15 @@ script+=strcompress(string(task.a,format="(', a_arr= ',g0)"))
 script+=strcompress(string(task.b,format="(', b_arr= ',g0)"))
 script+=', q_start=['+arr2str(task.q)+']'
 script+=string(arr2str((str2arr(', levels=['+self.levels+']')),format="(a0)"))
+
+if widget_valid(self.wIDBase) then begin
+  w_extra=widget_info(self.wIDBase,find_by_uname='_extra')
+  if widget_valid(w_extra) then begin
+    widget_control,w_extra,get_value=_extra
+    if strcompress(', '+_extra,/rem) ne ',' then script+=', '+_extra
+  endif
+endif
+
 script+=')'
 return,strcompress(script)
 end
@@ -726,6 +767,7 @@ pro gxchmp::CreatePanel,xsize=xsize,ysize=ysize
   toolbar= widget_base(right_base, /row,/toolbar)
   wExecute=widget_button(toolbar,value=gx_bitmap(gx_findfile('play.bmp')),tooltip='Execute Search Tasks',/bitmap,uname='execute')
   wAbort=widget_button(toolbar,value=gx_bitmap(gx_findfile('abort.bmp')),tooltip='Abort all running tasks',/bitmap,uname='abort')
+  wDebug=widget_button(toolbar,value=gx_bitmap(gx_findfile('debug.bmp')),tooltip='Debug execution of the selected task',/bitmap,uname='debug')
   wAddTasks=widget_button(font=font, toolbar, $
     value=gx_bitmap(filepath('ascii.bmp', subdirectory=subdirectory)), $
     /bitmap,tooltip='Add tasks',uname='add_tasks')
@@ -787,7 +829,18 @@ pro gxchmp::CreatePanel,xsize=xsize,ysize=ysize
     /bitmap,tooltip='Select the path to a valid reference data structure',uname='refdatapath_select')
   geom = widget_info (wRefDatapathBase, /geom)
   wRefDatapathPath=widget_text(wRefDatapathBase,scr_xsize=scr_xsize-geom.scr_xsize,uname='refdatapath',/editable,$
-    value=self.RefDataPath)   
+    value=self.RefDataPath)  
+  
+  wPSFmainBase=widget_base(wSettingsBase,/row,scr_xsize=scr_xsize,/frame)
+  wPSFBase=widget_base(wPSFmainBase,/row)
+  wlabel=widget_label(wPSFBase,value='Convolving PSF parameters',scr_xsize=label_scr_xsize)
+  wPSFdisplay=widget_button(wPSFBase, $
+    value=gx_bitmap(filepath('ellipse.bmp', subdirectory=subdirectory)), $
+    /bitmap,tooltip='Display PSF parameters',uname='psf_display')
+  geom = widget_info (wPSFBase, /geom)
+  wPSFinfo=widget_text(wPSFBase,scr_xsize=scr_xsize-geom.scr_xsize,uname='psf_info',editable=0,$
+    value='')
+       
   wLabelBase=widget_base(wSettingsBase,/row,scr_xsize=scr_xsize,/frame)
   wLabelBase=widget_base(wLabelBase,/row)
   wlabel=widget_label(wLabelBase,value='Search Pipeline Respositories',scr_xsize=scr_xsize,/align_center)
@@ -829,10 +882,10 @@ pro gxchmp::CreatePanel,xsize=xsize,ysize=ysize
   
   wRendererBase=widget_base(wSettingsBase,/row,scr_xsize=scr_xsize,/frame)
   wRendererpathBase=widget_base(wRendererBase,/row)
-  wlabel=widget_label(wRendererpathBase,value='Fast Code Renderer Path          ',scr_xsize=label_scr_xsize)
+  wlabel=widget_label(wRendererpathBase,value='Renderer Path          ',scr_xsize=label_scr_xsize)
   wSelectRendererpath= widget_button(wRendererpathBase, $
     value=gx_bitmap(filepath('open.bmp', subdirectory=subdirectory)), $
-    /bitmap,tooltip='Select the path to a valid IDL Fast Code Rendering Routine',uname='rendererpath_select')
+    /bitmap,tooltip='Select the path to a valid IDL Rendering Routine',uname='rendererpath_select')
   geom = widget_info (wRendererpathBase, /geom)
   wRendererpathPath=widget_text(wRendererpathBase,scr_xsize=scr_xsize-geom.scr_xsize,uname='rendererpath',/editable,$
     value=self.renderer)
@@ -877,6 +930,28 @@ pro gxchmp::CreatePanel,xsize=xsize,ysize=ysize
   wLevels=widget_text(wLevelsBase,scr_xsize=scr_xsize-geom.scr_xsize,uname='levels',/editable,$
     value=self.levels)  
     
+  w_extraBase=widget_base(wSettingsBase,/row,scr_xsize=scr_xsize,/frame)
+  w_extraBase=widget_base(w_extraBase,/row)
+  wlabel=widget_label(w_extraBase,value='_extra keyword parameters',scr_xsize=label_scr_xsize)
+  wReset_extra= widget_button(w_extraBase, $
+    value=gx_bitmap(filepath('reset.bmp', subdirectory=subdirectory)), $
+    /bitmap,tooltip='Reset _extra keywords',uname='_extra_reset')
+  geom = widget_info (w_extraBase, /geom)
+  w_extra=widget_text(w_extraBase,scr_xsize=scr_xsize-geom.scr_xsize,uname='_extra',/editable,$
+    value='',uvalue='')   
+  
+  w_DebugBase=widget_base(wSettingsBase,/row,scr_xsize=scr_xsize,/frame)
+  w_DebugBase=widget_base(w_DebugBase,/row)
+  wlabel=widget_label(w_DebugBase,value='Selected task script',scr_xsize=label_scr_xsize)
+  toolbar= widget_base(w_DebugBase, /row,/toolbar)
+  wDebug=widget_button(toolbar,value=gx_bitmap(gx_findfile('debug.bmp')),tooltip='Debug mode execution of the selected task',/bitmap,uname='debug')  
+  wSaveScript=widget_button(font=font, toolbar, $
+    value=gx_bitmap(filepath('save.bmp', subdirectory=subdirectory)), $
+    /bitmap,tooltip='Save selected task script to a text file',uname='save_script')
+    
+  wScript=widget_text(wSettingsBase,scr_xsize=scr_xsize,ysize=8,$ 
+                      /scroll,uname='script',/wrap, editable=0,value='')  
+    
   wtask=WIDGET_DRAW(wSettingsBase,xsize=xsize,ysize=ysize/2,UNAME='tasks_plot',$
     /expose_events, $
     retain=1,$
@@ -914,7 +989,7 @@ pro gxchmp::CreatePanel,xsize=xsize,ysize=ysize
     COLUMN_WIDTHS =[scr_xsize/10,scr_xsize/10,scr_xsize/10,scr_xsize/10,4*scr_xsize/10],$
     edit=0,format=format,$
     column_labels=['a','b','q1','q2','task status'],uname='Queue',$
-    scr_xsize=scr_xsize,scr_ysize=scr_ysize/2,/resizeable_columns)
+    scr_xsize=scr_xsize,scr_ysize=scr_ysize/2,/resizeable_columns,/all_events)
   widget_control,wQueue,table_ysize=0
   
   wInputParmsBase=widget_base(right_base,/column,uname='input_base',map=0)
@@ -1033,7 +1108,7 @@ function gxchmp::check_fields
   widget_control,widget_info(self.wBase,find_by_uname='res'),get_value=res
   if res ne self.res then mismatch=[mismatch,'Model Maps Resolution']
   if n_elements(mismatch) eq 0 then return,1
-  answ=dialog_message(['Input field(s) inconsistency detected:',mismatch,'Please check each field reported here and press <ENTER> to accepted the currently displayed values and try again!'],/info)
+  answ=dialog_message(['Input field(s) inconsistency detected:',mismatch,'Please check each field reported here, press <ENTER> to accept the currently displayed values, and try again!'],/info)
   return,0
 end
 
@@ -1071,7 +1146,7 @@ pro gxchmp::DisplaySolution,best=best
   return
  endif
  grid=gx_chmp2grid(self.solution->ToArray())
- if (size(grid.res2_best))[0] eq 1 then return
+ ;if (size(grid.res2_best))[0] eq 1 then return
  widget_control,self.displays[0],get_value=wgrid
  widget_control,self.displays[1],get_value=wmap
  widget_control,self.displays[2],get_value=wres
@@ -1245,7 +1320,12 @@ function gxchmp::HandleEvent, event
       if valid eq 1 then self.GXMpath=gxmpath else answ=dialog_message('Not a valid path or a valid GX model file structure!')
       widget_control,widget_info(self.wBase,find_by_uname='GXMpath'),set_value=self.GXMpath
     end
+    'psf_display':begin
+                   widget_control,widget_info(self.wbase,find_by_uname='refdatapath'),get_value=refdatapath
+                   goto, refdatapath_select
+                  end  
     'refdatapath': begin
+      refdatapath:
       widget_control,event.id,get_value=refdatapath
       goto,refdatapath_select
     end
@@ -1254,13 +1334,26 @@ function gxchmp::HandleEvent, event
         DEFAULT_EXTENSION='sav',/read,$
         title='Please select a data reference file',/must_exist)
       refdatapath_select:
-      if file_exist(refdatapath) then begin
-        restore,refdatapath
-        if size(ref,/tname) eq 'STRUCT' then begin
-          if tag_exist(ref,'a_beam') then valid=1
-        endif else valid=0
-      endif else valid=0
-      if valid eq 1 then self.refdatapath=refdatapath else answ=dialog_message('Not a valid path or a valid data referance file structure!')
+      if widget_valid(self.wIDBase) then begin
+        w_extra=widget_info(self.wIDBase,find_by_uname='_extra')
+        if widget_valid(w_extra) then begin
+          widget_control,w_extra,get_value=_extra
+        endif
+      endif
+      default,_extra,''
+      _extra=strcompress(', '+_extra[0],/rem)
+      if _extra eq ',' then _extra=''
+      dummy=execute('ref=gx_ref2chmp(refdatapath'+_extra+')')
+      if valid_map(ref) eq 1 then begin
+        self.refdatapath=refdatapath 
+        a_beam=ref->get(/a_beam)
+        b_beam=ref->get(/b_beam)
+        phi_beam=ref->get(/phi_beam)
+        corr_beam=ref->get(/corr_beam)
+        widget_control,widget_info(self.wbase,find_by_uname='psf_info'),set_value=$
+          strcompress(string([a_beam,b_beam,phi_beam,corr_beam], $
+          format="('a_beam= ',g0,', b_beam= ',g0,', phi_beam= ',g0,', corr_beam= ',g0)"))
+      endif else answ=dialog_message('Not a valid path or a valid data referance file!')
       widget_control,widget_info(self.wBase,find_by_uname='refdatapath'),set_value=self.refdatapath
     end
     'rendererpath':begin
@@ -1340,7 +1433,27 @@ function gxchmp::HandleEvent, event
                     widget_control,widget_info(self.wbase,find_by_uname='levels'),set_value=self.levels
                     self->DisplaySolution
                     end  
-                    
+     '_extra': begin
+                widget_control,event.id,get_value=_extra,get_uvalue=old_extra
+                _extra=str2arr(strcompress(_extra,/rem),del=',') 
+                err=0
+                for k=0,n_elements(_extra)-1 do begin
+                  err=err or ~(execute(_extra[k]))
+                endfor
+                if keyword_set(err) then begin
+                  answ=dialog_message('Invalid _extra keyword syntax!',/error)
+                  widget_control,event.id,set_value=old_extra
+                endif else begin
+                  widget_control,event.id,set_uvalue=_extra
+                  widget_control,widget_info(self.wbase,find_by_uname='refdatapath'),get_value=refdatapath
+                  goto, refdatapath_select
+                endelse
+               end               
+     '_extra_reset':begin
+                     widget_control,widget_info(self.wbase,find_by_uname='_extra'),set_value=''
+                     widget_control,widget_info(self.wbase,find_by_uname='refdatapath'),get_value=refdatapath
+                     goto, refdatapath_select
+                    end                        
      'open':begin
               answ=self->SaveSolution(/question)
               if strupcase(answ) ne 'CANCEL' then begin
@@ -1610,7 +1723,17 @@ function gxchmp::HandleEvent, event
                  end  
      'clearlog':begin
                    widget_control,widget_info(self.wIDBase,find_by_uname='console'),set_value=''
-                 end  
+                 end 
+     'Queue': begin
+               if self.tasks->Count() gt 0 then begin
+                 if event.sel_top  ge 0 and event.sel_bottom eq event.sel_top and event.sel_left eq 0 and event.sel_right eq 4 then begin
+                    if widget_valid(self.wIDBase) then begin
+                      wScript=widget_info(self.wIDBase,find_by_uname='script')
+                      if widget_valid(wScript) then widget_control,wScript,set_value=strreplace(self->GetScript(task_id=event.sel_top ),'result',strcompress(string(event.sel_top,format="('result',i0)"),/rem))
+                    end  
+                 endif
+               end
+              end             
                  
      'add_tasks':self->EditTasks,0  
      'cancel_enqueue':self->EditTasks,1
@@ -1623,7 +1746,9 @@ function gxchmp::HandleEvent, event
      'flush_queue':self->flush_queue,/question
      'save':answ=self.SaveSolution()   
      'color_table':self->OnPallete
-     '2ps':self->Solution2PS                              
+     '2ps':self->Solution2PS    
+     'debug':self->Debug    
+     'save_script':self->SaveScript                      
     else:
   endcase
   exit_point:

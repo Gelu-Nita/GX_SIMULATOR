@@ -4,6 +4,7 @@ function gx_RendererInfo,renderer,info=info
   catch, error_stat
   if error_stat ne 0 then begin
     catch, /cancel
+    message,!ERROR_STATE.MSG,/info
     goto,invalid_renderer
   end
   dirpath=file_dirname(renderer,/mark)
