@@ -1076,7 +1076,7 @@ Function gxFluxTube::integrate_f_arr,pa=pa,energy=energy,e_arr=e_arr,mu_arr=mu_a
   n_t=n_elements(t_arr)
   dMu=mu_arr[1]-mu_arr[0]
   if keyword_set(pa) then begin
-    ;ap integration
+    ;pa integration
     f_arr_int=dblarr(n_e,n_s,n_t)
     for k=0,n_t-1 do begin
       for j=0,n_s-1 do begin
@@ -2264,10 +2264,22 @@ PRO gxFLUXTUBE::upload_fparms,filename
   restore,filename
   self.nb_arr=1
   s_arr=exist(s)?s:z
-  bad=where(distfunc eq 0,count,comp=good)
-  if count gt 0 then begin
-    distfunc[bad]=min(distfunc[good],/nan)
-  endif
+  ;remove unresonably small double precision numbers 
+  ;and replace them with the smallest resaonable value
+  sz=size(distfunc)
+  sz=sz[0] eq 4?sz:[4l,sz[1:3],1l]
+  for i=0,sz[1]-1 do begin
+    for j=0,sz[2]-1 do begin
+      for k=0,sz[4]-1 do begin
+        bad=where(float(distfunc[i,j,*,k]) eq 0 or finite(float(distfunc[i,j,*,k])) eq 0 ,count,comp=good,ncomp=ngood)
+        if count gt 0 and ngood gt 0 then distfunc[i,j,bad,k]=min(distfunc[i,j,good,k],/nan)
+      endfor
+    endfor
+  endfor
+;  bad=where(distfunc eq 0,count,comp=good)
+;  if count gt 0 then begin
+;    distfunc[bad]=min(distfunc[good],/nan)
+;  endif
   fparms={f_arr:distfunc/self.nb_arr,e_arr:e,mu_arr:mu,s_arr:s_arr,t_arr:t}
   ptr_free,self.fparms
   self.fparms=ptr_new(fparms)

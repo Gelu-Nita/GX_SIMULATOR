@@ -87,8 +87,8 @@ pro gxampp::CreatePanel,xsize=xsize,ysize=ysize
    wCenterBase=widget_base(wInputBase,/row)
    wCenter=cw_objArray(wCenterBase,label='Model Coordinates ', value=[-15,185],$
     scr_arraylabelsize=label.scr_xsize,$
-    names=['Xc: ','Yc: '],units='"',xtextsize=10,/static,xlabelsize=4,/show,uname='center')
-   wCarrington=cw_bgroup(wCenterbase,['Heliocentric','Carrington'],/exclusive,/row,uname='/carrington',set_value=0)
+    names=['Xc: ','Yc: '],units='',xtextsize=10,/static,xlabelsize=4,/show,uname='center')
+   wCarrington=cw_bgroup(wCenterbase,['Heliocentric (arseconds)','Carrington (degrees)'],/exclusive,/row,uname='/carrington',set_value=0)
    
    wBox=widget_base(wInputBase,/row)
    wDimensions=cw_objArray(wBox, label='Model Gridpoints', value=[64,64,64],scr_arraylabelsize=label.scr_xsize,$

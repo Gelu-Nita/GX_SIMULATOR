@@ -34,7 +34,7 @@ pro xray_tt,parms,rowdata,rparms,xray_cs=xray_cs,info=info
        Parms[18].Name='N_E'         & Parms[18].Value=101          & Parms[18].Unit='none'    & Parms[18].Hint='Number of energy channels'
        Parms[19].Name='VoxelID'    & Parms[19].Value=0            & Parms[19].Unit='1/2/4' & Parms[19].Hint='chromo/TR/corona'
        ; corrected by Eduard@glasgow after converstation with Gelu Nita about Parms.unit 
-        rparms=[{name:'relative_abundance',value:1d,unit:'(cm^2)',user:1.0,hint:'Relative to coronal abundance for Chianti'}]
+        rparms=[{name:'relative_abundance',value:1d,unit:'',user:1.0,hint:'Relative to coronal abundance for Chianti'}]
      endif else begin
       parms=info.parms
       rparms=info.rparms

@@ -125,7 +125,7 @@ endif
 if n_elements(a_beam) eq 0 then if tag_exist(data,'a_beam') then a_beam=data.a_beam
 if n_elements(a_beam) eq 0 and tag_exist(data,'BMAJ') then a_beam=gx_fwhm2sigma(ref.bmaj)
 if n_elements(b_beam) eq 0 then if tag_exist(data,'b_beam') then b_beam=data.b_beam
-if n_elements(b_beam) eq 0 and tag_exist(data,'BMIN') then _beaam=gx_fwhm2sigma(ref.bmin)
+if n_elements(b_beam) eq 0 and tag_exist(data,'BMIN') then b_beam=gx_fwhm2sigma(ref.bmin)
 if n_elements(phi_beam) eq 0 then if tag_exist(data,'phi_beam') then phi_beam=data.phi_beam
 if n_elements(phi_beam) eq 0 and tag_exist(data,'BPA') then phi_beam=data.bpa
 if n_elements(corr_beam) eq 0 then if tag_exist(data,'corr_beam') then corr_beam=data.corr_beam else corr_beam=1

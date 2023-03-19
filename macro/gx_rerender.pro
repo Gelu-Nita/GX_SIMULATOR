@@ -1,4 +1,4 @@
-function gx_rerender,parms_cube,orig_data=orig_data,header=header
+function gx_rerender,parms_cube,orig_data=orig_data,header=header,moi=moi,idx_range=idx_range
 if n_elements(parms_cube) eq 0 then begin
  gx_readlos,parms_cube,orig_data,header=header
 endif
@@ -24,13 +24,18 @@ if tag_exist(info,'aparms') then begin
 endif
 freqlist=info.spectrum.x.axis
 t0=systime(/s)
-for row=0, ny-1 do begin
- print,strcompress(string(row+1,ny,format="('computing image row ', i5,' out of', i5)"))
+case n_elements(idx_range) of
+  0:idx_range=[0,ny-1]
+  1:idx_range=idx_range*[1,1]
+  else:
+endcase
+for row_idx=idx_range[0], idx_range[1] do begin
+ print,strcompress(string(row_idx+1,ny,format="('computing image row ', i5,' out of', i5)"))
  rowdata[*]=0
- parms=reform(parms_cube[*,row,*,*])
+ parms=reform(parms_cube[*,row_idx,*,*])
  result=execute(info.execute)
- data[*,row,*,*,*]=rowdata
+ data[*,row_idx,*,*,*]=rowdata
 endfor
 print,strcompress(string(systime(/s)-t0,format="('Computation done in ',f10.3,' seconds')"))
-return,data
+return,data[*,idx_range[0]:idx_range[1],*,*,*]
 end

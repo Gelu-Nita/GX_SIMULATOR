@@ -45,7 +45,7 @@ pro xray_tt_albedo,parms,rowdata,rparms,xray_cs=xray_cs,albedo=albedo,info=info
       Parms[26].Name='a'           & Parms[26].Value=1            & Parms[26].Unit='none'    & Parms[26].Hint='chromo anisotropy ratio'
       Parms[27].Name='hc_angle'    & Parms[27].Value=45           & Parms[27].Unit='degrees' & Parms[27].Hint='Heliocentric angle (0-90 deg)'
       ; corrected by Eduard@glasgow after converstation with Gelu Nita about Parms.unit
-      rparms=[{name:'relative_abundance',value:1d,unit:'(cm^2)',user:1.0,hint:'Relative to coronal abundance for Chianti'}]
+      rparms=[{name:'relative_abundance',value:1d,unit:'',user:1.0,hint:'Relative to coronal abundance for Chianti'}]
      endif else begin
       parms=info.parms
       rparms=info.rparms
@@ -72,7 +72,7 @@ pro xray_tt_albedo,parms,rowdata,rparms,xray_cs=xray_cs,albedo=albedo,info=info
 
   parmin=transpose(parms[0,*,*])
   E1=parmin[15,0]
-  logdE=parmin[16,0]
+  logdE=double(string(parmin[16,0])); @gelunumerical precission corection
   Eph =10^(Alog10(E1)+findgen(parmin[18,0])*logdE)
   DEph= 10^(Alog10(E1)+(findgen(parmin[18,0])+1)*logdE)-eph
   ; output photon energy array
