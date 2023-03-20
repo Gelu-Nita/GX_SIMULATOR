@@ -1119,7 +1119,7 @@ Function gxFluxTube::integrate_f_arr,pa=pa,energy=energy,e_arr=e_arr,mu_arr=mu_a
       for i=0,sz[1]-1 do begin
         for j=0,sz[2]-1 do begin
           for k=0,sz[4]-1 do begin
-            f_arr_int[i,j,*,k]=interpol(reform(f_arr[i,j,*,k]),s_arr0,s_arr)>0
+            f_arr_int[i,j,*,k]=interpol(reform(f_arr[i,j,*,k]),s_arr0,s_arr)>min(f_arr[i,j,*,k]);0
           end
         endfor
       endfor
@@ -1129,7 +1129,7 @@ Function gxFluxTube::integrate_f_arr,pa=pa,energy=energy,e_arr=e_arr,mu_arr=mu_a
       f_arr_int=dblarr(sz[1:3])
       for i=0,sz[1]-1 do begin
         for j=0,sz[3]-1 do begin
-          f_arr_int[i,*,j]=interpol(reform(f_arr[i,*,j]),s_arr0,s_arr)>0
+          f_arr_int[i,*,j]=interpol(reform(f_arr[i,*,j]),s_arr0,s_arr)>min(f_arr[i,*,j],/nan);0
         endfor
       endfor
     end
@@ -1137,7 +1137,7 @@ Function gxFluxTube::integrate_f_arr,pa=pa,energy=energy,e_arr=e_arr,mu_arr=mu_a
       sz[1]=n_elements(s_arr)
       f_arr_int=dblarr(sz[1:2])
       for i=0,sz[2]-1 do begin
-        f_arr_int[*,i]=interpol(reform(f_arr[*,i]),s_arr0,s_arr)>0
+        f_arr_int[*,i]=interpol(reform(f_arr[*,i]),s_arr0,s_arr)>min(f_arr[*,i],/nan);0
       endfor
     end
   endcase
@@ -2272,7 +2272,9 @@ PRO gxFLUXTUBE::upload_fparms,filename
     for j=0,sz[2]-1 do begin
       for k=0,sz[4]-1 do begin
         bad=where(float(distfunc[i,j,*,k]) eq 0 or finite(float(distfunc[i,j,*,k])) eq 0 ,count,comp=good,ncomp=ngood)
-        if count gt 0 and ngood gt 0 then distfunc[i,j,bad,k]=min(distfunc[i,j,good,k],/nan)
+        if count gt 0 and ngood gt 0 then begin
+          distfunc[i,j,bad,k]=min(distfunc[i,j,good,k],/nan)
+        endif
       endfor
     endfor
   endfor
@@ -2320,7 +2322,7 @@ FUNCTION gxFLUXTUBE::interpolate_fparms,time_idx=time_idx
   f_arr=fltarr(sz[1],sz[2],n_elements(spine))
   for i=0,sz[1]-1 do begin
     for j=0,sz[2]-1 do begin
-      f_arr[i,j,*]=interpol(fparms.f_arr[i,j,*,time_idx],fparms.s_arr,spine)>0
+      f_arr[i,j,*]=interpol(fparms.f_arr[i,j,*,time_idx],fparms.s_arr,spine)>min(fparms.f_arr[i,j,*,time_idx]);0
     endfor
   endfor
   fparms=rep_tag_value(fparms,f_arr,'f_arr')
