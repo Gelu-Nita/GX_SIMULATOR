@@ -2,7 +2,7 @@
 ;containing three map structures: Data, SDEV, and BEAM, where at least the DATA map has the restoring beam parameters included as map properties 
 function gx_ref2chmp,refdata,freq=freq,chan=chan,$
                                  a_beam=a_beam,b_beam=b_beam,phi_beam=phi_beam,corr_beam=corr_beam,$
-                                 data=data,sdev=sdev,err_msg=err_msg,help=help,quiet=quiet
+                                 data=data,sdev=sdev,err_msg=err_msg,help=help,quiet=quiet,_extra=_extra
   ;WARNING: if any of the a_beam,b_beam,phi_beam or corr_beam keywords are provided as input parameters, 
   ;they are used to replace any such parameters that the reference data might contain                               
   if keyword_set(help) or n_elements(refdata) eq 0 then begin

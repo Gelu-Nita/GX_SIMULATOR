@@ -77,18 +77,17 @@ function gx_search4bestq, gxmpath=gxmpath,a_arr=a_arr,b_arr=b_arr,q_start=q_star
             q_formula=string(a,b,format="('q0*(B/q[1])^(',g0,')/(L/q[2])^(',g0,')')")
             q_parms=[q[j], 100.0, 1.0000000d+009, 0.0, 0.0]
             if n_elements(freq) gt 0 then begin
-             omap=gx_mwrender_ebtel(model,renderer,info=info,ebtel_path=ebtel_path,$
+             map=gx_mwrender_ebtel(model,renderer,info=info,ebtel_path=ebtel_path,$
                  q_parms=q_parms,q_formula=q_formula,q0_formula=q0_formula,$
                  gxcube=gxcube,_extra=_extra)
             endif else begin
-              omap=gx_euvrender_ebtel(model,renderer,info=info,ebtel_path=ebtel_path,$
+              map=gx_euvrender_ebtel(model,renderer,info=info,ebtel_path=ebtel_path,$
                 q_parms=q_parms,q_formula=q_formula,q0_formula=q0_formula,$
                 gxcube=gxcube,_extra=_extra)
             endelse
-            if obj_valid(omap) then begin
-                map->setmap,0,omap->get(0,/map)
+            if obj_valid(map) then begin
                 save,map,file=modfile
-                obj_destroy,omap
+                obj_destroy,map
             endif
             if (isa(gxcube) and keyword_set(save_gxc)) then save,gxcube,file=gxcDir+path_sep()+strcompress(string(a,b,q[j],freq,format="('a',f7.2,'b',f7.2,'q',g0,'f',g0,'GHz.gxc')"),/rem)
           endif else gx_message, modfile+' already exists, no reprocessing requested!',/info

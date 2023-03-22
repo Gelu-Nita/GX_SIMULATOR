@@ -25,6 +25,10 @@ function gx_render,model,renderer,logfile=logfile,_extra=_extra
     for k=0,n_elements(names)-1 do begin
       gx_setparm,info,names[k],_extra.(k)
     endfor
+    if tag_exist(_extra,'freqlist') then begin
+      gx_setparm,info,'freqlist',_extra.freqlist
+      freqlist=info.spectrum.x.axis
+    endif
   endif
   dr=model->GetFovPixSize(unit='cm')
   gx_setparm,info,'dS',dr[0]*dr[1]

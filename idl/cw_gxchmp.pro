@@ -72,7 +72,6 @@ pro objgxchmpKill,wBase
   obj_destroy,obj
 end
 
-
 function gxchmp::SaveSolution,question=question
   solution_unsaved=(self.solution->Count() gt 0)
   if keyword_set(question) then begin
@@ -1286,6 +1285,10 @@ pro gxchmp::PlotTasks
   tvlct,rgb_curr
 end  
 
+function gxchmp::valid_extra,_extra=_extra
+          return,1
+         end 
+
 function gxchmp::HandleEvent, event
   compile_opt hidden
   catch, error_status
@@ -1432,14 +1435,15 @@ function gxchmp::HandleEvent, event
                     self.levels='12,20,30,50,80'
                     widget_control,widget_info(self.wbase,find_by_uname='levels'),set_value=self.levels
                     self->DisplaySolution
-                    end  
+                    end                
      '_extra': begin
                 widget_control,event.id,get_value=_extra,get_uvalue=old_extra
-                _extra=str2arr(strcompress(_extra,/rem),del=',') 
-                err=0
-                for k=0,n_elements(_extra)-1 do begin
-                  err=err or ~(execute(_extra[k]))
-                endfor
+;                _extra=str2arr(strcompress(_extra,/rem),del=',') 
+;                err=0
+;                for k=0,n_elements(_extra)-1 do begin
+;                  err=err or ~(execute(_extra[k]))
+;                endfor
+                err=~(execute('test=self->valid_extra(_extra=_extra)'))
                 if keyword_set(err) then begin
                   answ=dialog_message('Invalid _extra keyword syntax!',/error)
                   widget_control,event.id,set_value=old_extra
