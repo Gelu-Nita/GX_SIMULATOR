@@ -33,7 +33,7 @@ pro gx_chmp,wgxchmp,fresh=fresh,font=font,_extra=_extra
       wgxchmp=cw_gxchmp(tlb,GXMpath=GXMpath,RefDataPath=RefDataPath,modDir=modDir,psDir=psDir,tmpDir=tmpDir,$
                        RefDataStruct=RefDataStruct,alist=alist,blist=blist,qlist=qlist,$
                        levels=levels,solution=solution, renderer=renderer,$
-                       fov=fov,res=res,nBridges=nBridges,EBTELpath=EBTELpath)
+                       fov=fov,res=res,nBridges=nBridges,EBTELpath=EBTELpath,keywords=keywords)
     endif
   endif
   if n_elements(wgxchmp) eq 0 then wgxchmp=cw_gxchmp(tlb,_extra=_extra)

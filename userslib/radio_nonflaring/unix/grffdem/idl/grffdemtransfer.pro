@@ -1,6 +1,6 @@
-pro GRFF_DEM_Transfer,parms,rowdata,nparms,rparms,path,parmin,datain,freqlist,logtdem=logtdem,$
+pro grffdemtransfer,parms,rowdata,nparms,rparms,path,parmin,datain,freqlist,logtdem=logtdem,$
 dem_run=dem_run,ddm_run=ddm_run,qrun=qrun,lrun=lrun,use_dem=use_dem,has_ddm=has_ddm,info=info
-if n_elements(path) eq 0 then path=gx_libpath('grff_dem')
+if n_elements(path) eq 0 then path=gx_libpath('grffdem')
  if arg_present(info) then begin
     if n_elements(parms) gt 0 then dummy=temporary(parms)
     ;update EBTEL Fields

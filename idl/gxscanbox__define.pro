@@ -731,7 +731,7 @@ pro gxScanBox::SaveFreqList
 end
 
 pro gxScanBox::UploadFreqList
-  file = DIALOG_PICKFILE(FILTER='*.txt',TITLE='Please select an instrument specific comma-separted frequency list file (GHz)',path=gx_findfile(folder='freqlists'))
+  file = DIALOG_PICKFILE(FILTER='*.txt',TITLE='Please select an instrument specific comma-separated frequency list file (GHz)',path=gx_findfile(folder='freqlists'))
   if file eq '' then return
   widget_control,self.wUseFreqList,set_value=0
   OPENR, lun, file, /GET_LUN

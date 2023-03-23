@@ -1,7 +1,7 @@
 function gxchmp::INIT,wBase,uname=uname, GXMpath=GXMpath,RefDataPath=RefDataPath,modDir=modDir,psDir=psDir,$
                        TmpDir=TmpDir,alist=alist,blist=blist,qlist=qlist,$
                        levels=levels,solution=solution, renderer=renderer,EBTELpath=EBTELpath,$
-                       fov=fov,res=res,_extra=_extra
+                       fov=fov,res=res,keywords=keywords,_extra=_extra
   compile_opt hidden
   catch, error_stat
   if error_stat ne 0 then begin
@@ -10,6 +10,8 @@ function gxchmp::INIT,wBase,uname=uname, GXMpath=GXMpath,RefDataPath=RefDataPath
     return, 0
   end
   self.WinOS=!version.os_family eq 'Windows'
+  default,keywords,''
+  self.keywords=keywords
   default,modDir,curdir()+path_sep()+'moddir'
   self.modDir=modDir
   default,psDir,curdir()+path_sep()+'PsDir'
@@ -55,7 +57,7 @@ end
 
 pro gxchmp__define
   struct_hide,{gxchmp, inherits gxwidget,Id:0l,GXMpath:'',RefDataPath:'',modDir:'',psDir:'',TmpDir:'',EbtelPath:'',$
-    renderer:'',alist:'',blist:'',qlist:'',levels:'',fov:'',res:'',completed:0l,$
+    renderer:'',alist:'',blist:'',qlist:'',levels:'',fov:'',res:'',keywords:'',completed:0l,$
     solution:obj_new(),bridges:obj_new(),tasks:obj_new(),WinOS:0l,displays:lonarr(5),info_renderer:ptr_new()}
 end
 
@@ -67,9 +69,18 @@ pro objgxchmpKill,wBase
   if ptr_valid(info_renderer) then ptr_free,info_renderer
   obj->GetProperty,GXMpath=GXMpath,RefDataPath=RefDataPath,modDir=modDir,psDir=psDir,tmpDir=tmpDir,$
     alist=alist,blist=blist,qlist=qlist,levels=levels,renderer=renderer,$
-    fov=fov,res=res, ebtelpath=ebtelpath
-  save,GXMpath,RefDataPath,modDir,psDir,tmpDir,alist,blist,qlist,levels,renderer,fov,res,ebtelpath,file='gxchmp.ini'
+    fov=fov,res=res, ebtelpath=ebtelpath,keywords=keywords
+  save,GXMpath,RefDataPath,modDir,psDir,tmpDir,alist,blist,qlist,$
+    levels,renderer,fov,res,ebtelpath,keywords,file='gxchmp.ini'
   obj_destroy,obj
+end
+
+function gxchmp::AcceptFreqList
+  if ~ptr_valid(self.info_renderer) then return, 0
+  if tag_exist(*self.info_renderer,'execute') then begin
+    idx=where(str2arr((*self.info_renderer).execute) eq 'freqlist',count)
+  endif else count=0
+  return,count
 end
 
 function gxchmp::SaveSolution,question=question
@@ -289,8 +300,8 @@ end
 pro gxchmp::GetProperty,GXMpath=GXMpath,RefDataPath=RefDataPath,modDir=modDir,psDir=psDir,$
                        TmpDir=TmpDir,alist=alist,blist=blist,qlist=qlist,$
                        levels=levels,solution=solution, tasks=tasks,EBTELpath=EBTELpath,$
-                       renderer=renderer,bridges=bridges,fov=fov,res=res,nBridges=nBridges,completed=completed,info_renderer=info_renderer,$
-                       _ref_extra=extra
+                       renderer=renderer,bridges=bridges,fov=fov,res=res,nBridges=nBridges,$
+                       keywords=keywords,completed=completed,info_renderer=info_renderer,_ref_extra=extra
     GXMpath=self.GXMpath
     RefDataPath=self.RefDataPath
     modDir=self.modDir
@@ -305,6 +316,7 @@ pro gxchmp::GetProperty,GXMpath=GXMpath,RefDataPath=RefDataPath,modDir=modDir,ps
     qlist=self.qlist
     levels=self.levels
     EBTELpath=self.EBTELpath
+    keywords=self.keywords
     nBridges=ptr_valid(self.Bridges)?n_elements(*self.Bridges):0
     res=self.res
     fov=self.fov
@@ -619,15 +631,14 @@ script+=strcompress(string(task.a,format="(', a_arr= ',g0)"))
 script+=strcompress(string(task.b,format="(', b_arr= ',g0)"))
 script+=', q_start=['+arr2str(task.q)+']'
 script+=string(arr2str((str2arr(', levels=['+self.levels+']')),format="(a0)"))
-
-if widget_valid(self.wIDBase) then begin
-  w_extra=widget_info(self.wIDBase,find_by_uname='_extra')
-  if widget_valid(w_extra) then begin
-    widget_control,w_extra,get_value=_extra
-    if strcompress(', '+_extra,/rem) ne ',' then script+=', '+_extra
-  endif
-endif
-
+if strcompress(', '+self.keywords,/rem) ne ',' then script+=', '+self.keywords
+;if widget_valid(self.wIDBase) then begin
+;  w_extra=widget_info(self.wIDBase,find_by_uname='_extra')
+;  if widget_valid(w_extra) then begin
+;    widget_control,w_extra,get_value=_extra
+;    if strcompress(', '+_extra,/rem) ne ',' then script+=', '+_extra
+;  endif
+;endif
 script+=')'
 return,strcompress(script)
 end
@@ -885,9 +896,13 @@ pro gxchmp::CreatePanel,xsize=xsize,ysize=ysize
   wSelectRendererpath= widget_button(wRendererpathBase, $
     value=gx_bitmap(filepath('open.bmp', subdirectory=subdirectory)), $
     /bitmap,tooltip='Select the path to a valid IDL Rendering Routine',uname='rendererpath_select')
+  wImport_Freqlist= widget_button(wRendererpathBase, $
+    value=gx_bitmap(filepath('importf.bmp', subdirectory=subdirectory)), $
+    /bitmap,tooltip='Import csv freqency list',uname='import_freqlist',sensitive=self->AcceptFreqlist())   
   geom = widget_info (wRendererpathBase, /geom)
   wRendererpathPath=widget_text(wRendererpathBase,scr_xsize=scr_xsize-geom.scr_xsize,uname='rendererpath',/editable,$
     value=self.renderer)
+    
     
   wEBTELpathBase=widget_base(wSettingsBase,/row,scr_xsize=scr_xsize,/frame)
   wEBTELpathpathBase=widget_base(wEBTELpathBase,/row)
@@ -935,9 +950,10 @@ pro gxchmp::CreatePanel,xsize=xsize,ysize=ysize
   wReset_extra= widget_button(w_extraBase, $
     value=gx_bitmap(filepath('reset.bmp', subdirectory=subdirectory)), $
     /bitmap,tooltip='Reset _extra keywords',uname='_extra_reset')
+  
   geom = widget_info (w_extraBase, /geom)
   w_extra=widget_text(w_extraBase,scr_xsize=scr_xsize-geom.scr_xsize,uname='_extra',/editable,$
-    value='',uvalue='')   
+    value=self.keywords,uvalue=self.keywords)   
   
   w_DebugBase=widget_base(wSettingsBase,/row,scr_xsize=scr_xsize,/frame)
   w_DebugBase=widget_base(w_DebugBase,/row)
@@ -1375,6 +1391,7 @@ function gxchmp::HandleEvent, event
           self.renderer=renderer 
           ptr_free,self.info_renderer
           self.info_renderer=ptr_new(info_renderer)
+          widget_control,widget_info(self.wBase,find_by_uname='import_freqlist'),sensitive=self->AcceptFreqList()
         endif else answ=dialog_message('Not a valid renderer routine!')
         widget_control,widget_info(self.wBase,find_by_uname='rendererpath'),set_value=self.renderer 
        end
@@ -1438,26 +1455,46 @@ function gxchmp::HandleEvent, event
                     end                
      '_extra': begin
                 widget_control,event.id,get_value=_extra,get_uvalue=old_extra
-;                _extra=str2arr(strcompress(_extra,/rem),del=',') 
-;                err=0
-;                for k=0,n_elements(_extra)-1 do begin
-;                  err=err or ~(execute(_extra[k]))
-;                endfor
                 err=~(execute('test=self->valid_extra(_extra=_extra)'))
                 if keyword_set(err) then begin
                   answ=dialog_message('Invalid _extra keyword syntax!',/error)
                   widget_control,event.id,set_value=old_extra
                 endif else begin
                   widget_control,event.id,set_uvalue=_extra
+                  self.keywords=_extra
                   widget_control,widget_info(self.wbase,find_by_uname='refdatapath'),get_value=refdatapath
                   goto, refdatapath_select
                 endelse
                end               
      '_extra_reset':begin
                      widget_control,widget_info(self.wbase,find_by_uname='_extra'),set_value=''
+                     self.keywords=''
                      widget_control,widget_info(self.wbase,find_by_uname='refdatapath'),get_value=refdatapath
                      goto, refdatapath_select
-                    end                        
+                    end   
+     'import_freqlist':begin
+                      hasfreq=self->AcceptFreqList()
+                      filename=dialog_pickfile(filter=['*.txt','*.csv'],title='Please select a text file containing a comma separated list of frequencies in GHz',/must,/read)
+                      if n_elements(file) eq 0 then begin
+                        OPENR, lun, filename, /GET_LUN
+                        ; Read one line at a time, saving the result into array
+                        line = ''
+                        k=0
+                        WHILE NOT EOF(lun) DO BEGIN
+                          READF, lun, line & $
+                            freqlist = (k eq 0)?line:[freqlist, line]
+                          k+=1
+                        ENDWHILE
+                        ;Close the file and free the file unit
+                        FREE_LUN, lun
+                        if n_elements(freqlist) gt 1 then freqlist=float(freqlist)
+                        freqlist='freqlist=['+strcompress(str_replace(arr2str(freqlist[sort(freqlist)],/trim_str,/compress),',',', '))+']'
+                        if execute('test=self->valid_extra('+freqlist+')') then begin
+                          widget_control,widget_info(self.wbase,find_by_uname='_extra'),set_value=freqlist
+                          self.keywords=freqlist
+                        endif
+                      endif
+                    end                                    
      'open':begin
               answ=self->SaveSolution(/question)
               if strupcase(answ) ne 'CANCEL' then begin
