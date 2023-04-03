@@ -810,7 +810,7 @@ pro gxchmp::CreatePanel,xsize=xsize,ysize=ysize
   wSettingsPanel=widget_base(wSettings,/column,xsize=scr[0],ysize=scr[1],$
     x_scroll_size=xsize,y_scroll_size=ysize,/scroll)
   geom = widget_info (wSettingsPanel, /geom)
-  scr_xsize=0.98*geom.scr_xsize
+  scr_xsize=0.98*geom.scr_xsize*1.25
   scr_ysize=0.98*geom.scr_ysize
   wSettingsBase=widget_base(wSettingsPanel,/column,uname='settings_base')
   

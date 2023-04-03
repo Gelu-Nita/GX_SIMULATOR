@@ -414,7 +414,7 @@ compile_opt hidden
   widget_control,self.wPSF[3],get_value=cv
   pData=(cv[0] eq 0)?self.pData:self.pConvolvedData
   sz=size(*pData)
-  if sz[0] ge 3 then if sz[3] eq 1 then goto,one_image
+;  if sz[0] eq 3 then if sz[3] eq 1 then goto,one_image
    case n_elements(idx) of
    2:begin
       ;provision for one image only

@@ -1037,7 +1037,7 @@ pro gxModel::Slice,parms,row,scanner=scanner
   sz=self->Size(/volume)
   dr=reform((*grid)[0,*,row,*])
   g=reform((*grid)[1:3,*,row,*])
-  vol_ind=transpose(reform(g,3,nx*nz))+1e-6;added epilon correction to fix borderline numerical errors
+  vol_ind=transpose(reform(g,3,nx*nz))+1e-6;added epsilon correction to fix borderline numerical errors
   missing=0
   (self->GetVolume())->GetVertexAttributeData,'voxel_id',id 
   if n_elements(id) gt 0 then begin
@@ -1053,6 +1053,26 @@ pro gxModel::Slice,parms,row,scanner=scanner
       assigned[idx]=1
     end
   endif
+  
+  ;ASSIGN VoxelX
+  idx=gx_name2idx(parms,'VoxelX')
+  if (size(idx))[0] ne 0 then begin
+    (*scanner).parms[*,*,idx]=vol_ind[*,0]
+    assigned[idx]=1
+  end
+  
+  ;ASSIGN VoxelY
+  idx=gx_name2idx(parms,'VoxelY')
+  if (size(idx))[0] ne 0 then begin
+    (*scanner).parms[*,*,idx]=vol_ind[*,1]
+    assigned[idx]=1
+  end
+  ;ASSIGN VoxelZ
+  idx=gx_name2idx(parms,'VoxelZ')
+  if (size(idx))[0] ne 0 then begin
+    (*scanner).parms[*,*,idx]=vol_ind[*,2]
+    assigned[idx]=1
+  end
 
   r=self->R(/volume)
   radius=interpolate(temporary(r),vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
