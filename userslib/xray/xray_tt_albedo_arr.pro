@@ -12,6 +12,7 @@
 ; Eduard@Glasgow & Gelu@njit 19-June-2018 changed albedo matrix interpolation
 ; Gelu@njit 15-March-2023 added the option of using array defined parameters. 
 ; NOTE: THiS IS JUST A BETA VERSION, AWAITING VALIDATION FROM Eduard@Glasgow!
+; Eduard@Glasgow 13-April-2023: corrected the errors in array units
 
 
 pro xray_tt_albedo_arr,parms,rowdata,nparms,rparms,xray_cs=xray_cs,albedo=albedo,E_arr,mu_arr,f_arr,info=info
@@ -327,8 +328,8 @@ endcase
           if LPARMS_M[arr_key_idx] eq 0 then begin
             dist_e_arr=dblarr(n_elements(e_arr))
             for k=0, n_elements(e_arr)-1 do dist_e_arr[k]=2d0*!dpi*int_trapzd(mu_arr, f_arr_in[k,*,i])
-            dist_e_int=interpol(dist_e_arr,e_arr*1000.,ee)
-            e_dataout=ve*dist_e_int*norm[i]/511.
+            dist_e_int=interpol(dist_e_arr,e_arr*1e3,ee)/1e3 ; 1MeV = 1e3keV;  dist_e_int is the lectron distribution per keV (dist_e_arr per MeV)
+            e_dataout=ve*dist_e_int*norm[i]
             ; the block below calculates TT emission
             IF ((ulong(Parmin[VoxelID_idx,i]) and gx_voxelid(/tr)) NE gx_voxelid(/tr)) THEN  eph_dataout+=xray_cs#(e_dataout*DE)
             ; calculates coronal X-ray emission using thin target
