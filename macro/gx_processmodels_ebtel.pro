@@ -265,8 +265,12 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
     plot_map,obsI,/over,levels=levels,/perc,color=200,thick=3
     get_map_coord,modI,x,y
     sz=size(modI.data)
-    xyouts,x[10.*sz[1]/100,90.*sz[2]/100],y[10.*sz[1]/100,90.*sz[2]/100],string(dx,dy,format="('!4D!3x=',f7.3,' !4D!3y=',f7.3)"),charsize=charsize,color=255
-    xyouts,x[10.*sz[1]/100,90.*sz[2]/100],y[10.*sz[1]/100,80.*sz[2]/100],string(q[i],format="('q=',g0)"),charsize=charsize,color=255
+    sx=sz[1]/100.
+    sy=sz[2]/100.
+    xyouts,x[10*sx,90*sy],y[10*sx,90*sy],string(dx,dy,format="('!4D!3x=',f7.3,' !4D!3y=',f7.3)"),charsize=charsize,color=255
+    xyouts,x[10*sx,90*sy],y[10*sx,80*sy],string(q[i],format="('q=',g0)"),charsize=charsize,color=255
+    xyouts,x[10*sx,90*sy],y[10*sx,20*sy],string(res2_best[i],format="(' Res!U2!N=',g0)"),charsize=charsize,color=255
+    xyouts,x[10*sx,90*sy],y[10*sx,10*sy],string(chi2_best[i],format="(' Chi!U2!N=',g0)"),charsize=charsize,color=255
    endfor
    !p.multi=[0,1,2]
    ;=================RES=========================
@@ -320,10 +324,11 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
    gx_plot_label,0.01,0.7, string([q_res_best,q_res_range-q_res_best], format="('Q!Dres_best!N = ',g0,'!S!D',g0,'!R!U+',g0)") ,/xlog,charsize=charsize
    if res_done then begin
      gx_plot_label,0.01,0.3, 'FINAL SOLUTION:',/xlog,charsize=charsize
-     gx_plot_label,0.01,0.2, string(res2_best, format="('RES!S!U2!N!R!Dnorm!N = ',g0)") ,/xlog,charsize=charsize
      gx_plot_label,0.01,0.1, string([q_res2_best,q_res_range-q_res2_best], format="('Q = ',g0,'!S!D',g0,'!R!U+',g0)") ,/xlog,charsize=charsize
    end
-  !p.font=-1
+   gx_plot_label,0.01,0.2, string(res2_best, format="('RES!S!U2!N!R!Dnorm!N = ',g0)") ,/xlog,charsize=charsize
+
+    !p.font=-1
 ;  =================Chi=========================
    chi_thresh=sqrt(total((obsI.data[goodPix]/obsIsdev.data[goodPix])^2))*((apply2 eq 1)?3:1)
    !p.font=2
@@ -374,10 +379,10 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
    gx_plot_label,0.01,0.7, string([q_chi_best,q_chi_range-q_chi_best], format="('Q!Dchi_best!N = ',g0,'!S!D',g0,'!R!U+',g0)") ,/xlog,charsize=charsize
    if chi_done then begin
      gx_plot_label,0.01,0.3, 'FINAL SOLUTION:',/xlog,charsize=charsize
-     gx_plot_label,0.01,0.2, string(chi2_best, format="('CHI!S!U2!N = ',g0)") ,/xlog,charsize=charsize
      gx_plot_label,0.01,0.1, string([q_chi2_best,q_chi_range-q_chi2_best], format="('Q = ',g0,'!S!D',g0,'!R!U+',g0)") ,/xlog,charsize=charsize
    end
-  !p.font=-1
+     gx_plot_label,0.01,0.1, string([q_chi2_best,q_chi_range-q_chi2_best], format="('Q = ',g0,'!S!D',g0,'!R!U+',g0)") ,/xlog,charsize=charsize
+   !p.font=-1
  endif
  device,/close
  file_arr=setfiles[[res_idx,chi_idx]]
