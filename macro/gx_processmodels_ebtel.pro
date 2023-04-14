@@ -381,7 +381,7 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
      gx_plot_label,0.01,0.3, 'FINAL SOLUTION:',/xlog,charsize=charsize
      gx_plot_label,0.01,0.1, string([q_chi2_best,q_chi_range-q_chi2_best], format="('Q = ',g0,'!S!D',g0,'!R!U+',g0)") ,/xlog,charsize=charsize
    end
-     gx_plot_label,0.01,0.1, string([q_chi2_best,q_chi_range-q_chi2_best], format="('Q = ',g0,'!S!D',g0,'!R!U+',g0)") ,/xlog,charsize=charsize
+     gx_plot_label,0.01,0.2, string(chi2_best, format="('CHI!U2!N=',g0)") ,/xlog,charsize=charsize
    !p.font=-1
  endif
  device,/close
