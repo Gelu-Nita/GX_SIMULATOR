@@ -116,6 +116,7 @@ pro gxROI::ReplaceFovMap
   fovmap.xc=round(fovmap.xc*1000d)/1000d
   fovmap.yc=round(fovmap.yc*1000d)/1000d
   ;correction needed to avoid precision math errors
+  add_prop,fovmap,b0=self.parent->GetLos(/b0),l0=self.parent->GetLos(/l0),SpaceView=self.parent->SpaceView()
   self.fovmap->set,0,map=fovmap
   fovdata=data[*,[0,1,2,15]]
   self.fovscreen->SetProperty, data=fovdata

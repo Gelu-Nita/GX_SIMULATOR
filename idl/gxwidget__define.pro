@@ -111,10 +111,10 @@ pro gxWidget::CreatePanel,_extra=_extra
    ;xlabelsize=85
    xtextsize=10
    wDimensions=widget_base(self.wbase,/row)
-   pbr=pb0r(self.subject->GetTime())*60
+   pbr=self.subject->GetLos(/pbr)*60
    if self.subject->IsCombo(csize=csz,bsize=sz) then begin
      wVolumeInfo = widget_label(font=font,wDimensions, $
-       VALUE='['+self.subject->GetTime()+'] ' +string(sz[1],sz[2],sz[3],csz[3],xcoord_conv[1],xcoord_conv[1]*pbr[2],$
+       VALUE='['+self.subject->GetTime()+'] ' +string(sz[1],sz[2],sz[3],csz[3],xcoord_conv[1],xcoord_conv[1]*pbr[0],$
        format="('Dimension: [',i3,',',i3,',',i3,'(',i3,')] Resolution: ',g0,'R (',g0,' arcsec)')"))
    endif else begin
      wVolumeInfo = widget_label(font=font,wDimensions, $
@@ -146,12 +146,12 @@ pro gxWidget::CreatePanel,_extra=_extra
           XTEXTSIZE=10,$; XLABELSIZE=30,$
           INCREMENT=1, $
           UNITS=STRING(176b), $
-          VALUE=EW,Sensitive=keyword_set(expert))
+          VALUE=EW,Sensitive=0)
    wNS=cw_objfield(wLocation, uname=prefix+'NS', LABEL=' NS',$
           XTEXTSIZE=10,$ ; XLABELSIZE=30,$
           INCREMENT=1, $
           UNITS=STRING(176b), $
-          VALUE=NS,Sensitive=keyword_set(expert))
+          VALUE=NS,Sensitive=0)
    wGyro=cw_objfield(wLocation, uname=prefix+'GYRO', LABEL=' PHI',$
           XTEXTSIZE=10,$ ; XLABELSIZE=30,$
           INCREMENT=1, $

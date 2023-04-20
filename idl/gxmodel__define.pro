@@ -442,8 +442,7 @@ pro gxModel::UpdateRoi,roi=roi,replace=replace
 end
 
 function gxModel::Rsun
-  pbr=pb0r(self->GetTime())
-  return,pbr[2]*60
+   return,self.r*60
 end
 
 function gxModel::SetFOV,xc=xc,yc=yc,xfov=xfov, yfov=yfov,_extra=_extra
@@ -584,7 +583,9 @@ pro gxModel::UpdateDef
   for k=0,count-1 do begin
     if ~isa(fluxtubes[k]->GetVertexData('nr_nth'),/number) then fluxtubes[k]->Update_N_NTH
   endfor
-  ;
+
+  ;Update LOS tags if needed
+  if self->SpaceView() eq 0 then self->SetLos,/EarthView
   
   ;Update maps if needed
   maps=*self.refmaps
@@ -789,7 +790,7 @@ pro gxmodel::DisplayMap,select
 end
 
 function gxmodel::GetFovMap
-  return,(self->scanbox())->GetFovMap()
+  return,obj_valid(self->scanbox())?(self->scanbox())->GetFovMap():obj_new()
 end
 
 pro gxmodel::RemoveMap,select
@@ -1590,11 +1591,8 @@ end
 
 pro gxModel::ResetPosition, unlock=unlock,top=top
  self->Reset
- maps=*(self->Refmaps())
- time=maps->get(2,/time)
- pb0r=pb0r(time)
- b0=pb0r[1]
- rsun=pb0r[2]*60
+ los=Self.GetLos()
+ rsun=Los.r*60
  self->Translate,self.xrange[0],self.yrange[0],1
  if ~keyword_set(top) then begin
  if widget_valid(self.wparent) then begin
@@ -1612,11 +1610,11 @@ pro gxModel::ResetPosition, unlock=unlock,top=top
    end
    
    self->Rotate,[1d,0,0],-self.NS
-   self->Rotate,[0,1d,0],self.EW
-   self->Rotate,[1d,0,0],b0
+   self->Rotate,[0,1d,0],self.EW-los.l0
+   self->Rotate,[1d,0,0],los.b0
    
  endif else begin
-   xy=60*hel2arcmin(self.NS,self.EW,date=time)/rsun
+   xy=60*hel2arcmin(self.NS,self.EW-los.l0,date=self->GetTime())/rsun
    self->Translate,xy[0],xy[1],0
  endelse
 end
@@ -1682,7 +1680,7 @@ function gxModel::refmaps
 end
 
 function gxModel::GetTime,seconds=seconds
- if valid_map(self.GetFovMap()) then time=(self.GetFovMap())->get(/time) else $
+ if valid_map(self->GetFovMap()) then time=(self->GetFovMap())->get(/time) else $
  time=(*self.refmaps)->get(2,/time)
  if keyword_set(seconds) then time=anytim(time)
  return,time
@@ -2045,10 +2043,45 @@ pro gxModel::upgrade_combo_model,verbose=verbose
   self->UpdateRoi,/replace
 end
 
+function gxModel::GetLos,b0=b0,r=r,L0=L0,pbR=pbR,pb0R=pb0R
+if keyword_set(pbR) or keyword_set(pb0R) then return,[self.p,self.b0,self.r]
+if keyword_set(b0) then return,self.b0
+if keyword_set(r) then return,self.r
+if keyword_set(l0) then return,self.l0
+return,{p:self.p,b0:self.b0,r:self.r,l0:self.l0}
+end
+
+pro gxModel::SetLos,p=p,b0=b0,r=r,l0=l0,struct=pb0rl,EarthView=EarthView
+if keyword_set(EarthView) then begin
+  angles=pb0r(self->GetTime())
+  self.p=angles[0]
+  self.b0=angles[1]
+  self.r=angles[2]
+  self.l0=0
+  self.SpaceView=0
+  return
+endif
+if n_elements(l0) ne 0 then self.l0=l0
+if n_elements(p) ne 0 then self.p=p
+if n_elements(b0) ne 0 then self.b0=b0
+if n_elements(r) ne 0 then self.r=r
+if n_elements(pb0rl) ne 0 then begin
+  self.p=pb0rl.p
+  self.b0=pb0rl.b0
+  self.r=pb0rl.r
+  self.l0=pb0rl.l0
+endif
+self.SpaceView=1
+end
+
+function gxModel::SpaceView
+ return,self.SpaceView
+end
+
 pro gxModel__define
 self={gxModel,inherits gxComponent,$
 NS:0d,EW:0d,volume:obj_new(),ROI:obj_new(),refmaps:ptr_new(),$
 Size:lonarr(4),$
 FluxTubeCount:0l,XCOORD_CONV:[0d,0d],YCOORD_CONV:[0d,0d],ZCOORD_CONV:[0d,0d],$
-xrange:[0d,0d],yrange:[0d,0d],zrange:[0d,0d],IsROI:0l,FullROI:0l,wParent:0l,subgridpts:0l,steps:0l,lock:0l}
+xrange:[0d,0d],yrange:[0d,0d],zrange:[0d,0d],IsROI:0l,FullROI:0l,wParent:0l,subgridpts:0l,steps:0l,lock:0l,b0:0d,l0:0d,r:0d,p:0d,SpaceView:0l}
 end

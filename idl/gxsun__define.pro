@@ -46,10 +46,8 @@ pro gxSun::Reset
  grid =self.GetByName('Solar Grid')
  grid->Reset
  grid->Rotate,[1,0,0],90
- if self.time ne '' then begin
-  b0=(pb0r(self.time))[1]
-  grid->Rotate,[1d,0,0],b0
- endif
+ scanbox=self->Get(isa='gxScanbox')
+ grid->Rotate,[1d,0,0],scanbox->getLos(/b0)
 end
 
 pro gxSun__define

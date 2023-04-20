@@ -1090,11 +1090,74 @@ case event.id of
                              goto,update_volume
                            end                                                                                                                                     
    self.wTV_Slice: self->TV_SLICE    
-   self.wSaveLOS:self->SaveLOS                                                                                          
+   self.wSaveLOS:self->SaveLOS  
+   self.wObserver:self->SetLos  
+   self.wL0:self->SetLos,/user
+   self.wB0:self->SetLos,/user
+   self.wR:self->SetLos,/user                                                                                    
  else:
  endcase
 return, self->Rewrite(event,auto=auto)
 END
+
+pro gxScanBox::SetLos,user=user
+  view=widget_info(self.wObserver,/combobox_gettext)
+  widget_control,self.wObserver,get_value=view_list,get_uvalue=pbrl_list
+  idx=where(view_list eq view)
+  self.ImgViewWid->GetProperty,model=moi
+  case view of
+    'Earth View': begin
+                    EarthView=1
+                    if obj_valid(moi) then begin
+                      moi->SetLos,/EarthView
+                      widget_control,self.wL0,set_value=moi->GetLos(/L0)
+                      widget_control,self.wB0,set_value=moi->GetLos(/B0)
+                      widget_control,self.wR, set_value=moi->GetLos(/R)*60
+                    endif else begin
+                      widget_control,self.wL0,set_value=pbrl_list[idx].L0
+                      widget_control,self.wB0,set_value=pbrl_list[idx].B0
+                      widget_control,self.wR, set_value=pbrl_list[idx].R*60
+                    endelse
+                  end
+    else: begin
+            if keyword_set(user) then begin
+              widget_control,self.wL0,get_value=L0
+              widget_control,self.wB0,get_value=B0
+              widget_control,self.wR, get_value=R
+              pbrl_list[idx].L0=l0
+              pbrl_list[idx].B0=B0
+              pbrl_list[idx].R=R/60
+            endif
+            widget_control,self.wL0,set_value=pbrl_list[idx].L0
+            widget_control,self.wB0,set_value=pbrl_list[idx].B0
+            widget_control,self.wR, set_value=pbrl_list[idx].R*60
+            if obj_valid(moi) then moi->SetLos, struct=pbrl_list[idx]
+          end              
+  endcase
+        widget_control,self.wL0,get_value=L0,sensitive=~keyword_set(EarthView)
+        widget_control,self.wB0,get_value=B0,sensitive=~keyword_set(EarthView)
+        widget_control,self.wR,get_value=R,sensitive=~keyword_set(EarthView)
+        pbrl_list[idx].b0=L0
+        pbrl_list[idx].b0=B0
+        pbrl_list[idx].R=R/60
+        widget_control,self.wObserver,set_uvalue=pbrl_list
+        if obj_valid(moi) then moi->ResetPosition
+        self.parent->Reset
+end
+
+function gxScanBox::GetLos,b0=b0,r=r,L0=L0
+  self.ImgViewWid->GetProperty,moi=moi
+  if obj_valid(moi) then return, moi->GetLos(b0=b0,r=r,L0=L0,pbR=pbR,pb0R=pb0R)
+  p=(pb0r())[0];just to return something non-zero
+  widget_control,self.wL0,get_value=thisL0
+  widget_control,self.wB0,get_value=thisB0
+  widget_control,self.wR,get_value=thisR
+  if keyword_set(b0) then return,thisb0
+  if keyword_set(r) then return,thisR/60
+  if keyword_set(l0) then return,thisl0
+  L0=thisL0
+  return,{p:p,b0:thisb0,r:thisR/60,l0:thisl0}
+end
 
 pro gxScanBox::ReplaceEBTELtables,path=path
  if self.active then begin
@@ -1640,7 +1703,47 @@ self.wPlotLOSOptions=cw_objPlotOptions(wPlotLOSBase,uname='LOS Profile Plot Opti
         XTEXTSIZE=XTEXTSIZE, XLABELSIZE=XLABELSIZE,$
         INCREMENT=10, $
         UNITS='"', $
-        VALUE=delta(self.Yrange),Sensitive=1,frame=frame, format=format)              
+        VALUE=delta(self.Yrange),Sensitive=1,frame=frame, format=format)
+ if obj_valid(self.ImgViewWid) then begin
+  self.ImgViewWid->GetProperty,model=moi
+  if obj_valid(moi) then begin
+    Spaceview=moi->SpaceView()
+    l0=moi->GeLos(/l0)
+    b0=moi->GeLos(/b0)
+    r=moi->GeLos(/r)
+  endif else begin
+    SpaceView=0
+    pbr=pb0r()
+    l0=0
+    b0=pbr[1]
+    r=pbr[2]*60
+  endelse
+ endif
+ pbrl_list=replicate({p:0d,b0:0d,r:0b,l0:0b},2)
+ pbrl_list[SpaceView].b0=L0
+ pbrl_list[SpaceView].b0=B0
+ pbrl_list[SpaceView].R=R/60
+ self.wObserver= widget_combobox(wRow2, value=['Earth View','Space View'],uvalue=pbrl_list) 
+ widget_control,self.wObserver,SET_COMBOBOX_SELECT=SpaceView
+ 
+ self.wL0=CW_objFIELD(wRow3, UNAME='L0', LABEL=' L0',$
+        XTEXTSIZE=3, XLABELSIZE=XLABELSIZE,$
+        INCREMENT=10, $
+        UNITS=STRING(176b), $
+        VALUE=l0,Sensitive=1,frame=frame, format=format)  
+ widget_control,self.wL0,sensitive=keyword_set(SpaceView)        
+ self.wB0=CW_objFIELD(wRow3, UNAME='B0', LABEL=' B0',$
+        XTEXTSIZE=3, XLABELSIZE=XLABELSIZE,$
+        INCREMENT=10, $
+        UNITS=STRING(176b), $
+        VALUE=b0,Sensitive=1,frame=frame, format=format) 
+ widget_control,self.wB0,sensitive=keyword_set(SpaceView)        
+ self.wR=CW_objFIELD(wRow3, UNAME='RSUN', LABEL='RSUN',$
+        XTEXTSIZE=4, XLABELSIZE=XLABELSIZE,$
+        INCREMENT=10, $
+        UNITS='"', $
+        VALUE=R,Sensitive=1,frame=frame, format=format)   
+ widget_control,self.wR,sensitive=keyword_set(SpaceView)                     
  wAutobase=widget_base(wRow3,/row,/nonexclusive)
 
  self->UpdateFields
@@ -1655,7 +1758,7 @@ end
 function gxScanbox::R
   self.ImgViewWid->GetProperty,model=moi
   if obj_isa(moi,'gxmodel') then begin
-    self.Rsun=(moi->GetFovMap())->get(/rsun)
+    self.Rsun=moi->Rsun()
   endif else begin
     if self.Rsun eq 0 then begin
       pbr=pb0r()
@@ -1781,5 +1884,5 @@ pause:0b,active:0b,new_view:0b,log:0l,t_start:0d,wPlotLOSOptions:0L,wLOS:0L,wPlo
 Grid2Update:0L,wGrid2Update:0L,wMinVolume:0l,wMaxVolume:0l,wPowerIndexVolume:0l,wResetVolumeScale:0l,$
 wSelectEbtel:0l,wEbtelTable:0ll,wParmBase:0l,wArrayParmBase:0l,wNparms:0l,wRparms:0l,$
 wUploadFreqList:0l,wFreqList:0l,wUseFreqList:0l,wDelFreqList:0l,wUndoFreqList:0l,$
-wResetFreqList:0l,wSaveFreqList:0l,wEditedFreqList:0l,Rsun:(pb0r())[2]*60}
+wResetFreqList:0l,wSaveFreqList:0l,wEditedFreqList:0l,Rsun:(pb0r())[2]*60,wObserver:0L,wL0:0l,wB0:0l,wR:0L}
 end
