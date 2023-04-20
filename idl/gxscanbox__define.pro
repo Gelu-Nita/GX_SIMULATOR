@@ -1148,7 +1148,7 @@ end
 function gxScanBox::GetLos,b0=b0,r=r,L0=L0
   self.ImgViewWid->GetProperty,moi=moi
   if obj_valid(moi) then return, moi->GetLos(b0=b0,r=r,L0=L0,pbR=pbR,pb0R=pb0R)
-  p=(pb0r())[0];just to return something non-zero
+  p=0;to b addressed at a later tim, for now it is not used anywhere
   widget_control,self.wL0,get_value=thisL0
   widget_control,self.wB0,get_value=thisB0
   widget_control,self.wR,get_value=thisR
@@ -1719,7 +1719,7 @@ self.wPlotLOSOptions=cw_objPlotOptions(wPlotLOSBase,uname='LOS Profile Plot Opti
     r=pbr[2]*60
   endelse
  endif
- pbrl_list=replicate({p:0d,b0:0d,r:0b,l0:0b},2)
+ pbrl_list=replicate({p:0d,b0:0d,r:0d,l0:0d},2)
  pbrl_list[SpaceView].b0=L0
  pbrl_list[SpaceView].b0=B0
  pbrl_list[SpaceView].R=R/60
