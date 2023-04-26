@@ -325,8 +325,8 @@ case size(renderer,/tname) of
                  fovmap=renderer.fovmap
                  data=renderer.data
                  if tag_exist(renderer,'EBTEL') then widget_control,self.wEbtelTable,set_value=gx_ebtel_path(renderer.ebtel)
-                 gx_fovmap2scanbox,fovmap,xc=xc,yx=yc,xfov=xfov,yfov=yfov,xrange=xrange,yrange=yrange,nx=nx,ny=ny
-                 self.Rsun=fovmap->get(/rsun)
+                 gx_fovmap2scanbox,fovmap,xc=xc,yx=yc,xfov=xfov,yfov=yfov,xrange=xrange,yrange=yrange,nx=nx,ny=ny,rsun=rsun,b0=b0,l0=l0
+                 self.Rsun=rsun
                  self.nx=nx
                  self.ny=ny
                  self.xrange=xrange
@@ -406,6 +406,7 @@ pro gxScanbox::SetRefModel,model
   model_info='SELECTED MODEL: '+model->GetName()+'['+model->GetTime()+']'
   widget_control,widget_info(widget_info(self.wScan,/parent),/parent),map=1
   hasBL=((model->GetVolume())->getflags()).hasBL
+  self->SetLos,/model
  endif else begin model_info='NO GX MODEL SELECTED!'
   widget_control,widget_info(widget_info(self.wScan,/parent),/parent),map=0
  end
@@ -459,16 +460,21 @@ pro gxScanbox::ComputeFOV,compute_grid=compute_grid,upload=upload,auto=auto,fovm
  
  if keyword_set(upload) and isa(moi,'gxmodel') then fovmap=moi->GetFovMap()
  if valid_map(fovmap) then begin
-   gx_fovmap2scanbox,fovmap,xc=xc,yx=yc,xfov=xfov,yfov=yfov,xrange=xrange,yrange=yrange,nx=nx,ny=ny,rsun=rsun
+   gx_fovmap2scanbox,fovmap,xc=xc,yx=yc,xfov=xfov,yfov=yfov,xrange=xrange,yrange=yrange,nx=nx,ny=ny,rsun=rsun,b0=b0,l0=l0
    self.nx=nx
    self.ny=ny
    self.xrange=xrange
    self.yrange=yrange
-   self.rsun=rsun
    widget_control,self.wX,set_value=xc
    widget_control,self.wY,set_value=yc
    widget_control,self.wXrange,set_value=xfov
    widget_control,self.wYrange,set_value=yfov
+   self.rsun=rsun
+   widget_control,self.wR,set_value=rsun
+   widget_control,self.wB0,set_value=b0
+   widget_control,self.wL0,set_value=l0
+   widget_control,self.wObserver,SET_COMBOBOX_SELECT=1-keyword_set(l0 eq 0)
+   self->SetLos,/user
  endif else begin
  if keyword_set(auto) then begin
        if obj_valid(moi) then begin
@@ -1100,11 +1106,18 @@ case event.id of
 return, self->Rewrite(event,auto=auto)
 END
 
-pro gxScanBox::SetLos,user=user
+pro gxScanBox::SetLos,user=user,model=model
+  self.ImgViewWid->GetProperty,model=moi
+  if obj_valid(moi) and keyword_set(model) then begin
+    widget_control,self.wObserver,set_combobox_select=moi->SpaceView()
+    widget_control,self.wL0,set_value=moi->GetLos(/L0)
+    widget_control,self.wB0,set_value=moi->GetLos(/B0)
+    widget_control,self.wR, set_value=moi->GetLos(/R)*60
+    user=1
+  endif
   view=widget_info(self.wObserver,/combobox_gettext)
   widget_control,self.wObserver,get_value=view_list,get_uvalue=pbrl_list
   idx=where(view_list eq view)
-  self.ImgViewWid->GetProperty,model=moi
   case view of
     'Earth View': begin
                     EarthView=1
@@ -1552,7 +1565,7 @@ pro gxScanBox::CreatePanel,_extra=_extra
  if not exist(xsize) then xsize = fix (scr[0] * .3)
  if not exist(ysize) then ysize = xsize 
  frame=1
- format='(f7.2)'
+ format='(f10.2)'
  wRow0=widget_base(self.wbase,/column)
  wToolbar=widget_base(wRow0,/row,/toolbar,/frame)
  self.wSaveLOS=widget_button( wToolbar, $

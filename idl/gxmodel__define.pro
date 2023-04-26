@@ -1058,20 +1058,20 @@ pro gxModel::Slice,parms,row,scanner=scanner
   ;ASSIGN VoxelX
   idx=gx_name2idx(parms,'VoxelX')
   if (size(idx))[0] ne 0 then begin
-    (*scanner).parms[*,*,idx]=vol_ind[*,0]
+    (*scanner).parms[*,*,idx]=vol_ind[*,0]-1e-6;removed epsilon correction
     assigned[idx]=1
   end
   
   ;ASSIGN VoxelY
   idx=gx_name2idx(parms,'VoxelY')
   if (size(idx))[0] ne 0 then begin
-    (*scanner).parms[*,*,idx]=vol_ind[*,1]
+    (*scanner).parms[*,*,idx]=vol_ind[*,1]-1e-6;removed epsilon correction
     assigned[idx]=1
   end
   ;ASSIGN VoxelZ
   idx=gx_name2idx(parms,'VoxelZ')
   if (size(idx))[0] ne 0 then begin
-    (*scanner).parms[*,*,idx]=vol_ind[*,2]
+    (*scanner).parms[*,*,idx]=vol_ind[*,2]-1e-6;removed epsilon correction
     assigned[idx]=1
   end
 

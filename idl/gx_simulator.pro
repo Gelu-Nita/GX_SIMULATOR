@@ -271,6 +271,8 @@ pro gx_simulator_event,event
                      UploadModel:
                      if obj_isa(model,'gxmodel') then begin
                        widget_control,widget_info(event.top,find_by_uname='ControlTab'),set_tab_current=0
+                       models=state.sun->get(/all,isa='gxmodel')
+                       state.ModelCount=total(obj_valid(models))
                        state.ModelCount+=1
                        model->SetIsRoi,state.ModelCount eq 1
                        name=model->GetName()
@@ -289,6 +291,18 @@ pro gx_simulator_event,event
                        end    
                                             
                        state.sun->Add,model
+                       if model->isROI() then begin
+                         time=model->GetTime()
+                         all=state.Sun->get(isa='GXMODEL',/all)
+                         for i=0, n_elements(all)-1 do begin
+                           if all[i] ne model then begin
+                             all[i]->SetProperty,IsROI=0
+                           endif
+                         endfor
+                         state.scanbox->SetRefModel,model
+                         state.scanbox->CreateArrayInputControls
+                         state.Sun->SetTime,model->GetTime()
+                       endif
                        state.oObjviewWid->Draw  
                        ;widget_control,event.top,redraw=0 
                        t0=systime(/s)               
@@ -322,18 +336,6 @@ pro gx_simulator_event,event
                         model->SetProperty,wParent=wParent
                         widget_control,state.scanbox->GetSliceSelector(),COMBOBOX_INDEX=index,get_value=value
                        (Model->GetVolume())->Update,state.scanbox->GetSliceSelector(/item),/update,/force
-                       if model->isROI() then begin
-                           time=model->GetTime()
-                           all=state.Sun->get(isa='GXMODEL',/all)
-                           for i=0, n_elements(all)-1 do begin
-                             if all[i] ne model then begin
-                                all[i]->SetProperty,IsROI=0
-                             endif
-                           endfor
-                         state.Sun->SetTime,model->GetTime()
-                         state.scanbox->SetRefModel,model
-                         state.scanbox->CreateArrayInputControls
-                       endif  
                      endif else answ=dialog_message('Invalid GX model!')
                      state.scanbox->DrawSlicer
                      state.oObjviewWid->Draw
