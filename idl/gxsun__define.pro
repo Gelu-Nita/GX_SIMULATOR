@@ -1,18 +1,8 @@
 function gxSUN::INIT,UT,grid_spacing=grid_spacing,_extra=_extra
- default,time,''
- default,grid_spacing,10
- self.r=1
- self.time=time
-; lon=grid_spacing*findgen(360./grid_spacing+1)*!dtor & nlat=n_elements(lon)
-; lat=grid_spacing*findgen(180./grid_spacing+1)*!dtor & nlon=n_elements(lat)
-; x=findgen(nlat,nlon)
-; y=findgen(nlat,nlon)
-; z=findgen(nlat,nlon)
-; for i=0, nlon-1 do begin 
-;   z[*,i]=self.r*sin(lat[i])*cos(lon)
-;   x[*,i]=self.r*sin(lat[i])*sin(lon)
-;   y[*,i]=self.r*cos(lat[i])
-; end   
+    default,time,''
+    default,grid_spacing,10
+    self.r=1
+    self.time=time  
     num_points=100
     theta = FINDGEN(num_points) * 2*!DPI/ (num_points - 1)
     radius=(self.r+0.005)
@@ -22,7 +12,7 @@ function gxSUN::INIT,UT,grid_spacing=grid_spacing,_extra=_extra
     thelimb=OBJ_NEW('IDLgrPolyline',x,y,z,color=[0,0,255],thick=2,name='Solar Limb seen from Earth')
     grid = replicate(self.r,361, 181)
     mesh_obj, 4, verts, polys, grid, /closed,p1=0,p2=0
-    sphere = obj_new('IDLgrPolygon',data=verts, polygons=polys, color=[255,255,0], style=2,name='Solar Surface');,diffuse=[255,0,0],emission=[255,0,0])
+    sphere = obj_new('IDLgrPolygon',data=verts, polygons=polys, color=[255,255,0], style=2,name='Solar Surface')
     grid = replicate(self.r,360/grid_spacing+1, 180/grid_spacing+1)
     grid+=0.005
     mesh_obj, 4, verts, polys, grid, /closed,p1=0,p2=0

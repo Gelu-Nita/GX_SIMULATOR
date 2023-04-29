@@ -508,7 +508,8 @@ pro gxScanbox::ComputeFOV,compute_grid=compute_grid,upload=upload,auto=auto,fovm
   end
  self->Reset
  self->SetRefModel,MOI
- self->NewGrid,xrange=xrange, yrange=yrange,zrange=zrange,compute_grid=compute_grid;,upload=upload
+ self->NewGrid,xrange=xrange, yrange=yrange,zrange=zrange,compute_grid=compute_grid
+ if obj_valid(moi) then moi->DisplayMap
  self->TV_SLICE
 end
 
@@ -952,7 +953,7 @@ case event.id of
               container=state.view->Get(/all,count=count)
               if obj_isa(container,'gxSun') then begin
                select=event.select 
-               (container->GetByName('Solar Grid'))->SetProperty,hide=select
+               ((container->GetByName('Solar Grid'))->GetByName('Solar Surface'))->SetProperty,hide=select
               endif else begin
                select=0 
               endelse

@@ -80,6 +80,17 @@ pro gx_fits2map,filename,map,reform=reform,header=header
               aia_prep, index0, data0, oindex, odata
               index2map, oindex, odata, map
            end
-    else:fits2map,filename,map,header=header
+    else:begin 
+           fits2map,filename,map,header=header
+           ;this fix is needed because fits2map ignores these header keys, assigning instead 
+           ;the RSUN, B0, L0 parameters corresponding to the Earth View perspective
+           rsun_obs=fxpar(header,'RSUN_OBS')
+           if rsun_obs ne 0 then add_prop,map,rsun=rsun_obs,/replace
+           b0_obs=fxpar(header,'HGLT_OBS')
+           if b0_obs ne 0 then add_prop,map,b0=b0_obs,/replace
+           l0_obs=fxpar(header,'HGLN_OBS')
+           if l0_obs ne 0 then add_prop,map,l0=l0_obs,/replace
+           ;end fits2map fix
+         end  
   endcase
 end

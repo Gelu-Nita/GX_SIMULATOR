@@ -1143,7 +1143,8 @@ end
                               endif else begin
                                edge=[-10,10]
                                for i=0, n_elements(map)-1 do begin
-                                 sub_map,map[i],amap,xrange=edge+((self.subject->GetFovMap())->get(/xrange)),yrange=edge+((self.subject->GetFovMap())->get(/yrange))
+                                 ;sub_map,map[i],amap,xrange=edge+((self.subject->GetFovMap())->get(/xrange)),yrange=edge+((self.subject->GetFovMap())->get(/yrange))
+                                 amap=map[i]
                                  self.subject->AddMap,amap,id=id
                                  if n_elements(id) gt 0 then begin
                                    wBaseSelect=widget_info(self.wBase,find_by_uname='GXMODEL:BaseMapSelect')

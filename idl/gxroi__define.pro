@@ -48,7 +48,7 @@ function gxROI::Refmaps
 end
 
 pro gxROI::DisplayMap,select
- 
+ default,select,(self->Refmaps())->get(/count)-1
  ref_map=(self->Refmaps())->get(0,/map)
  map=(self->Refmaps())->get(select,/map)
  if tag_exist(map,'PROJECTION') then CEA=(map.projection eq 'CEA') else CEA=0
@@ -60,7 +60,6 @@ pro gxROI::DisplayMap,select
    hide_cea=widget_info(wparent,Find_By_Uname='GXMODEL:HideMap')
  end
  if select le 2 or CEA then begin
-  ;map=drot_map(map,ref_map=ref_map)
   sz=size(ref_map.data)
   map=gx_rebin_map(map,sz[1],sz[2],/congrid)
   display=self->GetBaseScreen()
@@ -71,7 +70,8 @@ pro gxROI::DisplayMap,select
    if widget_valid(hide_cea) then  widget_control,hide_cea,set_button=0
   end  
  endif else begin
-  map=gx_remap(map,self.fovmap->get(/xrange),self.fovmap->get(/yrange),[self.nx,self.ny],time=ref_map.time)
+  ;map=gx_remap(map,self.fovmap->get(/xrange),self.fovmap->get(/yrange),[self.nx,self.ny],time=ref_map.time)
+  map=drot_map(map,ref=self.fovmap->get(/map),/KEEP_LIMB,/RIGID)
   display=self.fovimage
  (self->GetFOVscreen())->SetProperty,hide=0
  (self->GetBaseScreen())->SetProperty,ALPHA_CHANNEL=0,BLEND_FUNCTION = [3, 4]
@@ -257,6 +257,7 @@ function gxROI::ComputeGrid
   flags=(self.parent->GetVolume())->setflags(newGrid=0)
   message,strcompress('ComputeScanGrid execution time: '+string(systime(/s)-t0)),/info
   if (gx_progmeter(prog_id,1.0) eq 'Cancel') then goto,escape
+  self->DisplayMap
   return,flags.newGrid
   escape:
   status = gx_progmeter(prog_id,/DESTROY)

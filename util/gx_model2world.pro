@@ -27,21 +27,23 @@ pro gx_model2world,model,lines=lines,fluxtubes=fluxtubes,fov=fov,box=box,over=ov
     message,'No valid model in this file. Operation aborted!',/info
     return
   endif
-  refmaps=*(model->Refmaps()) 
-  for i=0, refmaps->get(/count)-1 do begin
-    if refmaps->get(i,/id) eq 'Bz_reference' or refmaps->get(i,/id) eq 'LOS_magnetogram' then ref=refmaps->get(i,/map)
-  endfor
   if ~valid_map(ref) then begin
+    refmaps=*(model->Refmaps()) 
     for i=0, refmaps->get(/count)-1 do begin
-      if refmaps->get(i,/xunit) eq 'arcsecs' then ref=refmaps->get(i,/map)
+      if refmaps->get(i,/id) eq 'Bz_reference' or refmaps->get(i,/id) eq 'LOS_magnetogram' then ref=refmaps->get(i,/map)
     endfor
-  endif 
-  if ~valid_map(ref) then begin
-    message,'No LOS reference map found in this model, please plot one and call this procedure using /over!',/info
-    return
-  endif
-  ref.id= 'HMI Bz'
-  if ~keyword_set(over) then begin
+    if ~valid_map(ref) then begin
+      for i=0, refmaps->get(/count)-1 do begin
+        if refmaps->get(i,/xunit) eq 'arcsecs' then ref=refmaps->get(i,/map)
+      endfor
+    endif 
+    if ~valid_map(ref) then begin
+      message,'No LOS reference map found in this model, please plot one and call this procedure using /over!',/info
+      return
+    endif
+    ref.id= 'HMI Bz'
+  end
+  if ~keyword_set(over) and ref.id eq 'HMI Bz' then begin
     tvlct,r,g,b,/get
     loadct,0,/silent
     plot_map,ref,fov=get_map_fov(ref)/40,GRID=10,_extra=_extra
