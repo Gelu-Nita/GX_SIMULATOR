@@ -32,7 +32,9 @@
 ;
 ; MODIFICATION HISTORY:
 ;   Written by:  Gelu M. Nita, September 2010- January 2013. 
-;   01/ /13: Initial SSW Release
+;   01/ /2013: Initial SSW release
+;   05/06/2019; Initial GitHub commit
+;   4/30/2022; First Zenodo release
 ;-
 
 function my_colorbar,direction, index, value,data=data
