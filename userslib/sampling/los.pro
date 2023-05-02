@@ -1,5 +1,6 @@
-;this is an utility routine that may be used to sample the magnetic field in the model at certain locations along LOS marked by a particular voxel ID flag 
-
+;this is an utility routine that may be used to compute 
+;Emission Measure (EM), Thermal Energy(Wth, and column thermal and non-thermal densities 
+;contributed by corona, transition region, and chromosphere
 pro los,parms,rowdata,info=info
  if arg_present(info) then begin
      if n_elements(info) eq 0 then begin

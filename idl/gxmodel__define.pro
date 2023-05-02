@@ -1086,7 +1086,7 @@ pro gxModel::Slice,parms,row,scanner=scanner
   end
   
   ;ASSIGN z
-  idx=gx_name2idx(parms,'z')
+  idx=gx_name2idx(parms,'h')
   if (size(idx))[0] ne 0 then begin
     vol=(self->R(/volume)-1)*gx_rsun(unit='km')
     (*scanner).parms[*,*,idx]=interpolate(vol,fix(vol_ind[*,0]),fix(vol_ind[*,1]),fix(vol_ind[*,2]),missing=missing)

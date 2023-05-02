@@ -17,12 +17,12 @@ pro blos_tr,parms,rowdata,info=info
        Parms[10].Name='By'          & Parms[10].Value=0           & Parms[10].Unit='G'      & Parms[10].Hint='By'
        Parms[11].Name='Bz'          & Parms[11].Value=0           & Parms[11].Unit='G'      & Parms[11].Hint='Bz'
        Parms[12].Name='T_0'         & Parms[12].Value=0           & Parms[12].Unit='K'      & Parms[12].Hint='Plasma Temperature'
-       Parms[13].Name='z'           & Parms[13].Value=0           & Parms[13].Unit='km'     & Parms[13].Hint='TR height'
+       Parms[13].Name='h'           & Parms[13].Value=0           & Parms[13].Unit='km'     & Parms[13].Hint='TR height'
    endif else parms=info.parms      
       info={parms:parms,$
       pixdim:[1,15],$
       spectrum:{x:{axis:[0],label:'Dummy Index',unit:'' },$
-      y:{label:['Absolute B', 'LOS B', 'Transverse B','Inclination','Azimuth','VoxelID', 'VoxelX', 'VoxelY', 'VoxelZ','Bx','By','Bz','TR T','z','Mask'],unit:['G','G','G','deg','deg','','','','','G','G','G','K','km','']}}}                          
+      y:{label:['Absolute B', 'LOS B', 'Transverse B','Inclination','Azimuth','VoxelID', 'VoxelX', 'VoxelY', 'VoxelZ','Bx','By','Bz','TR T','h','Mask'],unit:['G','G','G','deg','deg','','','','','G','G','G','K','km','']}}}                          
     return
  end
    sz=size(rowdata,/dim)
@@ -31,7 +31,8 @@ pro blos_tr,parms,rowdata,info=info
    rowdata[*]=0
    for pix=0, Npix-1 do begin
      rparms=transpose(parms[pix,*,*])
-     idx=max(where((ulong(rparms[5,*]) and 2l) eq 2l,count))
+     z=float(reform(rparms[8,*]))
+     idx=max(where(((ulong(rparms[5,*]) and 2l) eq 2l) and (z ge 0),count))
      if count gt 0 then begin
       rowdata[pix,0,0]=rparms[2,idx]
       rowdata[pix,0,1]=rparms[2,idx]*cos(rparms[3,idx]*!dtor)

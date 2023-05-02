@@ -86,7 +86,7 @@ pro aia,parms,rowdata,nparms,rparms,path=path,logtdem=logtdem,dem_run=dem_run,qr
      rowparms=transpose(parms[pix,*,*])
      cutoff=max(where(rowparms[nhi_idx,*] ge n_hi0))
      if cutoff ge 0 then rowparms[nhi_idx,0:cutoff]=n_hi0
-     tr_idx=max(where((ulong(rowparms[v_idx,*]) and gx_voxelid(/euv)) ne 0))
+     tr_idx=max(where((ulong(rowparms[v_idx,*]) and gx_voxelid(/euv)) ne 0 and rowparms[t0_idx,*] ne 0))
      point_in=where((rowparms[t0_idx,*] gt 0 and rowparms[v_idx,*] gt 1 and rowparms[nhi_idx,*] lt n_hi0), Nvox)
      if Nvox gt 0 then begin
         parmin=rowparms[*,point_in]
@@ -95,7 +95,7 @@ pro aia,parms,rowdata,nparms,rparms,path=path,logtdem=logtdem,dem_run=dem_run,qr
          dem_interpolate,n,t,dem,path=path,logtdem=logtdem,dem_run=dem_run,qrun=qrun,lrun=lrun,qarr=parmin[q_idx,*],larr=parmin[l_idx,*],avgdem=avgdem
          tr_factor=1
          if AddTR eq 1 then begin
-           tr_idx=max(where((ulong(parmin[v_idx,*]) and gx_voxelid(/euv)) ne 0))
+           tr_idx=max(where((ulong(parmin[v_idx,*]) and gx_voxelid(/euv)) ne 0 and parmin[t0_idx,*] ne 0))
            if tr_idx ge 0 then begin
            point_in=where((parmin[t0_idx,*] gt 0 and parmin[nhi_idx,*] lt n_hi0))
            dem_interpolate,n_tr,t_tr,dem_tr,path=path,logtdem=logtdem,dem_run=dem_tr_run,lrun=lrun,qrun=qrun,$

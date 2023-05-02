@@ -18,13 +18,12 @@ pro blos_layers,parms,rowdata,info=info
        Parms[11].Name='VoxelY'       & Parms[11].Value=0            & Parms[11].Unit='double'  & Parms[11].Hint='Voxel fractional Y index'
        Parms[12].Name='VoxelZ'       & Parms[12].Value=0            & Parms[12].Unit='double'  & Parms[12].Hint='Voxel fractional Z index'
        Parms[13].Name='T_0'         & Parms[13].Value=0           & Parms[13].Unit='K'      & Parms[13].Hint='Plasma Temperature'
-       Parms[14].Name='z'           & Parms[14].Value=0           & Parms[14].Unit='km'     & Parms[14].Hint='Voxel Height'
+       Parms[14].Name='h'           & Parms[14].Value=0           & Parms[14].Unit='km'     & Parms[14].Hint='Voxel Height'
       endif else parms=info.parms      
       info={parms:parms,$
       pixdim:[parms[9].value,15],$
       spectrum:{x:{axis:lindgen(parms[9].value),label:'Layer Index',unit:''},$
-      y:{label:['Absolute B', 'LOS B', 'Transverse B','Inclination','Azimuth','Mask','Bx','By','Bz','VoxelID', 'VoxelX', 'VoxelY', 'VoxelZ','T','z'],unit:['G','G','G','deg','deg','idx','G','G','G','','','','','K','km']}}}                          
-;     y:{label:['Absolute B', 'LOS B', 'Transverse B','Inclination','Azimuth','Mask','Bx','By','Bz'],unit:['Gauss','Gauss','Gauss','deg','deg','idx','Gauss','Gauss','Gauss']}}}
+      y:{label:['Absolute B', 'LOS B', 'Transverse B','Inclination','Azimuth','Mask','Bx','By','Bz','VoxelID', 'VoxelX', 'VoxelY', 'VoxelZ','T','h'],unit:['G','G','G','deg','deg','idx','G','G','G','','','','','K','km']}}}                          
     return
  end
    sz=size(rowdata,/dim)
@@ -33,8 +32,9 @@ pro blos_layers,parms,rowdata,info=info
    rowdata[*]=0
    for pix=0, Npix-1 do begin
      rparms=transpose(parms[pix,*,*])
+     z=float(reform(rparms[12,*]))
      for chanid =0, nchan-1 do begin
-       idx=max(where(ishft(ulong(rparms[5,*]) and not gx_voxelid(/umb),-16) eq chanid+1,count))
+       idx=max(where(fix(z) eq chanid,count))
        if count gt 0 then begin
         rowdata[pix,chanid,0]=rparms[2,idx]
         rowdata[pix,chanid,1]=rparms[2,idx]*cos(rparms[3,idx]*!dtor)
@@ -51,7 +51,7 @@ pro blos_layers,parms,rowdata,info=info
         rowdata[pix,chanid,12]=rparms[12,idx]
         rowdata[pix,chanid,13]=rparms[13,idx]
         rowdata[pix,chanid,14]=rparms[14,idx]
-       end
+       endif
      end  
    endfor  
 END

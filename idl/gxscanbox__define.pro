@@ -1099,6 +1099,7 @@ case event.id of
    self.wTV_Slice: self->TV_SLICE    
    self.wSaveLOS:self->SaveLOS  
    self.wObserver:self->SetLos  
+   self.wTopView:self->SetLos,/topview
    self.wL0:self->SetLos,/user
    self.wB0:self->SetLos,/user
    self.wR:self->SetLos,/user                                                                                    
@@ -1107,14 +1108,25 @@ case event.id of
 return, self->Rewrite(event,auto=auto)
 END
 
-pro gxScanBox::SetLos,user=user,model=model
+pro gxScanBox::SetLos,user=user,model=model,topview=topview
   self.ImgViewWid->GetProperty,model=moi
-  if obj_valid(moi) and keyword_set(model) then begin
-    widget_control,self.wObserver,set_combobox_select=moi->SpaceView()
-    widget_control,self.wL0,set_value=moi->GetLos(/L0)
-    widget_control,self.wB0,set_value=moi->GetLos(/B0)
-    widget_control,self.wR, set_value=moi->GetLos(/R)*60
-    user=1
+  if obj_valid(moi)then begin
+    if keyword_set(model) then begin
+      widget_control,self.wObserver,set_combobox_select=moi->SpaceView()
+      widget_control,self.wL0,set_value=moi->GetLos(/L0)
+      widget_control,self.wB0,set_value=moi->GetLos(/B0)
+      widget_control,self.wR, set_value=moi->GetLos(/R)*60
+      user=1
+    endif else begin
+     if keyword_set(topview) then begin
+        moi->GetProperty,NS=NS,EW=EW
+        widget_control,self.wL0,set_value=EW
+        widget_control,self.wB0,set_value=NS
+        widget_control,self.wR, set_value=moi->GetLos(/R)*60
+        widget_control,self.wObserver,set_combobox_select=1
+        user=1
+     endif
+    endelse
   endif
   view=widget_info(self.wObserver,/combobox_gettext)
   widget_control,self.wObserver,get_value=view_list,get_uvalue=pbrl_list
@@ -1738,6 +1750,9 @@ self.wPlotLOSOptions=cw_objPlotOptions(wPlotLOSBase,uname='LOS Profile Plot Opti
  pbrl_list[SpaceView].b0=B0
  pbrl_list[SpaceView].R=R/60
  self.wObserver= widget_combobox(wRow2, value=['Earth View','Space View'],uvalue=pbrl_list) 
+ self.wTopView= widget_button(widget_base(wROw2,/toolbar),$
+ value=gx_bitmap(filepath('view.bmp', subdirectory=['resource', 'bitmaps'])), $
+   /bitmap,tooltip='Set top view LOS')
  widget_control,self.wObserver,SET_COMBOBOX_SELECT=SpaceView
  
  self.wL0=CW_objFIELD(wRow3, UNAME='L0', LABEL=' L0',$
@@ -1898,5 +1913,5 @@ pause:0b,active:0b,new_view:0b,log:0l,t_start:0d,wPlotLOSOptions:0L,wLOS:0L,wPlo
 Grid2Update:0L,wGrid2Update:0L,wMinVolume:0l,wMaxVolume:0l,wPowerIndexVolume:0l,wResetVolumeScale:0l,$
 wSelectEbtel:0l,wEbtelTable:0ll,wParmBase:0l,wArrayParmBase:0l,wNparms:0l,wRparms:0l,$
 wUploadFreqList:0l,wFreqList:0l,wUseFreqList:0l,wDelFreqList:0l,wUndoFreqList:0l,$
-wResetFreqList:0l,wSaveFreqList:0l,wEditedFreqList:0l,Rsun:(pb0r())[2]*60,wObserver:0L,wL0:0l,wB0:0l,wR:0L}
+wResetFreqList:0l,wSaveFreqList:0l,wEditedFreqList:0l,Rsun:(pb0r())[2]*60,wObserver:0L,wTopView:0L,wL0:0l,wB0:0l,wR:0L}
 end
