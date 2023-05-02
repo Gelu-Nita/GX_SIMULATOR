@@ -135,7 +135,7 @@ if tag_exist(box,'refmaps') then begin
        for k=0,rcount-1 do begin
         match=0
         count=refmaps->get(/count)
-        for l=0,count do begin
+        for l=0,count-1 do begin
           if refmaps->get(l,/id) eq rmap->get(k,/id) then match=1
         endfor
         if ~match then refmaps->setmap,count,rmap->get(k,/map)
