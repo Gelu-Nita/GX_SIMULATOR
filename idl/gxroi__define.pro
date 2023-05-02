@@ -48,7 +48,17 @@ function gxROI::Refmaps
 end
 
 pro gxROI::DisplayMap,select
- default,select,(self->Refmaps())->get(/count)-1
+ if ~is_number(select) then begin
+  self.parent->GetProperty,wParent=wParent
+  if widget_valid(wparent) then begin
+    wselect=widget_info(wparent,find_by_uname='GXMODEL:BaseMapSelect')
+    if widget_valid(wselect) then begin
+       selected_map=widget_info(wselect,/combobox_gettext)   
+       widget_control,wselect,get_value=list
+       select=(where(list eq selected_map))[0]
+    endif else select=2<((self->Refmaps())->get(/count)-1)
+  endif else select=2<((self->Refmaps())->get(/count)-1)
+ endif else select=select<((self->Refmaps())->get(/count)-1)
  ref_map=(self->Refmaps())->get(0,/map)
  map=(self->Refmaps())->get(select,/map)
  if tag_exist(map,'PROJECTION') then CEA=(map.projection eq 'CEA') else CEA=0

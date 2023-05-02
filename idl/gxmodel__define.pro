@@ -1809,8 +1809,8 @@ function gxModel::GetRoi,scanbox=scanbox
  return,self.roi
 end
 
-pro gxModel::ComputeGrid
-(self->GetByName('ScanBox'))->ComputeGrid
+function gxModel::ComputeGrid
+return,(self->GetByName('ScanBox'))->ComputeGrid()
 end
 
 function gxModel::Scanbox
