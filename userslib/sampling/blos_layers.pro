@@ -34,7 +34,7 @@ pro blos_layers,parms,rowdata,info=info
      rparms=transpose(parms[pix,*,*])
      z=float(reform(rparms[12,*]))
      for chanid =0, nchan-1 do begin
-       idx=max(where(fix(z) eq chanid,count))
+       idx=max(where(round(z) eq chanid,count))
        if count gt 0 then begin
         rowdata[pix,chanid,0]=rparms[2,idx]
         rowdata[pix,chanid,1]=rparms[2,idx]*cos(rparms[3,idx]*!dtor)

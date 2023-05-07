@@ -1042,7 +1042,7 @@ pro gxModel::Slice,parms,row,scanner=scanner
   missing=0
   (self->GetVolume())->GetVertexAttributeData,'voxel_id',id 
   if n_elements(id) gt 0 then begin
-    var=interpolate(id,fix(vol_ind[*,0]),fix(vol_ind[*,1]),fix(vol_ind[*,2]),missing=missing)
+    var=interpolate(id,round(vol_ind[*,0]),round(vol_ind[*,1]),round(vol_ind[*,2]),missing=missing)
     idx=gx_name2idx(parms,'VoxelID')
     if (size(idx))[0] ne 0 then begin
       (*scanner).parms[*,*,idx]=var
@@ -1089,7 +1089,7 @@ pro gxModel::Slice,parms,row,scanner=scanner
   idx=gx_name2idx(parms,'h')
   if (size(idx))[0] ne 0 then begin
     vol=(self->R(/volume)-1)*gx_rsun(unit='km')
-    (*scanner).parms[*,*,idx]=interpolate(vol,fix(vol_ind[*,0]),fix(vol_ind[*,1]),fix(vol_ind[*,2]),missing=missing)
+    (*scanner).parms[*,*,idx]=interpolate(vol,round(vol_ind[*,0]),round(vol_ind[*,1]),round(vol_ind[*,2]),missing=missing)
     assigned[idx]=1
   end
 
@@ -1159,7 +1159,7 @@ pro gxModel::Slice,parms,row,scanner=scanner
   if (size(idx))[0] ne 0 then begin
     vol=self->Box2Volume('bmed',/corona)
     if isa(vol)then begin
-      (*scanner).parms[*,*,idx]=interpolate(vol,fix(vol_ind[*,0]),fix(vol_ind[*,1]),fix(vol_ind[*,2]),missing=missing)
+      (*scanner).parms[*,*,idx]=interpolate(vol,round(vol_ind[*,0]),round(vol_ind[*,1]),round(vol_ind[*,2]),missing=missing)
       assigned[idx]=1
     end
   end
@@ -1170,7 +1170,7 @@ pro gxModel::Slice,parms,row,scanner=scanner
     vol=self->Box2Volume('length',/corona)
     if isa(vol)then begin
       vol=gx_rsun()*vol/2
-      (*scanner).parms[*,*,idx]=interpolate(vol,fix(vol_ind[*,0]),fix(vol_ind[*,1]),fix(vol_ind[*,2]),missing=missing)
+      (*scanner).parms[*,*,idx]=interpolate(vol,round(vol_ind[*,0]),round(vol_ind[*,1]),round(vol_ind[*,2]),missing=missing)
       assigned[idx]=1
     end
   end
@@ -1346,7 +1346,7 @@ pro gxModel::Slice,parms,row,scanner=scanner
       end
       if (idx_parms[k] eq 'SpineS') or (idx_parms[k] eq 'HasArr') or $
           (idx_parms[k] eq 'SpineR') or (idx_parms[k] eq 'dummy_n_b')then begin
-        (*scanner).parms[*,*,idx]+=interpolate(vol[box2vol],fix(vol_ind[*,0]),fix(vol_ind[*,1]),fix(vol_ind[*,2]),missing=missing)
+        (*scanner).parms[*,*,idx]+=interpolate(vol[box2vol],round(vol_ind[*,0]),round(vol_ind[*,1]),round(vol_ind[*,2]),missing=missing)
       endif else (*scanner).parms[*,*,idx]+=interpolate(vol[box2vol],vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
     endif
   end

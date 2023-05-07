@@ -31,8 +31,7 @@ pro blos_tr,parms,rowdata,info=info
    rowdata[*]=0
    for pix=0, Npix-1 do begin
      rparms=transpose(parms[pix,*,*])
-     z=float(reform(rparms[8,*]))
-     idx=max(where(((ulong(rparms[5,*]) and 2l) eq 2l) and (z ge 0),count))
+     idx=max(where(((ulong(rparms[5,*]) and gx_voxelid(/tr)) eq gx_voxelid(/tr)),count))
      if count gt 0 then begin
       rowdata[pix,0,0]=rparms[2,idx]
       rowdata[pix,0,1]=rparms[2,idx]*cos(rparms[3,idx]*!dtor)

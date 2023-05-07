@@ -5,7 +5,7 @@ function gx_ebtel_valid_path,path,has_ddm=has_ddm,quiet=quiet
     goto,not_valid
     CATCH, /CANCEL
   ENDIF
-  restore,gx_findfile(path)
+  if file_exist(path) then restore, path else restore,gx_findfile(file_basename(path))
   if ~isa(DEM_COR_RUN) or $
      ~isa(DEM_TR_RUN) or $
      ~isa(LOGTDEM) or $
