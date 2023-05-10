@@ -10,7 +10,15 @@ function gx_read,file
     MESSAGE, /INFO, !ERROR_STATE.MSG
     return,obj_new()
  end
-  restore,file,/relaxed
+ restore,file,/relaxed
+  ;start provision for arbitrarily named model objects
+ osav=obj_new('idl_savefile',file)
+ names=osav->names()
+ for i=0,n_elements(names)-1 do begin
+   e=execute('model='+names[i])
+ end  
+ obj_destroy,osav
+  ;end provision for arbitrarily named model objects
   FixIDLBug,model
   model->UpdateDef
   model->DisplayMap,2
