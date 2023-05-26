@@ -10,6 +10,8 @@
 ; gnita@njit 07-Dec-2017 change explicit TR index from 2L to gx_voxelid(/tr) to allow future redefinition if needed
 ; Eduard@Glasgow & Gelu@njit 28-Feb-2018 added albedo component
 ; Eduard@Glasgow & Gelu@njit 19-June-2018 changed albedo matrix interpolation
+; Eduard@Glasgow added 26-may-2023 added scaling for non-AU observations; requires R_sun in arcseconds
+; 
 
 
 pro xray_tt_albedo,parms,rowdata,rparms,xray_cs=xray_cs,albedo=albedo,info=info
@@ -412,6 +414,9 @@ pro xray_tt_albedo,parms,rowdata,rparms,xray_cs=xray_cs,albedo=albedo,info=info
         ; background thermal electron distribution
       ENDFOR
       ;ends FOR loop over voxels
+       
+       eph_dataout=eph_dataout*(R_sun/960.)^2 ; R_sun in arcseconds
+       
       rowdata[r,*,0]=eph_dataout
       rowdata[r,*,1]=(n_elements(albedo) gt 0?anisotropy*(transpose(albedo)#(eph_dataout*deph)):0)
     end
