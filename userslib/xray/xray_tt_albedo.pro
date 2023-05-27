@@ -6,16 +6,18 @@
 ; TT calculations are only for specific voxels
 ;Parms[19].Name='VoxelID' & Parms[19].Value=0 & Parms[19].Unit='0/1/2' & Parms[19].Hint='chromo/TR/corona'
 ; Modification history:
-; 
+;
 ; gnita@njit 07-Dec-2017 change explicit TR index from 2L to gx_voxelid(/tr) to allow future redefinition if needed
 ; Eduard@Glasgow & Gelu@njit 28-Feb-2018 added albedo component
 ; Eduard@Glasgow & Gelu@njit 19-June-2018 changed albedo matrix interpolation
+; Eduard@Glasgow 26-may-2023 added scaling for non-AU observations; requires R_sun in arcseconds
+; Gelu@njit 26-may-2023 added interface input for R_sun in arcseconds
 
 
 pro xray_tt_albedo,parms,rowdata,rparms,xray_cs=xray_cs,albedo=albedo,info=info
   if arg_present(info) then begin
     if n_elements(info) eq 0 then begin
-      Parms=Replicate({Name:'unused',Value:0d,Unit:'',Hint:''},28)
+      Parms=Replicate({Name:'unused',Value:0d,Unit:'',Hint:''},29)
       Parms[0].Name='dS'           & Parms[0].Value=0.180E+19    & Parms[0].Unit='cm^2'    & Parms[0].Hint='Source/pixel Area'
       Parms[1].Name='dR'           & Parms[1].Value=0.600E+09    & Parms[1].Unit='cm'      & Parms[1].Hint='Source/voxel Depth'
       Parms[2].Name='T_0'          & Parms[2].Value=0.200E+08    & Parms[2].Unit='K'       & Parms[2].Hint='Plasma Temperature'
@@ -44,12 +46,13 @@ pro xray_tt_albedo,parms,rowdata,rparms,xray_cs=xray_cs,albedo=albedo,info=info
       Parms[25].Name='Bz'          & Parms[25].Value=100          & Parms[25].Unit='Gauss'   & Parms[25].Hint='Signed vertical magnetic field component'
       Parms[26].Name='a'           & Parms[26].Value=1            & Parms[26].Unit='none'    & Parms[26].Hint='chromo anisotropy ratio'
       Parms[27].Name='hc_angle'    & Parms[27].Value=45           & Parms[27].Unit='degrees' & Parms[27].Hint='Heliocentric angle (0-90 deg)'
+      Parms[28].Name='rsun'        & Parms[28].Value=960          & Parms[28].Unit='arcseconds' & Parms[28].Hint="Observer's solar radius"
       ; corrected by Eduard@glasgow after converstation with Gelu Nita about Parms.unit
       rparms=[{name:'relative_abundance',value:1d,unit:'',user:1.0,hint:'Relative to coronal abundance for Chianti'}]
-     endif else begin
+    endif else begin
       parms=info.parms
       rparms=info.rparms
-     endelse
+    endelse
     E1=Parms[15].value
     dEph=Parms[16].value
     Eph=10^(Alog10(E1)+findgen(Parms[18].value)*dEph)
@@ -98,6 +101,7 @@ pro xray_tt_albedo,parms,rowdata,rparms,xray_cs=xray_cs,albedo=albedo,info=info
   anisotropy=chromo_anis
 
   angle=Parmin[27,0]
+  r_sun=Parmin[28,0]
   mu=cos(angle*!PI/180.)
   Print,'Correction for an source at ',acos(mu)*180./!PI,' degrees', '  cos(theta) =',mu
 
@@ -412,10 +416,12 @@ pro xray_tt_albedo,parms,rowdata,rparms,xray_cs=xray_cs,albedo=albedo,info=info
         ; background thermal electron distribution
       ENDFOR
       ;ends FOR loop over voxels
+
+      eph_dataout=eph_dataout*(R_sun/960.)^2 ; R_sun in arcseconds
+
       rowdata[r,*,0]=eph_dataout
       rowdata[r,*,1]=(n_elements(albedo) gt 0?anisotropy*(transpose(albedo)#(eph_dataout*deph)):0)
     end
   end
   ;ends FOR over row
 END
-

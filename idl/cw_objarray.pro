@@ -1,5 +1,8 @@
-function objArray::INIT,wParent,value=value,units=units,uname=uname,label=label,names=names,items=items,frame=frame,sensitive=sensitive,display=display,$
-                             column=column,vertical=vertical,row=row,static=static,xlabelsizes=xlabelsizes,$
+function objArray::INIT,wParent,value=value,units=units,uname=uname,$
+                             label=label,names=names,items=items,frame=frame,$
+                             sensitive=sensitive,display=display,$
+                             column=column,vertical=vertical,row=row,$
+                             static=static,xlabelsizes=xlabelsizes,xtextsizes=xtextsizes,format=format,$
                              show_label=show_label,scr_arraylabelsize=scr_arraylabelsize,_extra=_extra
  compile_opt hidden
   catch, error_stat
@@ -38,6 +41,18 @@ function objArray::INIT,wParent,value=value,units=units,uname=uname,label=label,
    1: idisplay=replicate(idisplay,  n_elements(value))
    n_elements(value): idisplay=display
    else: idisplay=replicate(1,  n_elements(value))
+ endcase
+ 
+ case n_elements(format) of
+   1: iformat=replicate(format,  n_elements(value))
+   n_elements(value): iformat=format
+   else: iformat=replicate("(g0)",  n_elements(value))
+ endcase
+ 
+ case n_elements(xtextsizes) of
+   1: ixtextsizes=replicate(xtextsizes,  n_elements(value))
+   n_elements(value): ixtextsizes=xtextsizes
+   else: ixtextsizes=strlen(string(value,format="(g0)")+units)>6
  endcase
   
  void=self->IDLexWidget::Init(wParent,frame=frame)
@@ -95,8 +110,10 @@ function objArray::INIT,wParent,value=value,units=units,uname=uname,label=label,
                 row=keyword_set(vertical)?0:1, $
                 XPAD=0, YPAD=0, SPACE=0,/frame)             
     for i=0,n_elements(value)-1 do begin
-     item=cw_objField(self.wItemBase,value=value[i],units=iunits[i],label=ilabels[i],xlibelsize=ixlabelsizes[i],$
-                      flat=self.flat,sensitive=isensitive[i],map=idisplay[i],_extra=_extra,uname=n_elements(items) eq n_elements(value)?items[i]:ilabels[i])
+     item=cw_objField(self.wItemBase,value=value[i],units=iunits[i],label=ilabels[i],$
+                      xlibelsize=ixlabelsizes[i], xtextsize=ixtextsizes[i],format=iformat[i],$
+                      flat=self.flat,sensitive=isensitive[i],map=idisplay[i],$
+                      uname=n_elements(items) eq n_elements(value)?items[i]:ilabels[i],_extra=_extra)
     end
     
 

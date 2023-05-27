@@ -964,9 +964,9 @@ pro gxModel::SetGrid,grid
   if obj_valid(scanbox) then scanbox->SetGrid,grid
 end
 
-function gxModel::MakeScanboxGrid,parms
+function gxModel::MakeScanboxGrid,parms,grid
  if ~isa(parms) then return,ptr_new()
- grid=self->GetGrid()
+ if n_elements(grid) eq 0 then grid=self->GetGrid()
  if ~ptr_valid(grid) then begin
   scanbox=self->getroi(/scanbox)
   newgrid=scanbox->ComputeGrid()
@@ -978,9 +978,9 @@ function gxModel::MakeScanboxGrid,parms
  ny=dim[2]
  nz=dim[3]
  empty_slice=fltarr(nx,nz)
- grid=ptr_new({grid:grid,B:dblarr(nx*nz,3),$
+ scanboxgrid=ptr_new({grid:grid,B:dblarr(nx*nz,3),$
    parms:dblarr(nx,nz,n_elements(parms)),slice:empty_slice})
- return,grid
+ return,scanboxgrid
 end
 
 function gxModel::concatenate_aparms
@@ -1024,21 +1024,33 @@ function gxModel::concatenate_aparms
  return,{f_arr:f_arr,e_arr:e_arr,mu_arr:mu_arr,spine_arr:spine_arr,time_arr:time_arr}
 end
 
-pro gxModel::Slice,parms,row,scanner=scanner
-  if ~ptr_valid(scanner) then scanner=self->MakeScanboxGrid(parms)
-  void=self->Box2Volume(box2vol=box2vol)
-  grid=self->GetGrid()
-  if ptr_valid(grid) then (*scanner).grid=grid
-  assigned=lonarr(n_elements((*scanner).parms))
-  if ~ptr_valid(grid) then goto, unassigned
+pro gxModel::Slice,parms,row,any_grid,scanner=scanner
+  case (size(any_grid))[0] of
+    1: if ptr_valid(any_grid) then begin
+        if size((*any_grid)[0]) eq 4 then grid=any_grid
+       end
+    4: grid=ptr_new(any_grid)
+    else:
+  endcase
+  if n_elements(grid) eq 0 then grid=self->GetGrid()
+  if ~ptr_valid(grid) then begin
+    message,'No rendering grid computed yet for this model!',/cont
+    return
+  endif
+  if ~ptr_valid(scanner) then scanner=self->MakeScanboxGrid(parms,grid)
+  if ptr_valid(grid) then (*scanner).grid=grid else goto, unassigned
   dim=size(*grid,/dim)
   nx=dim[1]
   ny=dim[2]
   nz=dim[3]
   sz=self->Size(/volume)
+  default,row,0
   dr=reform((*grid)[0,*,row,*])
   g=reform((*grid)[1:3,*,row,*])
-  vol_ind=transpose(reform(g,3,nx*nz))+1e-6;added epsilon correction to fix borderline numerical errors
+  vol_ind=transpose(reform(g,3,nx*nz))
+  assigned=lonarr(n_elements((*scanner).parms))
+  vol_ind+=1e-6;added epsilon correction to fix borderline numerical errors
+  void=self->Box2Volume(box2vol=box2vol)
   missing=0
   (self->GetVolume())->GetVertexAttributeData,'voxel_id',id 
   if n_elements(id) gt 0 then begin
@@ -1218,8 +1230,14 @@ pro gxModel::Slice,parms,row,scanner=scanner
 
   idx=gx_name2idx(parms,'hc_angle')
   if (size(idx))[0] ne 0 then begin
-    self->GetProperty,ns=ns,ew=ew
-    (*scanner).parms[*,*,idx]=asin(sqrt(total((hel2arcmin(ns,ew,radius=rsun,date=(*(self->Refmaps()))->Get(/time)))^2))/rsun)/!dtor
+    btm=self->GetBTM()
+    (*scanner).parms[*,*,idx]=acos((btm##[0,0,1])[2])/!dtor
+    assigned[idx]=1
+  end
+  
+  idx=gx_name2idx(parms,'rsun')
+  if (size(idx))[0] ne 0 then begin
+    (*scanner).parms[*,*,idx]=self->GetLos(/r)*60
     assigned[idx]=1
   end
 
@@ -2076,6 +2094,98 @@ end
 
 function gxModel::SpaceView
  return,self.SpaceView
+end
+
+pro gxModel::AddGyroLayers,fghz,bmax=bmax,smax=smax,hide=hide
+  default,bmax,2400.; Keep only B field values less than 2400 G
+  default,smax,3; default maximum harmonics
+  default,hide,1; surfaces are hided by default after creation
+  b0=[]
+  s=[]
+  freq=[]
+  iso_freq=[]
+  iso_s=[]
+  iso_b=[]
+  for i = 0, n_elements(fghz)-1 do begin
+    for j=smax,1,-1 do begin
+      s=[s,j]
+      freq=[freq,fghz[i]]
+      b0=[b0, fghz[i]/2.8e-3/j]
+    end
+  endfor
+    idx = sort(b0)
+    b0 = b0[idx]
+    s=s[idx]
+    freq=freq[idx]
+    ; Keep only B field values less than bmax
+    good = where(b0 le bmax,ngood)
+    if ngood eq 0 then begin
+      message,'Magnetic fields coresponding to the requested gyro frequencies or their harmonics are above the maximum field strengths of ',string(bmax,format="(g0,' G')")
+      return
+    endif else begin
+      ; Reverse the arrays because we have to load the model from bottom up
+      b0 = reverse(b0[good])
+      s = reverse(s[good])
+      freq = reverse(freq[good])
+    endelse
+    ;check now if some of the requested surfaces alredy exist
+     iso_all=self->get(/all,isa='gxisogauss',count=count)
+     if count gt 0 then begin
+      good=where(obj_valid(iso_all),count)
+      if count gt 0 then iso_all=iso_all[good]
+     endif
+     good=where(obj_valid(iso_all),count);this has a purpose!
+     if count gt 0 then begin
+        iso_all=iso_all[good]
+        for k=0,count-1 do begin
+          iso_freq=[iso_freq,iso_all[k]->GetFreq()]
+          iso_s=[iso_s,iso_all[k]->GetS()]
+          iso_b=[iso_b, iso_freq[k]/2.8e-3/iso_s[k]]
+        endfor
+        todo_idx=[]
+        for i=0,ngood-1 do begin
+         match=where((iso_freq eq freq[i]) and (iso_s eq s[i]),nmatch)
+         if nmatch eq 0 then todo_idx=[todo_idx,i]
+        endfor
+        todo_count= n_elements(todo_idx)
+        if todo_count gt 0 then begin
+         b0 = b0[todo_idx]
+         s=s[todo_idx]
+         freq=freq[todo_idx]
+        endif
+        if n_elements(todo_idx) eq 0 then begin
+          message,'All requested gyroresonace layers allready exist in the model!',/cont
+          return
+        endif
+        self->Remove,iso_all
+     endif  
+     if ~obj_valid(iso_all[0]) then iso_all=[]
+     self->getproperty,xcoord_conv=xcoord_conv,ycoord_conv=ycoord_conv,zcoord_conv=zcoord_conv
+     dummy=self->getB(bx=bx,by=by,bz=bz)
+     b_abs = sqrt(bx^2 + by^2 + bz^2)
+     te = self->GetVertexData('T0')
+     loadct,39
+     tvlct,r,g,b,/get
+     for i = 0, n_elements(b0)-1 do begin
+       ; Calculate all required entities at vertex points
+       ISOSURFACE, b_abs, b0[i], verts, conn, AUXDATA_IN=te, AUXDATA_OUT=te_vert
+       if n_elements(te_vert) gt 0 then begin
+         it = byte(te_vert*255/max(te))
+         vcol = transpose([[r[it]],[g[it]],[b[it]],[replicate(255b,n_elements(it))]])
+         iso_all= [iso_all,obj_new('gxisogauss',verts,polygons=conn,hide=hide,color=[255,255,255],shading=1,vert_colors=vcol,$
+           xcoord_conv=xcoord_conv,ycoord_conv=ycoord_conv,zcoord_conv=zcoord_conv,freq=freq[i],s=s[i],te=te_vert)]
+         iso_b=[iso_b,b0[i]]
+       endif
+     end 
+     if n_elements(iso_b) gt 0 then begin
+       idx = reverse(sort(iso_b))
+       iso_all=iso_all[idx]
+       for k=0,n_elements(idx)-1 do begin
+        iso_all[k]->GetProperty,name=name
+        message,'Adding gyroresonance layer '+strmid(name,3),/cont 
+        self->Add,iso_all[k]
+       endfor
+     endif
 end
 
 pro gxModel__define

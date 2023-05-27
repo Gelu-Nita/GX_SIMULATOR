@@ -132,33 +132,44 @@ dem_run=dem_run,ddm_run=ddm_run,qrun=qrun,lrun=lrun,use_dem=use_dem,has_ddm=has_
    if n_elements(datain) eq 0 then datain=dblarr(7,Nfreq,Npix)
    if n_elements(rowparmin) eq 0 then rowparmin=dblarr(N_parms,Nvox,Npix)
    if n_elements(parmin) eq 0 then parmin=dblarr(N_parms,Nvox)
-  for pix=0, Npix-1 do begin
-    parmin[*,*]=transpose(parms[pix,*,*])
-    dem_interpolate,n,t,los_dem,los_ddm,logtdem=logtdem,dem_run=dem_run,ddm_run=ddm_run,qrun=qrun,lrun=lrun,$
-      qarr=parmin[parms_idx+1,*],larr=parmin[parms_idx+2,*],avgdem=avgdem,use_dem=use_dem,has_ddm=has_ddm
-    DEMvox=where((n gt 0 and t gt 0),nDemvox,comp=noDEMvox,ncomp=nNoDEMvox)
-    if ~keyword_set(has_ddm) then los_ddm=los_dem*0
-    if n_elements(dem) eq 0 then begin
-      sz=size(los_dem)
-      dem=(ddm=dblarr(sz[1],sz[2],Npix))
-    endif
-    dem[*,*,pix]=los_dem
-    ddm[*,*,pix]=los_ddm
-    if nDemVox gt 0 then begin
-      if recomputeNT gt 0 then begin
-        ;Replace n&T computed from volume interpolated DEM/DDM with LOS-interpolated DEM/DDM moments
-        parmin[1,DEMvox]=t[DEMvox]
-        parmin[2,DEMvox]=n[DEMvox]
+
+   skip_DEMDDM=(ndat[4] and ndat[5]) 
+    for pix=0, Npix-1 do begin
+      parmin[*,*]=transpose(parms[pix,*,*])
+      if ~keyword_set(skip_DEMDDM) then begin
+        ;if both DEM_Key and DDM_Key are turned off then skip the dem_interpolate block
+      dem_interpolate,n,t,los_dem,los_ddm,logtdem=logtdem,dem_run=dem_run,ddm_run=ddm_run,qrun=qrun,lrun=lrun,$
+        qarr=parmin[parms_idx+1,*],larr=parmin[parms_idx+2,*],avgdem=avgdem,use_dem=use_dem,has_ddm=has_ddm
+      
+      DEMvox=where((n gt 0 and t gt 0),nDemvox,comp=noDEMvox,ncomp=nNoDEMvox)
+      if ~keyword_set(has_ddm) then los_ddm=los_dem*0
+      if n_elements(dem) eq 0 then begin
+        sz=size(los_dem)
+        dem=(ddm=dblarr(sz[1],sz[2],Npix))
+      endif
+      dem[*,*,pix]=los_dem
+      ddm[*,*,pix]=los_ddm
+      if nDemVox gt 0 then begin
+        if recomputeNT gt 0 then begin
+          ;Replace n&T computed from volume interpolated DEM/DDM with LOS-interpolated DEM/DDM moments
+          parmin[1,DEMvox]=t[DEMvox]
+          parmin[2,DEMvox]=n[DEMvox]
+        end
+        parmin[11,DEMvox]=0
+        parmin[12,DEMvox]=0
       end
-      parmin[11,DEMvox]=0
-      parmin[12,DEMvox]=0
+      if nNoDemVox gt 0 then begin
+        parmin[11,noDEMvox]=1
+        parmin[12,noDEMvox]=1
+      endif
+     end 
+      rowparmin[*,*,pix]=parmin
+    end 
+    if keyword_set(skip_DEMDDM) then begin  
+      Ntemp=ndat[3]
+      tdem=dblarr(Ntemp)
+      dem=(ddm=dblarr(Ntemp,Nvox,Npix))
     end
-    if nNoDemVox gt 0 then begin
-      parmin[11,noDEMvox]=1
-      parmin[12,noDEMvox]=1
-    endif
-    rowparmin[*,*,pix]=parmin
-  end 
    if n_elements(tdem) eq 0 then tdem=10d0^logtdem
    rowparmin=double(rowparmin[0:parms_idx,*,*])
    datain[*]=0

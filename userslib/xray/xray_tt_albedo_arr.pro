@@ -13,7 +13,8 @@
 ; Gelu@njit 15-March-2023 added the option of using array defined parameters. 
 ; NOTE: THiS IS JUST A BETA VERSION, AWAITING VALIDATION FROM Eduard@Glasgow!
 ; Eduard@Glasgow 13-April-2023: corrected the errors in array units
-
+; Eduard@Glasgow 26-may-2023 added scaling for non-AU observations; requires R_sun in arcseconds
+; Gelu@njit 26-may-2023 added interface input for R_sun in arcseconds
 
 pro xray_tt_albedo_arr,parms,rowdata,nparms,rparms,xray_cs=xray_cs,albedo=albedo,E_arr,mu_arr,f_arr,info=info
   if arg_present(info) then begin
@@ -43,7 +44,8 @@ pro xray_tt_albedo_arr,parms,rowdata,nparms,rparms,xray_cs=xray_cs,albedo=albedo
              {Name:'arr_key_loc',Value:0.0,Unit:'1/2/4',Hint:'chromo/TR/corona'},$
              {Name:'SpineS',Value:0.0,unit:'',Hint:'Fluxtube spine longitudinal coordinate '},$
              {Name:'SpineR',Value:0.0,unit:'',Hint:'Fluxtube spine radial distance '},$
-             {Name:'HasArr',Value:0.0,unit:'0/1',Hint:'Fluxtube has array defined distributions'}]
+             {Name:'HasArr',Value:0.0,unit:'0/1',Hint:'Fluxtube has array defined distributions'},$
+             {Name:'rsun',Value:960, unit:'arcseconds', hint:"Observer's solar radius"}]
       nparms=[{name:'N_pix',value:0l,unit:'(int)',user:0,hint:'Number of pixels'},$
               {name:'N_vox',value:0l,unit:'(int)',user:0,hint:'Number of voxels'},$ 
               {name:'N_Eph',value:101l,unit:'(int)',user:1,hint:'Number of energy channels'},$
@@ -108,12 +110,14 @@ pro xray_tt_albedo_arr,parms,rowdata,nparms,rparms,xray_cs=xray_cs,albedo=albedo
   SpineS_idx=23
   SpineR_idx=24
   HasArr_idx=25
+  rsun_idx=26
   ;define rparms indices
   dS_idx= 0
   Eph_min_idx= 1
   dEph_idx= 2
   a_idx= 3
   relative_abundance_idx= 4
+
   ;define nparms indices
   N_pix_idx= 0
   N_vox_idx= 1
@@ -156,7 +160,7 @@ pro xray_tt_albedo_arr,parms,rowdata,nparms,rparms,xray_cs=xray_cs,albedo=albedo
   angle=parms[0,0,hc_angle_idx]
   mu=cos(angle*!PI/180.)
   Print,'Correction for an source at ',acos(mu)*180./!PI,' degrees', '  cos(theta) =',mu
-
+  r_sun=parms[0,0,rsun_idx]
   ; the following lines upload albedo correction files
   ; The description of the method is given in
   ;http://adsabs.harvard.edu/abs/2006A%26A...446.1157K
@@ -567,6 +571,7 @@ endcase
         ; background thermal electron distribution
       ENDFOR
       ;ends FOR loop over voxels
+      eph_dataout=eph_dataout*(R_sun/960.)^2 ; R_sun in arcseconds
       rowdata[los_idx,*,0]=eph_dataout
       rowdata[los_idx,*,1]=(n_elements(albedo) gt 0?anisotropy*(transpose(albedo)#(eph_dataout*deph)):0)
     end
