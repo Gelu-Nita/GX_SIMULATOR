@@ -4,6 +4,7 @@
 ; modified by Eduard@Glasgow 27 July 2017  - added soft x-ray calculations using f_vth from RHESSI OSPEX
 ; see also https://hesperia.gsfc.nasa.gov/ssw/packages/xray/idl/f_thick_warm.pro
 ; modified by Gelu@NJIT 24 Dec 2022  - added relative_abundances user input
+;Gelu@njit 28-may-2023 added scaling for non-AU observations and added interface input for R_sun in arcseconds
 
 
 
@@ -32,6 +33,7 @@ pro xray,parms,rowdata,rparms,xray_cs=xray_cs,info=info
        Parms[17].Name='Dist_E'      & Parms[17].Value=3            & Parms[17].Unit='none'    & Parms[17].Hint='Type of distribution over energy'
        Parms[18].Name='N_E'         & Parms[18].Value=101          & Parms[18].Unit='none'    & Parms[18].Hint='Number of energy channels'
        Parms[19].Name='VoxelID'    & Parms[19].Value=0            & Parms[19].Unit='0/1/2' & Parms[19].Hint='chromo/TR/corona'
+       Parms[20].Name='rsun'        & Parms[20].Value=960          & Parms[20].Unit='arcseconds' & Parms[20].Hint="Observer's solar radius"
        rparms=[{name:'relative_abundance',value:1d,unit:'',user:1.0,hint:'Relative to coronal abundance for Chianti'}]
      endif else begin
       parms=info.parms
@@ -98,6 +100,7 @@ pro xray,parms,rowdata,rparms,xray_cs=xray_cs,info=info
    ; normalisation factor
    EM49=reform(V_vox*Np_vox^2*1d-49)
    ;
+   r_sun=parmin[28,0]
   ;main loop over all voxels  
    FOR i=0,Nvox-1 DO BEGIN
   
@@ -253,6 +256,7 @@ pro xray,parms,rowdata,rparms,xray_cs=xray_cs,info=info
 ENDFOR
    ;ends FOR loop over voxels   
    ;rowdata[r,*]=(xray_cs#(e_dataout*DE))
+   eph_dataout=eph_dataout*(R_sun/960.)^2 ; R_sun in arcseconds
    rowdata[r,*]=eph_dataout
    ;turning mean LOS electron flux into photon flux
    

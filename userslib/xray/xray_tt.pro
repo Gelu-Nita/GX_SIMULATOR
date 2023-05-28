@@ -8,11 +8,12 @@
 ;
 ;gnita@njit 07-Dec-2017 change explicit TR index from 2L to gx_voxelid(/tr) to allow future redefinition if needed
 ;modified by Gelu@NJIT 24 Dec 2022  - added relative_abundances user input
+;Gelu@njit 28-may-2023 added scaling for non-AU observations and added interface input for R_sun in arcseconds
 
 pro xray_tt,parms,rowdata,rparms,xray_cs=xray_cs,info=info
  if arg_present(info) then begin
      if n_elements(info) eq 0 then begin
-       Parms=Replicate({Name:'unused',Value:0d,Unit:'',Hint:''},20)
+       Parms=Replicate({Name:'unused',Value:0d,Unit:'',Hint:''},21)
        Parms[0].Name='dS'           & Parms[0].Value=0.180E+19    & Parms[0].Unit='cm^2'    & Parms[0].Hint='Source/pixel Area'
        Parms[1].Name='dR'           & Parms[1].Value=0.600E+09    & Parms[1].Unit='cm'      & Parms[1].Hint='Source/voxel Depth'
        Parms[2].Name='T_0'          & Parms[2].Value=0.200E+08    & Parms[2].Unit='K'       & Parms[2].Hint='Plasma Temperature'
@@ -33,6 +34,8 @@ pro xray_tt,parms,rowdata,rparms,xray_cs=xray_cs,info=info
        Parms[17].Name='Dist_E'      & Parms[17].Value=3            & Parms[17].Unit='none'    & Parms[17].Hint='Type of distribution over energy'
        Parms[18].Name='N_E'         & Parms[18].Value=101          & Parms[18].Unit='none'    & Parms[18].Hint='Number of energy channels'
        Parms[19].Name='VoxelID'    & Parms[19].Value=0            & Parms[19].Unit='1/2/4' & Parms[19].Hint='chromo/TR/corona'
+       Parms[20].Name='rsun'        & Parms[20].Value=960          & Parms[20].Unit='arcseconds' & Parms[20].Hint="Observer's solar radius"
+
        ; corrected by Eduard@glasgow after converstation with Gelu Nita about Parms.unit 
         rparms=[{name:'relative_abundance',value:1d,unit:'',user:1.0,hint:'Relative to coronal abundance for Chianti'}]
      endif else begin
@@ -114,6 +117,7 @@ pro xray_tt,parms,rowdata,rparms,xray_cs=xray_cs,info=info
    EM49=reform(V_vox*Np_vox^2*1d-49)
    npV =V_vox*Np_vox
    ;
+   r_sun=parmin[28,0]
   ;main loop over all voxels  
    FOR i=0,Nvox-1 DO BEGIN
   
@@ -343,6 +347,7 @@ pro xray_tt,parms,rowdata,rparms,xray_cs=xray_cs,info=info
 ENDFOR
    ;ends FOR loop over voxels   
    ;rowdata[r,*]=(xray_cs#(e_dataout*DE))
+   eph_dataout=eph_dataout*(R_sun/960.)^2 ; R_sun in arcseconds
    rowdata[r,*]=eph_dataout
    ;turning mean LOS electron flux into photon flux
       
