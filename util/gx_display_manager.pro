@@ -1,4 +1,5 @@
 pro display_freq,selected,tlb
+  widget_control,/hourglass
   wsurface=widget_info(tlb,find_by_uname='select_surface')
   wopacity=widget_info(tlb,find_by_uname='select_opacity')
   wstyle=widget_info(tlb,find_by_uname='select_style')
@@ -54,6 +55,11 @@ pro SortModelObjects, model,iso=iso,freq=freq,non_iso=non_iso
     iso=list()
     freq=list()
   endelse
+  all=model->get(/all,isa='gxisogauss',count=count)
+  if count gt 0 then begin
+    model->Remove,all
+    model->Add,all
+  endif
 end
 
 function GetSelectedIso,iso,freq,info=info

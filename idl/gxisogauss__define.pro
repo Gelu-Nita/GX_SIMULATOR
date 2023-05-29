@@ -140,7 +140,7 @@ pro gxisogauss::update,force_update=force_update,_extra=_extra
   ds=dx*dy*(gx_rsun(unit='cm')^2)
   gx_setparm,info,'dS',ds
   gx_setparm,info,'freqlist',self.freq
-  gx_setparm,info,'mech_flag',0;2
+  gx_setparm,info,'mech_flag',2
   gx_setparm,info,'s_max',self.s
   freqlist=info.spectrum.x.axis
   info=gx_rendererinfo(renderer,info=info)
