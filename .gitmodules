@@ -13,3 +13,6 @@
 [submodule "external/mw/grffdem"]
 	path = external/mw/grffdem
 	url = https://github.com/kuznetsov-radio/GRFF
+[submodule "external/grid"]
+	path = external/grid
+	url = https://github.com/kuznetsov-radio/RenderIrregular
