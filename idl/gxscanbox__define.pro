@@ -533,6 +533,7 @@ pro gxScanBox::NewGrid,xrange=xrange,yrange=yrange,zrange=zrange,nx=nx,ny=ny,com
      sroi=moi->getroi(/scanbox)
      dim=sroi->GetDim()
      nz=dim[2]
+     obs2sun=moi->getAu()
     endif
     self.roi->ReplaceData,sdata
     self.xrange=xrange
@@ -566,6 +567,23 @@ pro gxScanBox::NewGrid,xrange=xrange,yrange=yrange,zrange=zrange,nx=nx,ny=ny,com
         if idx ge 0 then begin
           rparms=(*self.info).rparms
           rparms[idx].value=ds
+          (*self.info).rparms=rparms
+        endif
+      endif
+    endelse
+    idx=self->name2idx('distance')
+    default,obs2sun,1d
+    if idx ge 0 then begin
+      table[idx].value=obs2sun
+      parms[idx].value=obs2sun
+    endif else begin
+      if tag_exist(*self.info,'rparms') and widget_valid(self.wRparms) then begin
+        wdistance=widget_info(self.wRparms,find_by_uname='distance')
+        if widget_valid(wdistance) then widget_control,wdistance,set_value=obs2sun
+        idx=gx_name2idx((*self.info).rparms,'distance')
+        if idx ge 0 then begin
+          rparms=(*self.info).rparms
+          rparms[idx].value=obs2sun
           (*self.info).rparms=rparms
         endif
       endif

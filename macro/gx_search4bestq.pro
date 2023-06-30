@@ -57,7 +57,7 @@ function gx_search4bestq, gxmpath=gxmpath,a_arr=a_arr,b_arr=b_arr,q_start=q_star
      almost_done=0
      done_res=0b
      done_chi=0b
-     apply2=1
+     default,apply2,3
      force_done=0
      if n_elements(freq) ne 0 then begin
        if isa(_extra,'STRUCT') then begin
@@ -65,6 +65,7 @@ function gx_search4bestq, gxmpath=gxmpath,a_arr=a_arr,b_arr=b_arr,q_start=q_star
          if ~tag_exist(_extra,'n_freq') then _extra=create_struct(_extra,'n_freq',1)
        endif else _extra={f_min:freq*1d9,n_freq:1}
      endif
+     counter=0
      REPEAT BEGIN; until done       
         for j=0,n_elements(q)-1 do begin
           modfile=modDir+path_sep()+strcompress(string(a,b,q[j],format="('i_a',f7.2,'b',f7.2,'q',g0,'.map')"),/rem)
@@ -96,17 +97,18 @@ function gx_search4bestq, gxmpath=gxmpath,a_arr=a_arr,b_arr=b_arr,q_start=q_star
           modDir=modDir,psDir=psDir,$
           levels=levels,resize=resize,$
           file_arr=file_arr,apply2=apply2,done=force_done,$
-          refdatapath=refdatapath,gxmpath=gxmpath,q_start=q_start)
+          refdatapath=refdatapath,gxmpath=gxmpath,q_start=q_start,counter=counter)
         if size(result,/tname) eq 'STRUCT' then begin
-          add_q=(apply2 eq 1)?((result.res_done eq 0) and (result.chi_done  eq 0)):((result.res_done eq 0) or (result.chi_done  eq 0))
+          add_q=(apply2 eq 1)?((result.res2_done eq 0) and (result.chi2_done  eq 0)):((result.res2_done eq 0) or (result.chi2_done  eq 0))
           if add_q eq 1 then begin
             nq=n_elements(q)
             if apply2 eq 1 then begin
-              if result.res_done eq 0 then q=[q,result.q_res_best] else q=[q,result.q_chi_best]
+              if result.res2_done eq 0 then q=[q,result.q_res2_best] else q=[q,result.q_chi2_best]
             endif else begin
-              q=[q,result.q_res_best,result.q_chi_best]
+              q=[q,result.q_res2_best,result.q_chi2_best]
             endelse
             q=q[uniq(q,sort(q))]
+            q=q[where(finite(q) eq 1)]
             if n_elements(q) eq nq then begin
               if apply2 eq 1 then apply2=3 else force_done=1
             endif

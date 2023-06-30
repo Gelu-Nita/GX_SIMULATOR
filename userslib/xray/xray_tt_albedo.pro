@@ -187,9 +187,6 @@ pro xray_tt_albedo,parms,rowdata,rparms,xray_cs=xray_cs,albedo=albedo,info=info
         IF ((ulong(Parmin[19,i]) and gx_voxelid(/tr)) EQ gx_voxelid(/tr))  THEN BEGIN
           ;anis defined below is used to multiply below e_data_tt when needed
           anis=anis_factor(Parmin[20,i], Parmin[21,i], Parmin[22,i], Parmin[23,i], Parmin[24,i],Parmin[25,i])
-
-          print,anis
-
           ; the value that mimics anisotropy of the source
         ENDIF
         ;**********************************************************
@@ -418,9 +415,8 @@ pro xray_tt_albedo,parms,rowdata,rparms,xray_cs=xray_cs,albedo=albedo,info=info
       ;ends FOR loop over voxels
 
       eph_dataout=eph_dataout*(R_sun/960.)^2 ; R_sun in arcseconds
-
-      rowdata[r,*,0]=eph_dataout
-      rowdata[r,*,1]=(n_elements(albedo) gt 0?anisotropy*(transpose(albedo)#(eph_dataout*deph)):0)
+      rowdata[r,*,0]=eph_dataout;DIRECT FLUX
+      rowdata[r,*,1]=(n_elements(albedo) gt 0?anisotropy*(transpose(albedo)#(eph_dataout*deph)):0);ALBEDO FLUX
     end
   end
   ;ends FOR over row

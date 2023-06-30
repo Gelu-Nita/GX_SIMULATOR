@@ -12,8 +12,8 @@ compile_opt idl2
  objMetricsArr=objarr(n_elements(result),2)
  q_best=dblarr(n_elements(result),2)
  modFilesArr=strarr(n_elements(result),2)
- objMetricsArr[*,0]=result.RES_BEST_METRICS
- objMetricsArr[*,1]=result.CHI_BEST_METRICS
+ objMetricsArr[*,0]=result.RES2_BEST_METRICS
+ objMetricsArr[*,1]=result.CHI2_BEST_METRICS
  modFilesArr[*,0]=result.res2_best_file
  modFilesArr[*,1]=result.chi2_best_file
  q_best[*,0]=result.Q_RES2_BEST

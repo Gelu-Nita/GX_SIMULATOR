@@ -617,7 +617,6 @@ pro gxVolume::Update,select,data=data,plot_model_attributes=plot_model_attribute
     endif else chromo_view=0
   end
   if n_elements(select) ne 0 then self.select=strcompress(select,/rem)
-  self->SetColor,/auto
   case self.select of
   'Bx'  :begin
          data=self->GetBx(/volume)
@@ -735,7 +734,7 @@ pro gxVolume::Update,select,data=data,plot_model_attributes=plot_model_attribute
                 if n_elements(owned) gt 1 then begin
                  base->GetVertexAttributeData,'n_nth',n_nth
                  base->GetVertexAttributeData,'N_IDX',n_idx
-                 ndata[n_idx]=n_nth;+tubes[j]->get_nb_arr()
+                 ndata[n_idx]=n_nth
                  data[owned]=ndata[owned]
                 end 
               end 
@@ -829,7 +828,7 @@ pro gxVolume::Update,select,data=data,plot_model_attributes=plot_model_attribute
    endcase
    defined:
    if keyword_set(getdata) then return
-   
+   self->SetColor,/auto
    message,strcompress(self.select+' range: ['+arr2str(minmax(data)))+']',/info
    IsCombo=self.parent->IsCombo(csize=csize,bsize=bsize,chromo_layers=chromo_layers, corona_base=corona_base)
    if ~keyword_set(chromo_view) and chromo_layers gt 0 then begin

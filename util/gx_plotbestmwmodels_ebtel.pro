@@ -9,9 +9,9 @@ compile_opt idl2
 default,charsize,!p.charsize
 default,psDir,curdir()+'\psDir'
 if not file_test(psDir) then file_mkdir,psDir
- 
+if arg_present(maps_best) then return_best_maps=1 
  ;----------------------------------------------------------------------------
- objMetricsArr=[[result.RES_BEST_METRICS],[result.CHI_BEST_METRICS]]
+ objMetricsArr=[[result.RES2_BEST_METRICS],[result.CHI2_BEST_METRICS]]
  psFilesArr=[psDir+'\BestRes.ps',psDir+'\BestChi.ps']
  psPlotsArr=[keyword_set(plot_res),keyword_set(plot_chi)]
  modFilesArr=[[result.res2_best_file],[result.chi2_best_file]]
@@ -352,7 +352,7 @@ if not file_test(psDir) then file_mkdir,psDir
    plot_map,CHI2_MAP,charsize=charsize,title=filnam+'CHI!U2!N Map' ,dmax=d_res*20, dmin=0 ;-d_res*10
    xyouts,x[10*sx,90*sy],y[10*sx,90*sy],string(chi,format="(' Chi=',g0)"),charsize=charsize,color=200
    xyouts,x[10*sx,90*sy],y[10*sx,80*sy],string(chi2,format="(' Chi!U2!N=',g0)"),charsize=charsize,color=200
-   maps_best=[maps_best,{modI:modI,obsI:obsI,RES_NORM_MAP:RES_NORM_MAP,CHI2_MAP:CHI2_MAP,a:a,b:b,q0:q0,npix:npix,R:R,chi:chi,chi2:chi2,res:res,res2:res2}]
+   if keyword_set(return_best_maps) then maps_best=[maps_best,{modI:modI,obsI:obsI,RES_NORM_MAP:RES_NORM_MAP,CHI2_MAP:CHI2_MAP,a:a,b:b,q0:q0,npix:npix,R:R,chi:chi,chi2:chi2,res:res,res2:res2}]
  endfor
  device,/close
  !p.font=0 
@@ -360,5 +360,6 @@ if not file_test(psDir) then file_mkdir,psDir
  a=a_arr
  b=b_arr
  set_plot,thisDEvice
+ if !version.os_family eq 'Windows' then cgPS2PDF,psDir+'\Best of Bests.ps',/delete_ps; convert to pdf if on windows platform as GSVIEW stopped being supported
 end
 

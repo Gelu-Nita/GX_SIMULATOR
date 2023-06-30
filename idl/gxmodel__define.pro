@@ -2096,6 +2096,12 @@ function gxModel::SpaceView
  return,self.SpaceView
 end
 
+function gxModel::GetAU
+ rsun_model=self->GetLos(/r)*60
+ rsun_1au=3600*atan(wcs_rsun(),wcs_au())/!dtor
+ return,rsun_1au/rsun_model
+end
+
 pro gxModel::AddGyroLayers,fghz,bmax=bmax,smax=smax,hide=hide
   default,bmax,2400.; Keep only B field values less than 2400 G
   default,smax,3; default maximum harmonics
@@ -2107,7 +2113,7 @@ pro gxModel::AddGyroLayers,fghz,bmax=bmax,smax=smax,hide=hide
   iso_s=[]
   iso_b=[]
   for i = 0, n_elements(fghz)-1 do begin
-    for j=smax,1,-1 do begin
+    for j=smax,2,-1 do begin
       s=[s,j]
       freq=[freq,fghz[i]]
       b0=[b0, fghz[i]/2.8e-3/j]

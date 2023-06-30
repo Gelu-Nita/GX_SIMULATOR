@@ -77,7 +77,7 @@ function gx_metrics_map, map, reference, sdev,no_align=no_align,metrics=metrics,
   dx=keyword_set(no_align)?0:(map.xc-map.orig_xc)
   dy=keyword_set(no_align)?0:(map.yc-map.orig_yc)
   
-  map.id=string(dx,dy,metrics.r,format="('ALLIGNED [',f5.2,',',f5.2,'] (R=',f5.2,')')")+map.id
+  map.id=strcompress(string(dx,dy,metrics.r,format="('ALLIGNED [',f6.2,',',f6.2,'] (R=',f6.2,')')"))+map.id
   add_prop,map,roi_metrics=metrics.r
   add_prop,map,uname='MAP:R',/replace
   omap->setmap,k++,map

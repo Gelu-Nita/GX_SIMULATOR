@@ -636,6 +636,11 @@ END
 
 PRO gxFluxTube::Compute_EM,key,n_total,n2_total
   default,key,'n_0'
+  case key of
+    'n_0':  Self->Update_N_TH,/no_volume_update
+    'n_b':  Self->Update_N_NTH
+    else:
+  endcase
   self.base->GetVertexAttributeData,'owned',owned
   volume=(self.parent->GetVolume())
   volume->Update,key,data=n,/update,/getdata,/chromo_view
@@ -655,23 +660,24 @@ end
 
 PRO gxFluxTube::Display_EM
   if ~widget_valid(self.wparent) then return
-  self.base->GetVertexAttributeData,'owned',owned
-  self.base->GetVertexAttributeData,'N_IDX',n_idx
-  self.base->GetVertexAttributeData,'n_nth',n_nth
-  n_nth=n_nth+self->get_nb_arr()
-  volume=(self.parent->GetVolume())
-  volume->GetVertexAttributeData,'n0',n0
-  key='n_0'
-  n=n0[owned]
-  voxelid=self.parent->GetVoxelId()
-  voxelid=voxelid[owned]
-  corona_idx=where(voxelid and gx_voxelid(/corona),comp=chromo_idx)
-  corona_n=n[corona_idx]
-  chromo_n=n[chromo_idx]
-  self.parent->GetProperty,xcoord_conv=dx,ycoord_conv=dy,zcoord_conv=dz
-  dv=dx[1]*dy[1]*dz[1]*((gx_rsun())^3)
-  n_total=[total(chromo_n,/double,/nan)*dv,total(corona_n,/double,/nan)*dv]
-  n2_total=[total(chromo_n^2,/double,/nan)*dv,total(corona_n^2,/double,/nan)*dv]
+;  self.base->GetVertexAttributeData,'owned',owned
+;  self.base->GetVertexAttributeData,'N_IDX',n_idx
+;  self.base->GetVertexAttributeData,'n_nth',n_nth
+;  n_nth=n_nth+self->get_nb_arr()
+;  volume=(self.parent->GetVolume())
+;  volume->GetVertexAttributeData,'n0',n0
+;  key='n_0'
+;  n=n0[owned]
+;  voxelid=self.parent->GetVoxelId()
+;  voxelid=voxelid[owned]
+;  corona_idx=where(voxelid and gx_voxelid(/corona),comp=chromo_idx)
+;  corona_n=n[corona_idx]
+;  chromo_n=n[chromo_idx]
+;  self.parent->GetProperty,xcoord_conv=dx,ycoord_conv=dy,zcoord_conv=dz
+;  dv=dx[1]*dy[1]*dz[1]*((gx_rsun())^3)
+;  n_total=[total(chromo_n,/double,/nan)*dv,total(corona_n,/double,/nan)*dv]
+;  n2_total=[total(chromo_n^2,/double,/nan)*dv,total(corona_n^2,/double,/nan)*dv]
+  self->Compute_EM,'n_0',n_total,n2_total
   wid=widget_info(self.wparent,find_by_uname='GXFLUXTUBE:n0_total_chromo')
   if widget_valid(wid) then widget_control,wid,set_value=n_total[0]
   wid=widget_info(self.wparent,find_by_uname='GXFLUXTUBE:n0_total_corona')
@@ -684,19 +690,20 @@ PRO gxFluxTube::Display_EM
   if widget_valid(wid) then widget_control,wid,set_value=total(n_total,/double)
   wid=widget_info(self.wparent,find_by_uname='GXFLUXTUBE:n0^2_total')
   if widget_valid(wid) then widget_control,wid,set_value=total(n2_total,/double)
-  key='n_b'
-  n0[*]=0
-  n0[n_idx]=n_nth
-  n=n0[owned]
-  voxelid=self.parent->GetVoxelId()
-  voxelid=voxelid[owned]
-  corona_idx=where(voxelid and gx_voxelid(/corona),comp=chromo_idx)
-  corona_n=n[corona_idx]
-  chromo_n=n[chromo_idx]
-  self.parent->GetProperty,xcoord_conv=dx,ycoord_conv=dy,zcoord_conv=dz
-  dv=dx[1]*dy[1]*dz[1]*((gx_rsun())^3)
-  n_total=[total(chromo_n,/double,/nan)*dv,total(corona_n,/double,/nan)*dv]
-  n2_total=[total(chromo_n^2,/double,/nan)*dv,total(corona_n^2,/double,/nan)*dv]
+;  key='n_b'
+;  n0[*]=0
+;  n0[n_idx]=n_nth
+;  n=n0[owned]
+;  voxelid=self.parent->GetVoxelId()
+;  voxelid=voxelid[owned]
+;  corona_idx=where(voxelid and gx_voxelid(/corona),comp=chromo_idx)
+;  corona_n=n[corona_idx]
+;  chromo_n=n[chromo_idx]
+;  self.parent->GetProperty,xcoord_conv=dx,ycoord_conv=dy,zcoord_conv=dz
+;  dv=dx[1]*dy[1]*dz[1]*((gx_rsun())^3)
+;  n_total=[total(chromo_n,/double,/nan)*dv,total(corona_n,/double,/nan)*dv]
+;  n2_total=[total(chromo_n^2,/double,/nan)*dv,total(corona_n^2,/double,/nan)*dv]
+  self->Compute_EM,'n_b',n_total,n2_total
   wid=widget_info(self.wparent,find_by_uname='GXFLUXTUBE:nb_total_chromo')
   if widget_valid(wid) then widget_control,wid,set_value=n_total[0]
   wid=widget_info(self.wparent,find_by_uname='GXFLUXTUBE:nb_total_corona')

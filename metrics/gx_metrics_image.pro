@@ -51,8 +51,9 @@
   ; :Author: Sergey Anfinopgentov (anfinogentov@iszf.irk.ru)
   ;  Modification history:
   ;  07/08/20-Gelu Nita (gnita@njit.edu) Redefined metrics and addded the option of using SDEV images
+  ;  06/07/23-Gelu Nita (gnita@njit.edu) added the no_renorm keyword to allow computation of classic metrics
 
-function gx_metrics_image, data_model, data_obs, data_sdev,mask=mask,apply2=apply2,n_free=n_free
+function gx_metrics_image, data_model, data_obs, data_sdev,mask=mask,apply2=apply2,n_free=n_free,no_renorm=no_renorm
   if ~isa(data_model) or ~isa(data_obs) then begin
     message, 'Model Data, Observational Data, or both, not provided',/info
     return,!null
@@ -125,10 +126,10 @@ function gx_metrics_image, data_model, data_obs, data_sdev,mask=mask,apply2=appl
          res_norm=total(res_img_norm[mask_pix])/n_mask_pix
          res2_img=res_img^2
          if nbad gt 0 then res2_img[bad]=0
-         res2=total(res2_img[mask_pix])/n_mask_pix-res^2
+         res2=total(res2_img[mask_pix])/n_mask_pix-keyword_set(no_renorm)?0:res^2
          res2_img_norm=res_img_norm^2
          if nbad gt 0 then res2_img_norm[bad]=1
-         res2_norm=total(res2_img_norm[mask_pix])/n_mask_pix-res_norm^2
+         res2_norm=total(res2_img_norm[mask_pix])/n_mask_pix-(keyword_set(no_renorm)?0:res_norm^2)
  metrics={R:R,$
           mask_img:img_mask,$
           res_img:res_img,$
@@ -146,7 +147,7 @@ function gx_metrics_image, data_model, data_obs, data_sdev,mask=mask,apply2=appl
          chi=total(chi_img[mask_pix])/n_mask_pix
          chi2_img=chi_img^2
          if nbad gt 0 then chi2_img[bad]=1
-         chi2=total(chi2_img[mask_pix])/(n_mask_pix-n_free)-chi^2
+         chi2=total(chi2_img[mask_pix])/(n_mask_pix-n_free)-(keyword_set(no_renorm)?0:chi^2)
  chi_metrics={$
          chi_img:chi_img,$
          chi:chi,$

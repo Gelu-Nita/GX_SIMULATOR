@@ -37,7 +37,6 @@
   ;
   ; :Author: Gelu Nita (gnita@njit.edu) 7/26/20
   ;  Modification history:
-  ;  
 
 function gx_metrics_spectrum, data_model, data_obs, data_sdev,range_idx=range_idx,n_free=n_free
   

@@ -49,33 +49,47 @@ pro gxisogauss::Select,select
   endif  
 end
 
-function gxisogauss::GetT,lcp=lcp,rcp=rcp,te=te,id=id,opacity=opacity,alpha=alpha
+function gxisogauss::GetL
+return,ptr_valid(self.grparms)?reform((*self.grparms)[4,*]):!NUll
+end
+
+function gxisogauss::GetT,lcp=lcp,rcp=rcp,te=te,id=id,opacity=opacity,alpha=alpha,effective=effective
   if ~ptr_valid(self.te) then return,!null
-  if ~ptr_valid(self.tb_lcp) or ~ptr_valid(self.tb_rcp) then self->Update,/force,/full
+  if ~ptr_valid(self.grparms) then self->Update,/force,/full
   if keyword_set(te) then self.selected=0
   if keyword_set(lcp) then self.selected=1
   if keyword_set(rcp) then self.selected=2
-  case self.selected of 
-    1:begin
-       id='Tb_lcp'
-       Tb=*self.tb_lcp
-      end
-    2:begin
-       id='Tb_rcp'
-       Tb=*self.tb_rcp
-      end
-    else:begin
-          id='Te'
-          Tb=*self.te
-         end
-  endcase
-  if keyword_set(opacity) or keyword_set(alpha) then begin
-    opacity=keyword_set(opacity)?opacity:1
-    if opacity gt 1 then alpha=1
-    Tb=self->GetOpacity(Tb,alpha=alpha)
-    id=(keyword_set(alpha)?'Opacity ':'Optical Depth ')+id
+ case self.selected of
+  0:begin
+     Tb=*self.te
+     tau=replicate(1d,n_elements(Tb))
+     op=replicate(1d,n_elements(Tb))
+    end 
+  1:begin 
+    Tb=reform((*self.grparms)[0,*])
+    tau=reform((*self.grparms)[1,*])
+    op=reform(1-exp(-tau))
+    end
+  2:begin 
+     Tb=reform((*self.grparms)[2,*])
+     tau=reform((*self.grparms)[3,*])
+     op=reform(1-exp(-tau))
+    end
+  end  
+  if keyword_set(alpha) then begin
+    id='Alpha'
+    return,byte((tau<1)*255)
   endif
-  return,Tb
+  if keyword_set(opacity) then begin
+    id='Opacity'
+    return, op
+  endif
+  if keyword_set(effective) then begin
+    id='Effective Temperature'
+    return, Tb
+  endif
+  id='Tb'
+  return,Tb*op
 end
 
 function gxisogauss::ComputeGrid,nz=nz,full=full
@@ -128,26 +142,26 @@ pro gxisogauss::update,force_update=force_update,_extra=_extra
     message,'parent is not a valid gxmodel object!',/cont
     return
   endif
-  if ~ptr_valid(self.te) or ~ptr_valid(self.tb_lcp) or ~ptr_valid(self.tb_rcp) then force_update=1
+  if ~ptr_valid(self.grparms) then force_update=1
   if ~keyword_set(force_update) then return
   message,'Updating the isogauss '+self.name+' surface, it might take a while!',/cont
   dx=self.YCOORD_CONV[1]
   dy=self.YCOORD_CONV[1]
   dz=self.ZCOORD_CONV[1]
   grid=self->ComputeGrid(_extra=_extra)
-  renderer=!version.os_family eq 'Windows'?'grff_dem_transfer':'grffdemtransfer'
+  renderer='gr_isogauss'
   info=gx_rendererinfo(renderer)
   ds=dx*dy*(gx_rsun(unit='cm')^2)
   gx_setparm,info,'dS',ds
   gx_setparm,info,'freqlist',self.freq
-  gx_setparm,info,'mech_flag',2
+  gx_setparm,info,'s_min',self.s
   gx_setparm,info,'s_max',self.s
   freqlist=info.spectrum.x.axis
-  info=gx_rendererinfo(renderer,info=info)
   ;here the gx_rendererinfo automatic settings are replaced
   gx_setparm,info,'DEM_key',1
   gx_setparm,info,'DDM_key',1
   ;end replacement
+  info=gx_rendererinfo(renderer,info=info)
   sz=size(grid)
   nx=sz[2]
   nvox=sz[4]
@@ -161,17 +175,10 @@ pro gxisogauss::update,force_update=force_update,_extra=_extra
   model->Slice,info.parms,0,grid,scanner=scanner
   parms=(*scanner).parms
   result=execute(info.execute)
-  coeff=1.4568525e026/ds/(self.freq)^2
-  coeff=coeff/2; NORH convention
-  ptr_free,self.tb_lcp & self.tb_lcp=ptr_new(coeff*rowdata[*,0,0,0]) ; LCP Brightness teerature
-  ptr_free,self.tb_rcp & self.tb_rcp=ptr_new(coeff*rowdata[*,0,1,0]) ; RCP Brightness teerature
+  ptr_free,self.grparms & self.grparms=ptr_new(reform(grparms))
   message,'update of '+self.name+' surface completed!',/cont
 end
 
-function gxisogauss::GetOpacity,Tb,alpha=alpha
- tau=n_elements(tb) gt 0?alog(*self.te / ((*self.te - 2*Tb)>0.0001)):replicate(100.,n_elements(*self.te ))
- return,keyword_set(alpha)?((n_elements(tb) gt 0 and self.selected ne 0)?byte((tau>0.0)*255):replicate(255b,n_elements(*self.te ))):tau
-end
 
 function gxisogauss::IsOpaque
  return,self.opaque
@@ -201,15 +208,32 @@ pro gxisogauss::Display,select,hide=hide,lcp=lcp,rcp=rcp,te=te,opaque=opaque,$
  if keyword_set(lcp) and  ~keyword_set(rcp) then self.selected=1
  if keyword_set(rcp) and  ~keyword_set(lcp) then self.selected=2
  if is_string(select) or is_number(select) then self->select,select; if set, select overwrites all of the above!
+ if keyword_set(opaque) then self.opaque=1
  case self.selected of
-  0:Tb=*self.te
-  1:Tb=*self.tb_lcp
-  2:Tb=*self.tb_rcp
+  0:begin
+     Tb=*self.te
+     tau=replicate(1d,n_elements(Tb))
+     opacity=replicate(1d,n_elements(Tb))
+    end 
+  1:begin 
+    Tb=reform((*self.grparms)[0,*])
+    tau=reform((*self.grparms)[1,*])
+    opacity=reform(1-exp(-tau))
+    end
+  2:begin 
+     Tb=reform((*self.grparms)[2,*])
+     tau=reform((*self.grparms)[3,*])
+     opacity=reform(1-exp(-tau))
+    end
   else:
  endcase
- if keyword_set(opaque) then self.opaque=1
- alpha=keyword_set(self.opaque)?replicate(255b,n_elements(Tb)):self->GetOpacity(TB,/alpha)
- te_vert=*self.te;keyword_set(tb)?tb:*self.te 
+ if keyword_set(self.opaque) then begin
+  alpha=replicate(255b,n_elements(Tb))
+  te_vert=Tb*opacity
+ endif else begin
+  te_vert=Tb
+  alpha=byte((tau<1)*255)
+ endelse
  rgb=self->GetRGB(ct)
  t0 = self.parent->GetVertexData('T0')
  it = byte(te_vert*255/(keyword_set(local_scale)?max(te_vert):max(t0)))
@@ -303,11 +327,11 @@ end
 
 pro gxisogauss::Cleanup
   ptr_free,self.te
-  ptr_free,self.tb_rcp
-  ptr_free,self.tb_rcp
+  ptr_free,self.grparms
+  obj_destroy,self.gridmap
   self->IDLgrPolygon::Cleanup
 end
 
 pro gxisogauss__define
-  self={gxisogauss,inherits IDLgrPolygon,freq:0.0,s:0,te:ptr_new(),tb_rcp:ptr_new(),tb_lcp:ptr_new(),gridmap:obj_new(),selected:0b,opaque:0b}
+  self={gxisogauss,inherits IDLgrPolygon,freq:0.0,s:0,grparms:ptr_new(),te:ptr_new(),gridmap:obj_new(),selected:0b,opaque:0b}
 end

@@ -246,7 +246,7 @@ PRO gx_display_manager,model,modal=modal,selection=selection,xsize=xsize,ysize=y
   subdirectory=['resource', 'bitmaps']
   prefix=''
   tlb = WIDGET_BASE(/COLUMN,/TLB_KILL_REQUEST_EVENTS,$
-    title='Reference Maps Manager: ' +model->GetId(),uvalue=keyword_set(modal))
+    title='GX Display Manager: ' +model->GetId(),uvalue=keyword_set(modal))
   SortModelObjects, model,iso=iso,freq=freq,non_iso=non_iso
   if iso->Count() gt 0 and freq->Count() gt 0  then begin
     items=string(freq->ToArray(),format="('iso ',g0,' Ghz')")
@@ -328,7 +328,7 @@ oObjviewWid = obj_new('IDLexObjviewWid', $
   wIsoParmsBase=widget_base(wToolbarBase,/row,uname='iso_parms',map=0)
   wIsoFreq=cw_ObjField(wIsoParmsBase,value=[1],unit='GHz',label='Freq',xtextsize=10,uname='iso_freq')
   wIsoFreq=cw_ObjField(wIsoParmsBase,value=3,unit='',label='max s',xtextsize=2,uname='iso_max_s',$
-    inc=1,type=1L,min=1,max=9,tooltip='Maxmum garoresonance harmonics to geneate a isogauss surface for' )
+    inc=1,type=1L,min=2,max=10,tooltip='Maxmum garoresonance harmonics to geneate a isogauss surface for' )
   wIsoOK= widget_button(font=font, wIsoParmsBase, $
     value='OK',tooltip='Generate isosurface with this parms',uname='iso_ok')
   wIsoCancel= widget_button(font=font, wIsoParmsBase, $
