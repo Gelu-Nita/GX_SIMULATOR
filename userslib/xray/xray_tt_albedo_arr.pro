@@ -45,7 +45,7 @@ pro xray_tt_albedo_arr,parms,rowdata,nparms,rparms,xray_cs=xray_cs,albedo=albedo
              {Name:'SpineS',Value:0.0,unit:'',Hint:'Fluxtube spine longitudinal coordinate '},$
              {Name:'SpineR',Value:0.0,unit:'',Hint:'Fluxtube spine radial distance '},$
              {Name:'HasArr',Value:0.0,unit:'0/1',Hint:'Fluxtube has array defined distributions'},$
-             {Name:'rsun',Value:960, unit:'arcseconds', hint:"Observer's solar radius"}]
+             {Name:'rsun',Value:960.0, unit:'arcseconds', hint:"Observer's solar radius"}]
       nparms=[{name:'N_pix',value:0l,unit:'(int)',user:0,hint:'Number of pixels'},$
               {name:'N_vox',value:0l,unit:'(int)',user:0,hint:'Number of voxels'},$ 
               {name:'N_Eph',value:101l,unit:'(int)',user:1,hint:'Number of energy channels'},$
