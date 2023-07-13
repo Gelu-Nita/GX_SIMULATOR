@@ -16,6 +16,7 @@
 [submodule "external/grid"]
 	path = external/grid
 	url = https://github.com/kuznetsov-radio/RenderIrregular
+	branch = main
 [submodule "external/mw/mwtransferarr"]
 	path = external/mw/mwtransferarr
 	url = https://github.com/kuznetsov-radio/gyrosynchrotron
