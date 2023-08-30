@@ -23,3 +23,6 @@
 [submodule "external/rendergrff"]
 	path = external/rendergrff
 	url = https://github.com/kuznetsov-radio/gximagecomputing
+[submodule "external/chmp"]
+	path = external/chmp
+	url = https://github.com/kuznetsov-radio/gxmodelfitting
