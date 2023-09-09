@@ -27,10 +27,10 @@ function objPlotOptions::INIT,wParent,uname=uname,map=map,label=label,frame=fram
     if keyword_set(xlog) and keyword_set(ylog)then widget_control,self.wScale,set_combobox_select=0
     if ~keyword_set(xlog) and ~keyword_set(ylog)then widget_control,self.wScale,set_combobox_select=3
     self.wRangeBase=widget_base(OptionBase,/column,sensitive=0)
-    self.wXmin=cw_objField(self.wRangeBase,value=0.0,label='Xmin',/flat,format='(g10.3)');,format='(g10.0)')
-    self.wXmax=cw_objField(self.wRangeBase,value=0.0,label='Xmax',/flat,format='(g10.3)');,format='(g10.0)')
-    self.wYmin=cw_objField(self.wRangeBase,value=0.0,label='Ymin',/flat,format='(g10.3)');,format='(g10.0)')
-    self.wYmax=cw_objField(self.wRangeBase,value=0.0,label='Ymax',/flat,format='(g10.3)');,format='(g10.0)')  
+    self.wXmin=cw_objField(self.wRangeBase,value=0.0,label='Xmin',/flat,format='(g10.3)')
+    self.wXmax=cw_objField(self.wRangeBase,value=0.0,label='Xmax',/flat,format='(g10.3)')
+    self.wYmin=cw_objField(self.wRangeBase,value=0.0,label='Ymin',/flat,format='(g10.3)')
+    self.wYmax=cw_objField(self.wRangeBase,value=0.0,label='Ymax',/flat,format='(g10.3)')  
  return,1
 end
 

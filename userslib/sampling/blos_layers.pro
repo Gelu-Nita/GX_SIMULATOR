@@ -3,7 +3,7 @@
 pro blos_layers,parms,rowdata,info=info
  if arg_present(info) then begin
      if n_elements(info) eq 0 then begin
-       Parms=Replicate({Name:'unused',Value:0d,Unit:'',Hint:''},15)
+       Parms=Replicate({Name:'unused',Value:0d,Unit:'',Hint:''},17)
        Parms[0].Name='dS'           & Parms[0].Value=0.180E+19    & Parms[0].Unit='cm^2'    & Parms[0].Hint='Source/pixel Area'
        Parms[1].Name='dR'           & Parms[1].Value=0.600E+09    & Parms[1].Unit='cm'      & Parms[1].Hint='Source/voxel Depth'
        Parms[2].Name='B'            & Parms[2].Value=200.         & Parms[2].Unit='Gauss'       & Parms[2].Hint='Magnetic field'
@@ -19,11 +19,13 @@ pro blos_layers,parms,rowdata,info=info
        Parms[12].Name='VoxelZ'       & Parms[12].Value=0            & Parms[12].Unit='double'  & Parms[12].Hint='Voxel fractional Z index'
        Parms[13].Name='T_0'         & Parms[13].Value=0           & Parms[13].Unit='K'      & Parms[13].Hint='Plasma Temperature'
        Parms[14].Name='h'           & Parms[14].Value=0           & Parms[14].Unit='km'     & Parms[14].Hint='Voxel Height'
+       Parms[15].Name='n_0'         & Parms[15].Value=0.500E+10    & Parms[15].Unit='cm^{-3}' & Parms[15].Hint='Thermal e density'
+       Parms[16].Name='n_b'         & Parms[16].Value=0.300E+08    & Parms[16].Unit='cm^{-3}' & Parms[16].Hint='Nonthermal e density'
       endif else parms=info.parms      
       info={parms:parms,$
-      pixdim:[parms[9].value,15],$
+      pixdim:[parms[9].value,17],$
       spectrum:{x:{axis:lindgen(parms[9].value),label:'Layer Index',unit:''},$
-      y:{label:['Absolute B', 'LOS B', 'Transverse B','Inclination','Azimuth','Mask','Bx','By','Bz','VoxelID', 'VoxelX', 'VoxelY', 'VoxelZ','T','h'],unit:['G','G','G','deg','deg','idx','G','G','G','','','','','K','km']}}}                          
+      y:{label:['Absolute B', 'LOS B', 'Transverse B','Inclination','Azimuth','Mask','Bx','By','Bz','VoxelID', 'VoxelX', 'VoxelY', 'VoxelZ','T','h','n_0','n_b'],unit:['G','G','G','deg','deg','idx','G','G','G','','','','','K','km','cm^{-3}','cm^{-3}']}}}                          
     return
  end
    sz=size(rowdata,/dim)
@@ -51,6 +53,8 @@ pro blos_layers,parms,rowdata,info=info
         rowdata[pix,chanid,12]=rparms[12,idx]
         rowdata[pix,chanid,13]=rparms[13,idx]
         rowdata[pix,chanid,14]=rparms[14,idx]
+        rowdata[pix,chanid,15]=rparms[15,idx]
+        rowdata[pix,chanid,16]=rparms[16,idx]
        endif
      end  
    endfor  
