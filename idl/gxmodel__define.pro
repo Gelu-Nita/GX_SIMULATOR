@@ -1654,7 +1654,7 @@ Pro gxModel::CreateFluxtube,centerline
     1: idx=2
   else: begin
          idx=idx[sort(idx)]
-         list=[1:idx[-1]]
+         list=indgen(idx[-1])+1;list=[1:idx[-1]]
          matched_idx=idx[-1]+1
          for k=0,n_elements(list)-1 do begin
           if (where(idx eq list[k]))[0] eq -1 then matched_idx=list[k]
