@@ -22,7 +22,7 @@ function gx_readbox,file,info=info,first=first
       e=execute('tmp=temporary('+names[i]+')')
       if gx_validbox(tmp) then begin
         box=temporary(tmp)
-        if arg_present(info) then begin
+        if arg_present(info) and tag_exist(box,'execute') then begin
           exec=strsplit(box.execute,'&',/extract)
           n=n_elements(exec)
           if n gt 0 then begin
@@ -35,7 +35,9 @@ function gx_readbox,file,info=info,first=first
       endif
     endif
   endfor
-  if size(info_,/tname) eq 'STRUCT' then info=temporary(info_)
-  if ~tag_exist(info,'time') then info=add_tag(info,gx_id2time(box.id),'time',/no_copy,/duplicate)
+  if size(info_,/tname) eq 'STRUCT' then begin
+    info=temporary(info_)  
+    if ~tag_exist(info,'time') then info=add_tag(info,gx_id2time(box.id),'time',/no_copy,/duplicate)
+  endif
   return,box
  end 

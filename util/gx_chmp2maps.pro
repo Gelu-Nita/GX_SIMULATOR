@@ -1,6 +1,5 @@
 function gx_chmp2maps,obj_metrics
   keys=gx_getEBTELparms(obj_metrics->get(/gx_key),a,b,q0,f=formula,ebtel=ebtel)
-  freq=obj_metrics->get(/freq)
   modI=obj_metrics->get(0,/map)
   R=modI.roi_metrics
   obsI=obj_metrics->get(1,/map)
@@ -19,5 +18,9 @@ function gx_chmp2maps,obj_metrics
   chi=CHI_MAP.roi_metrics
   CHI2_MAP=obj_metrics->get(9,/map)
   chi2=CHI2_MAP.roi_metrics
-  return,{modI:modI,obsI:obsI,obsIsdev:obsIsdev,RES_NORM_MAP:RES_NORM_MAP,CHI2_MAP:CHI2_MAP,a:a,b:b,q0:q0,freq:freq,formula:formula,ebtel:ebtel,npix:npix,R:R,chi:chi,chi2:chi2,res:res,res2:res2}
+  freq=obj_metrics->get(/freq)
+  if n_elements(freq) eq 1 then return,{modI:modI,obsI:obsI,obsIsdev:obsIsdev,RES_NORM_MAP:RES_NORM_MAP,CHI2_MAP:CHI2_MAP,a:a,b:b,q0:q0,freq:freq,formula:formula,ebtel:ebtel,npix:npix,R:R,chi:chi,chi2:chi2,res:res,res2:res2}
+  chan=obj_metrics->get(/chan)
+  if n_elements(chan) eq 1 then return,{modI:modI,obsI:obsI,obsIsdev:obsIsdev,RES_NORM_MAP:RES_NORM_MAP,CHI2_MAP:CHI2_MAP,a:a,b:b,q0:q0,chan:chan,formula:formula,ebtel:ebtel,npix:npix,R:R,chi:chi,chi2:chi2,res:res,res2:res2}
+  return,!null
 end

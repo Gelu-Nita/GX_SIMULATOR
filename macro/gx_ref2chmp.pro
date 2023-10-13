@@ -9,13 +9,11 @@ function gx_ref2chmp,refdata,freq=freq,chan=chan,$
     err_msg=['Expected reference data formats:',$
              '1) A map object containing up to 2 relevant map structures:',$
              '   a) data=map->get(0,/map)',$
-             '   b) data=map->get(0,/map)',$
-             '      sdev=map->get(1,/map)',$
+             '   b) sdev=map->get(1,/map)',$
              '2) An array of up to 2 relevant map structures:',$
              '   a) maps[0]:  data map',$
-             '   b) maps[0]:  data map',$
-             '      maps[1]:  sdev map',$
-             '   The DATA map must also contain the following tags:',$
+             '   b) maps[1]:  sdev map',$
+             'The DATA map must also contain the following tags:',$
              '      FREQ or CHAN    ; Frequency (GHz) or Wavelength (A)',$
              '',$
              '      BMAJ or A_BEAM  ; FWHM or Gauss Sigma major beam axis, arcsecs',$

@@ -25,7 +25,10 @@ chi2_max=chi2_max,xsize=xsize,ysize=ysize,metrics_log=metrics_log,_extra=_extra
  maps=gx_chmp2maps(obj_metrics)
  if n_elements(win) gt 0 then wset,win[0]
  default,levels,[12,20,30,50,80]
- filnam=string(maps.modI.freq,format="('Best @',f5.2,'GHz: ')")
+ if tag_exist(maps.modI,'freq') then $
+ filnam=strcompress(string(fix(100*maps.modI.freq)/100d,format="('Best @',g0,' GHz: ')")) $
+ else $
+ filnam=strcompress(string(fix(100*maps.modI.chan)/100d,format="('Best @',g0,' A: ')")) 
  plot_map,maps.modI,_extra=_extra,title=filnam+'Data2Model',/cbar,cb_title='Tb (K)'
  plot_map,maps.modI,/over,levels=levels,/perc,color=0,thick=3
  plot_map,maps.obsI,/over,levels=levels,/perc,color=200,thick=3

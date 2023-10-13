@@ -111,7 +111,7 @@ pro MW_Transfer_Arr,parms,rowdata,nparms,rparms,path,datain,freqlist,info=info
    parmin=transpose(parms,[2,1,0])
 
    ;calculating the emission for analytical distribution (array -> off)
-   datain=dblarr(7, Nfreq, Npix)
+;   datain=dblarr(7, Nfreq, Npix)
    nparms=long(nparms)
    rparms=rparms#replicate(1d,Npix)
    result=call_external(path, 'GET_MW_SLICE', nparms, rparms, parmin, 0, 0, 0, datain, /unload)

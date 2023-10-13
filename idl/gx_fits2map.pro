@@ -25,7 +25,7 @@
 ; MODIFICATION HISTORY:
 ;     Written 03-Jan-2017 Gelu M. Nita
 ;
-pro gx_fits2map,filename,map,reform=reform,header=header
+pro gx_fits2map,filename,map,reform=reform,header=header,_extra=_extra
   if n_elements(filename) eq 0 then filename=dialog_pickfile(filter='*.f*')
   if ~file_exist(filename) then return
   break_file, filename, disk_log, dir, instr_name, ext
@@ -62,7 +62,7 @@ pro gx_fits2map,filename,map,reform=reform,header=header
         header=index.header
       endif else goto,err
     END
-    'EOVSA': vla_fits2map, filename, map
+    'EOVSA': vla_fits2map, filename, map,_extra=_extra
     'RHESSI':hsi_fits2map,filename,map
     'NORH': begin
              index=norh_img2idx(header)

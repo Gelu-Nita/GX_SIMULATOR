@@ -28,7 +28,7 @@
 ; Contact     : bin.chen@njit.edu
 ;-
 
-pro vla_fits2map, files, map
+pro vla_fits2map, files, map,_extra=_extra
 
 vla_readfits,files,index,data,/silent
 n_dim = size( data, /n_dim )

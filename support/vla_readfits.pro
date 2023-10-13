@@ -17,7 +17,8 @@
 pro vla_readfits, files0, index, data, $
     silent=silent, quiet=quiet, nodata=nodata, $
     outsize=outsize,strtemplate=strtemplate,$
-    nocomment=nocomment,nohistory=nohistory
+    nocomment=nocomment,nohistory=nohistory,ext=ext
+
 files=files0
 nf=n_elements(files)
 quiet=keyword_set(quiet)
@@ -38,10 +39,10 @@ ENDIF
         
 ; ---------------------- define the template structure ----------------
 if not data_chk(strtemplate,/struct) then begin
-    head=headfits(files(0))     ; pretty fast header-only read
+    head=headfits(files(0),ext=ext)     ; pretty fast header-only read
     if (keyword_set(all_keywords)) then begin
     for i=1l,nf-1 do begin
-        head2 = headfits(files(i))
+        head2 = headfits(files(i),ext=ext)
         ss1 = where_arr( strmid(head2, 0, 8), strmid(head, 0, 8), /map_ss)
         ss2 = where(ss1 eq -1, nss2)    ;where head2 is not in head
         if (nss2 ne 0) then begin
@@ -71,7 +72,7 @@ for i=0l,nf-1 do begin
         goto,next
     ENDIF
     
-   head=headfits(files(i))           ; read header-only
+   head=headfits(files(i),ext=ext)           ; read header-only
    alls=lonarr(n_elements(head))+1               ; header map
    nonnull=strlen(strtrim(head,2)) ne 0          ; non-null map
 
