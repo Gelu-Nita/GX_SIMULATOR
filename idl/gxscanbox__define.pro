@@ -1642,6 +1642,7 @@ self.wPlotLOSOptions=cw_objPlotOptions(wPlotLOSBase,uname='LOS Profile Plot Opti
  wRow1=widget_base(wColumn,/row)  
  wRow2=widget_base(wColumn,/row,Event_FUNC='gxScanboxHandleEvent',uvalue=self)
  wRow3=widget_base(wColumn,/row,Event_FUNC='gxScanboxHandleEvent',uvalue=self)
+ wRow5=widget_base(wColumn,/row,Event_FUNC='gxScanboxHandleEvent',uvalue=self)
  wRow4=widget_base(wColumn,/row,Event_FUNC='gxScanboxHandleEvent',uvalue=self)
  
  wSelect=widget_base(wRow4, /row,/toolbar)
@@ -1767,32 +1768,33 @@ self.wPlotLOSOptions=cw_objPlotOptions(wPlotLOSBase,uname='LOS Profile Plot Opti
  pbrl_list[SpaceView].b0=L0
  pbrl_list[SpaceView].b0=B0
  pbrl_list[SpaceView].R=R/60
- self.wObserver= widget_combobox(wRow2, value=['Earth View','Space View'],uvalue=pbrl_list) 
- self.wTopView= widget_button(widget_base(wROw2,/toolbar),$
- value=gx_bitmap(filepath('view.bmp', subdirectory=['resource', 'bitmaps'])), $
-   /bitmap,tooltip='Set top view LOS')
- widget_control,self.wObserver,SET_COMBOBOX_SELECT=SpaceView
+
  
- self.wL0=CW_objFIELD(wRow3, UNAME='L0', LABEL=' L0',$
+ self.wL0=CW_objFIELD(wRow5, UNAME='L0', LABEL=' L0',$
         XTEXTSIZE=3, XLABELSIZE=XLABELSIZE,$
         INCREMENT=10, $
         UNITS=STRING(176b), $
         VALUE=l0,Sensitive=1,frame=frame, format=format)  
  widget_control,self.wL0,sensitive=keyword_set(SpaceView)        
- self.wB0=CW_objFIELD(wRow3, UNAME='B0', LABEL=' B0',$
+ self.wB0=CW_objFIELD(wRow5, UNAME='B0', LABEL=' B0',$
         XTEXTSIZE=3, XLABELSIZE=XLABELSIZE,$
         INCREMENT=10, $
         UNITS=STRING(176b), $
         VALUE=b0,Sensitive=1,frame=frame, format=format) 
  widget_control,self.wB0,sensitive=keyword_set(SpaceView)        
- self.wR=CW_objFIELD(wRow3, UNAME='RSUN', LABEL='RSUN',$
+ self.wR=CW_objFIELD(wRow5, UNAME='RSUN', LABEL='RSUN',$
         XTEXTSIZE=4, XLABELSIZE=XLABELSIZE,$
         INCREMENT=10, $
         UNITS='"', $
         VALUE=R,Sensitive=1,frame=frame, format=format)   
- widget_control,self.wR,sensitive=keyword_set(SpaceView)                     
+ widget_control,self.wR,sensitive=keyword_set(SpaceView)    
+ self.wObserver= widget_combobox(wRow5, value=['Earth View','Space View'],uvalue=pbrl_list)
+ self.wTopView= widget_button(widget_base(wROw5,/toolbar),$
+   value=gx_bitmap(filepath('view.bmp', subdirectory=['resource', 'bitmaps'])), $
+   /bitmap,tooltip='Set top view LOS')
+ widget_control,self.wObserver,SET_COMBOBOX_SELECT=SpaceView                 
  wAutobase=widget_base(wRow3,/row,/nonexclusive)
-
+ 
  self->UpdateFields
 
  geometry=widget_info(widget_info(self.wInfo,/parent),/geometry)
