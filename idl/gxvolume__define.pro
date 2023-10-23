@@ -616,8 +616,11 @@ pro gxVolume::Update,select,data=data,plot_model_attributes=plot_model_attribute
       corona->GetProperty,chromo_view=chromo_view
     endif else chromo_view=0
   end
-  if n_elements(select) ne 0 then self.select=strcompress(select,/rem)
-  case self.select of
+  if n_elements(select) ne 0 then begin
+    select=strcompress(select,/rem)
+    if ~keyword_set(getdata) then self.select=select
+  endif else select=self.select
+  case select of
   'Bx'  :begin
          data=self->GetBx(/volume)
          if self->undefined(data) then goto,undefined

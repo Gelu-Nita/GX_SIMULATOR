@@ -643,7 +643,7 @@ PRO gxFluxTube::Compute_EM,key,n_total,n2_total
   endcase
   self.base->GetVertexAttributeData,'owned',owned
   volume=(self.parent->GetVolume())
-  volume->Update,nokey,data=n,/getdata,/chromo_view,/update
+  volume->Update,key,data=n,/getdata,/chromo_view,/update
   n=n[owned]
   voxelid=self.parent->GetVoxelId()
   voxelid=voxelid[owned]
