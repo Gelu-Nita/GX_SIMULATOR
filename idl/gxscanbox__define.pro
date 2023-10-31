@@ -1189,10 +1189,10 @@ pro gxScanBox::SetLos,user=user,model=model,topview=topview
         self.parent->Reset
 end
 
-function gxScanBox::GetLos,b0=b0,r=r,L0=L0
+function gxScanBox::GetLos,b0=b0,r=r,L0=L0,gyro=gyro
   self.ImgViewWid->GetProperty,moi=moi
   if obj_valid(moi) then return, moi->GetLos(b0=b0,r=r,L0=L0,pbR=pbR,pb0R=pb0R)
-  p=0;to b addressed at a later tim, for now it is not used anywhere
+  p=0;to b addressed at a later time, for now it is not used anywhere
   widget_control,self.wL0,get_value=thisL0
   widget_control,self.wB0,get_value=thisB0
   widget_control,self.wR,get_value=thisR

@@ -48,6 +48,10 @@ pro gxSun::Reset,b0=b0,l0=l0
  if obj_valid(scanbox) then begin
   l0=scanbox->getLos(/l0)
   b0=scanbox->getLos(/b0)
+  moi=scanbox->getMOI()
+  if obj_isa(moi,'gxmodel') then begin
+    moi->GetProperty,gyro=gyro
+  endif
  endif else begin
   default,l0,0d
   default,b0,0d
@@ -64,6 +68,9 @@ pro gxSun::Reset,b0=b0,l0=l0
  grid->Rotate,[1,0,0],90
  if b0 ne 0 then begin
    grid->Rotate,[1,0,0],b0
+ endif
+ if keyword_set(gyro) then begin
+   grid->Rotate,[0,0,1],gyro
  endif
 end
 

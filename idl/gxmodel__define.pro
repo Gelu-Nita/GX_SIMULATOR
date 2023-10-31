@@ -1621,12 +1621,12 @@ pro gxModel::ResetPosition, unlock=unlock,top=top
  endif else topview=0
  endif else topview=1
  if (~topview) or keyword_set(unlock) then begin
-   self->GetProperty,gyro=gyro
-   if n_elements(gyro) ne 1 then gyro=0
-   if gyro ne 0 then begin
-     self->Rotate,[0,0,1],gyro
-   end
-   
+;   self->GetProperty,gyro=gyro
+;   if n_elements(gyro) ne 1 then gyro=0
+;   if gyro ne 0 then begin
+;     self->Rotate,[0,0,1],gyro
+;   end
+;   
    self->Rotate,[1d,0,0],-self.NS
    self->Rotate,[0,1d,0],self.EW-los.l0
    self->Rotate,[1d,0,0],los.b0
@@ -1635,6 +1635,14 @@ pro gxModel::ResetPosition, unlock=unlock,top=top
    xy=60*hel2arcmin(self.NS,self.EW-los.l0,date=self->GetTime())/rsun
    self->Translate,xy[0],xy[1],0
  endelse
+ self->GetProperty,gyro=gyro
+ if n_elements(gyro) ne 1 then gyro=0
+ if gyro ne 0 then begin
+  self->Rotate,[0,0,1],gyro
+ end
+ self->GetProperty,parent=parent
+ if obj_isa(parent,'gxsun') then parent->Reset
+
 end
 
 
