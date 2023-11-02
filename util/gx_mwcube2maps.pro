@@ -1,0 +1,57 @@
+function gx_mwcube2maps,gxcube,map
+  ;map input should be provaded to add the flux maps to an existing map object
+  default,map,obj_new('map')
+  if ~obj_valid(map) then begin
+    message,'Invalid mapcontainer provided!',/info
+    goto,invalid_input
+  endif
+  
+  if size(gxcube,/tname) eq 'STRUCT'  then begin
+    if ~tag_exist(gxcube,'renderer') or ~tag_exist(gxcube,'data') $
+      or ~tag_exist(gxcube,'info') or ~tag_exist(gxcube,'fovmap') then begin
+      message,'Invalid gxcube input structure!',/info
+      goto,invalid_input
+    end
+  endif else begin
+    message,'None or invalid gxcube input structure provided!',/info
+    goto,invalid_input
+  endelse
+    
+  if ~(gxcube.info.spectrum.x.unit eq 'GHz') then begin
+    message,'Not a MW GXCUBE provided as input!'
+    goto,invalid_input
+  endif
+  if ~valid_map(gxcube.fovmap) then begin
+    message,'Invalid FOV map GXCUBE tag!'
+    goto,invalid_input
+  endif
+ info=gxcube.info
+ fovmap=gxcube.fovmap
+ freq=(((info).spectrum).x.axis)
+ freq2=freq^2
+ nfreq=n_elements(freq)
+ dx=fovmap->Get(/dx)
+ dy=fovmap->Get(/dy)
+ amap=fovmap->get(/map)
+ add_prop,amap,renderer=file_basename(gxcube.renderer),/replace
+ add_prop,amap,freq=0d
+ add_prop,amap,frequnits='GHz'
+ add_prop,amap,Stokes=''
+ add_prop,amap,datatype='Flux'
+ add_prop,amap,dataunit='sfu'
+ i=map->get(/count)
+ for k=0,nfreq-1 do begin
+  amap.freq=freq[k]
+  amap.id=string(freq[k],format="('GX LCP ',g0,' GHz')")
+  amap.Stokes='LCP'
+  amap.data=gxcube.data[*,*,k,0,0]
+  map->setmap,i++,amap
+  amap.id=string(freq[k],format="('GX RCP ',g0,' GHz')")
+  amap.Stokes='RCP'
+  amap.data=gxcube.data[*,*,k,1,0]
+  map->setmap,i++,amap
+ endfor
+ return,map
+ invalid_input:
+ return,map
+end
