@@ -26,3 +26,6 @@
 [submodule "external/chmp"]
 	path = external/chmp
 	url = https://github.com/kuznetsov-radio/gxmodelfitting
+[submodule "ratan"]
+	path = ratan
+	url = https://github.com/Alexey-Stupishin/RATAN-in-GX
