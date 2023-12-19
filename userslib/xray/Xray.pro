@@ -12,7 +12,7 @@
 pro xray,parms,rowdata,rparms,xray_cs=xray_cs,info=info
  if arg_present(info) then begin
      if n_elements(info) eq 0 then begin
-       Parms=Replicate({Name:'unused',Value:0d,Unit:'',Hint:''},20)
+       Parms=Replicate({Name:'unused',Value:0d,Unit:'',Hint:''},21)
        Parms[0].Name='dS'           & Parms[0].Value=0.180E+19    & Parms[0].Unit='cm^2'    & Parms[0].Hint='Source/pixel Area'
        Parms[1].Name='dR'           & Parms[1].Value=0.600E+09    & Parms[1].Unit='cm'      & Parms[1].Hint='Source/voxel Depth'
        Parms[2].Name='T_0'          & Parms[2].Value=0.200E+08    & Parms[2].Unit='K'       & Parms[2].Hint='Plasma Temperature'
@@ -100,7 +100,7 @@ pro xray,parms,rowdata,rparms,xray_cs=xray_cs,info=info
    ; normalisation factor
    EM49=reform(V_vox*Np_vox^2*1d-49)
    ;
-   r_sun=parmin[28,0]
+   r_sun=parmin[20,0]
   ;main loop over all voxels  
    FOR i=0,Nvox-1 DO BEGIN
   
