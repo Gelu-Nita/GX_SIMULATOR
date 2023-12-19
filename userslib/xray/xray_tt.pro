@@ -117,7 +117,7 @@ pro xray_tt,parms,rowdata,rparms,xray_cs=xray_cs,info=info
    EM49=reform(V_vox*Np_vox^2*1d-49)
    npV =V_vox*Np_vox
    ;
-   r_sun=parmin[19,0]
+   r_sun=parmin[20,0]
   ;main loop over all voxels  
    FOR i=0,Nvox-1 DO BEGIN
   
