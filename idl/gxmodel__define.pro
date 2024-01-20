@@ -486,6 +486,30 @@ function gxModel::ReplaceScanboxData,sdata,nx=nx,ny=ny,compute_grid=compute_grid
  return,(self->scanbox())->ReplaceData(sdata,nx=nx,ny=ny,compute_grid=compute_grid)
 end
 
+pro gxModel::ComputeCurlBandAlpha
+  dx=self.xcoord_conv[1]
+  dy=self.ycoord_conv[1]
+  dz=self.zcoord_conv[1]
+  m=max([dx,dy,dz])
+  dummmy=self->GetB(Bx=Bx,By=By,Bz=Bz)
+  curl,bx,by,bz,cx,cy,cz,order=3, dx=dx/m, dy=dy/m, dz=dz/m
+  alpha=bx*cx+by*cy+bz*cz
+  alpha=alpha/(bx*bx+by*by+bz*bz)
+  curlb=sqrt(cx*cx+cy*cy+cz*cz)
+  self.volume->SetVertexAttributeData,'alpha',alpha,/ram
+  self.volume->SetVertexAttributeData,'curlb',curlb,/ram
+end  
+
+pro gxModel::ComputeDivB
+  box=self->BBOX()
+  m=max(box.dr)
+  dx=box.dr[0]/m
+  dy=box.dr[1]/m
+  dz=box.dr[2]/m
+  div,box.bx,box.by,box.bz,divB,order=3, dx=dx, dy=dy, dz=dz
+  self.volume->SetVertexAttributeData,'divb',divb,/ram
+end
+
 pro gxModel::UpdateDef
   ;Here we upgrade combo_bodel if necessary
   self->upgrade_combo_model
@@ -527,33 +551,106 @@ pro gxModel::UpdateDef
     has_flags=0l
     for i=0, n_tags(flags)-1 do has_flags+=flags.(i)
     if has_flags eq 0 then flags=self.volume->setflags(/NTstored,/TRadd,/TRMask,/TRfactor)
-    ;Here check wheter the volume has Bmed-Lenght pair computed
+    ;here remove the curl and alpha if defined in previous versions
+    if isa(self->GetVertexData('curlb',/shader)) then self.volume->SetVertexAttributeData,'curlb',0,/shader
+    if isa(self->GetVertexData('alpha',/shader)) then self.volume->SetVertexAttributeData,'alpha',0,/shader
+    if isa(self->GetVertexData('ocurlb',/shader)) then self.volume->SetVertexAttributeData,'ocurlb',0,/shader
+    if isa(self->GetVertexData('oalpha',/shader)) then self.volume->SetVertexAttributeData,'oalpha',0,/shader
     
-    flags=self.volume->setflags(hasBL=self.volume->hasBL())
-    flags=self.volume->setflags(hasNT=self.volume->hasNT())
- 
-    if flags.hasBL or flags.hasNT then begin
-      ;Here compute alpha and curl if not already computed
-      self.volume->GetVertexAttributeData,'alpha',alpha
-      self.volume->GetVertexAttributeData,'curlb',curlb
-      self.volume->GetVertexAttributeData,'idx',idx
-      if n_elements(alpha) ne n_elements(idx) or n_elements(curlb) ne n_elements(idx) then begin
-        dx=self.xcoord_conv[1]
-        dy=self.ycoord_conv[1]
-        dz=self.zcoord_conv[1]
-        m=max([dx,dy,dz])
-        dummmy=self->GetB(Bx=Bx,By=By,Bz=Bz)
-        curl,bx,by,bz,cx,cy,cz,order=3, dx=dx/m, dy=dy/m, dz=dz/m
-        alpha=bx*cx+by*cy+bz*cz
-        alpha=alpha/(bx*bx+by*by+bz*bz)
-        curlb=sqrt(cx*cx+cy*cy+cz*cz)
-        alpha=alpha[idx]
-        curlb=curlb[idx]
-        self.volume->SetVertexAttributeData,'alpha',alpha
-        self.volume->SetVertexAttributeData,'curlb',curlb
-      endif
-    endif
+    hasBl=self.Volume->HasBL(idx=idx,/shader)
+    hasNT=self.Volume->HasNT(idx=idx,n=n,t=t,/shader)
+    
+    if hasNT then begin
+      if ~hasBL then begin
+        ;this is an old version model with user supplied N-T pairs, 
+        ;so let's move them to the ROM pointer
+        self.volume->SetVertexAttributeData,'n',n
+        self.volume->SetVertexAttributeData,'T',t
+        self.volume->SetVertexAttributeData,'idx',idx
+      endif else begin
+      ;this an old version model with N-T pairs computed from an EBTEL model, 
+      ;so they can be deleted for now, as they will be recomputed later 
+      self.volume->SetVertexAttributeData,'n',0b,/shader
+      self.volume->SetVertexAttributeData,'T',0b,/shader
+      endelse
+    endif  
+    
+    if hasBL then begin
+      ;this is an old version model with defined B-L pairs, 
+      ;so let's update the model to allow selective heating 
+      ;and move the B-L pairs to the ROM pointer
+      sz=self.Size()
+      sx=sz[1]
+      sy=sz[2]
+      sz=sz[3]
 
+      oidx=self->GetVertexData('oidx',/shader)
+      if isa(oidx) then  self.volume->SetVertexAttributeData,'oidx',0b,/shader
+      
+      bmed=self->GetVertexData('bmed',/shader)
+      if isa(bmed) then self.volume->SetVertexAttributeData,'bmed',0b,/shader
+     
+      obmed=self->GetVertexData('obmed',/shader)
+      if isa(obmed) then self.volume->SetVertexAttributeData,'obmed',0b,/shader
+      
+      length=self->GetVertexData('length',/shader)
+      if isa(length) then self.volume->SetVertexAttributeData,'length',0b,/shader
+      
+      olength=self->GetVertexData('olength',/shader)
+      if isa(olength) then self.volume->SetVertexAttributeData,'olength',0b,/shader
+      
+      foot1=self->GetVertexData('foot1',/shader)
+      if isa(foot1) then self.volume->SetVertexAttributeData,'foot1',0b,/shader
+      
+      ofoot1=self->GetVertexData('ofoot1',/shader)
+      if isa(ofoot1) then self.volume->SetVertexAttributeData,'ofoot1',0b,/shader
+      
+      foot2=self->GetVertexData('foot2',/shader)
+      if isa(foot2) then self.volume->SetVertexAttributeData,'foot2',0b,/shader
+      
+      ofoot2=self->GetVertexData('ofoot2',/shader)
+      if isa(ofoot2) then self.volume->SetVertexAttributeData,'ofoot2',0b,/shader
+     
+      if isa(idx) and $
+        isa(length) and $
+        isa(bmed) and $
+        isa(foot1) and $
+        isa(foot2) then begin
+        physLength=(avField=dblarr(sx,sy,sz))
+        startidx=(endidx=lonarr(sx,sy,sz))
+        status=bytarr(sx,sy,sz)
+        status[idx]=(status[idx] or 4L) or 2l
+        physLength[idx]=length
+        avField[idx]=bmed
+        startidx[idx]=foot1
+        endidx[idx]=foot2
+        if isa(oidx) and $
+          isa(olength) and $
+          isa(obmed) and $
+          isa(ofoot1) and $
+          isa(ofoot2) then begin
+            ofoot1=array_indices([sx,sy,sz]+[0,0,10],/dim,ofoot1)
+            ofoot2=array_indices([sx,sy,sz]+[0,0,10],/dim,ofoot2)
+            omin=min([min(ofoot1[2,*]),min(ofoot2[2,*])])
+            good=where(((ofoot2[2,*] eq omin) and (ofoot1[2,*] gt omin)) or ((ofoot1[2,*] eq omin) and (ofoot2[2,*] gt omin)),count)
+            if count ne 0 then begin
+              ofoot1=ofoot1[*,good]
+              ofoot2=ofoot2[*,good]
+              oidx=oidx[good]
+              status[oidx]=(status[oidx] or 16L) or 2l
+              physLength[oidx]=olength[good]
+              avField[oidx]=obmed[good]
+              startidx[oidx]=ofoot1[good]
+              endidx[oidx]=ofoot2[good]
+            endif
+        endif
+        self.Volume->Add2ROM,status=status,physLength=physLength,avField=avField,startidx=startidx,endidx=endidx
+     endif  
+  endif 
+
+  if tag_exist(*(self.Volume->GetROM()),'status') then Heat2VolumeFactor=self.volume->GetHeat2VolumeFactor(/compute)
+  flags=self.volume->setflags(hasBL=self.volume->hasBL())
+  flags=self.volume->setflags(hasNT=self.volume->hasNT())
   
   ;Here e add corona object if missing from old models
   corona=self->Corona()
@@ -838,8 +935,8 @@ function gxModel::IsCombo,bsize=bsize,csize=csize,_ref_extra=extra
   return,~array_equal(bsize[1:3],csize[1:3])
 end
 
-function gxModel::GetVertexData,var
-  return,self.volume->GetVertexData(var)
+function gxModel::GetVertexData,var,shader=shader
+  return,self.volume->GetVertexData(var,shader=shader)
 end
 
 pro gxModel::SetVertexData,key,var
@@ -847,9 +944,10 @@ pro gxModel::SetVertexData,key,var
 end
 
 
-function gxModel::Box2Volume,data,idx,box2vol=box2vol,bsize=bsize,csize=csize,corona_only=corona_only,recompute=recompute
+function gxModel::Box2Volume,data,idx,box2vol=box2vol,bsize=bsize,csize=csize,corona_only=corona_only,recompute=recompute,full=full
   isa_combo=(self->IsCombo(bsize=bsize,csize=csize))
   box_idx=lindgen(bsize[1],bsize[2],bsize[3])
+  if keyword_set(full) then idx=box_idx
   if isa_combo then begin
     box2chromo=self->GetVertexData('box2chromo')
     chromo_layers=self->GetVertexData('chromo_layers')
@@ -886,6 +984,7 @@ function gxModel::Box2Volume,data,idx,box2vol=box2vol,bsize=bsize,csize=csize,co
   endif
   if ~isa(idx) then idx=self.GetVertexData('idx')
   if (size(idx,/tname) eq 'STRING') then idx=self.GetVertexData(idx)
+  if n_elements(data) eq 1 then data=replicate(data,n_elements(idx))
   if isa(idx,/number) and isa(data,/number) and (n_elements(idx) eq n_elements(data)) then begin
     vol=replicate(data[0]*0,bsize[1],bsize[2],bsize[3])
     vol[idx]=data
@@ -1218,7 +1317,7 @@ pro gxModel::Slice,parms,row,any_grid,scanner=scanner
   if (size(idx))[0] ne 0 then begin
     self->GetProperty,wparent=wparent
     if widget_valid(wparent)  then begin
-     id=widget_info(wparent,find_by_uname='GXMODEL:DEMAVG')
+     id=widget_info(wparent,find_by_uname='GXVOLUME:DEMAVG')
      if widget_valid(id) then begin
       widget_control,id,get_value=demavg
      endif
@@ -1716,7 +1815,7 @@ function GXModel::UpdateEUVinfo,info
   volume=self->GetVolume()
   self->GetProperty,wparent=wparent
   if widget_valid(wparent) then begin
-    wDEMavg=widget_info(wParent,find_by_uname='GXMODEL:DEMAVG')
+    wDEMavg=widget_info(wParent,find_by_uname='GXVOLUME:DEMAVG')
     if widget_valid(wDEMavg) then widget_control,wDEMAvg,get_value=DEMavg else DEMavg=0
     gx_setparm,info, 'DEMavg',DEMavg
   endif

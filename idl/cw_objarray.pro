@@ -111,7 +111,7 @@ function objArray::INIT,wParent,value=value,units=units,uname=uname,$
                 XPAD=0, YPAD=0, SPACE=0,/frame)             
     for i=0,n_elements(value)-1 do begin
      item=cw_objField(self.wItemBase,value=value[i],units=iunits[i],label=ilabels[i],$
-                      xlibelsize=ixlabelsizes[i], xtextsize=ixtextsizes[i],format=iformat[i],$
+                      xlabelsize=ixlabelsizes[i], xtextsize=ixtextsizes[i],format=iformat[i],$
                       flat=self.flat,sensitive=isensitive[i],map=idisplay[i],$
                       uname=n_elements(items) eq n_elements(value)?items[i]:ilabels[i],_extra=_extra)
     end

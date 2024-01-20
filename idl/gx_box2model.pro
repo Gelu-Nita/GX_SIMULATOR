@@ -142,9 +142,53 @@ if tag_exist(box,'refmaps') then begin
        endfor
       endif
     endfor    
-
 endif
- 
+tags2remove=['Bx','By','Bz','Bcube','Base','index','refmaps','ADD_BASE_LAYER','ID','EXECUTE']
+if tag_exist(box,'idx') and $
+   tag_exist(box,'length') and $
+   tag_exist(box,'bmed') and $
+   tag_exist(box,'foot1') and $
+   tag_exist(box,'foot2') then begin
+  physLength=(avField=dblarr(sx,sy,sz))
+  startidx=(endidx=lonarr(sx,sy,sz))
+  status=bytarr(sx,sy,sz)
+  status[box.idx]=(status[box.idx] or 4L) or 2l
+  physLength[box.idx]=box.length
+  avField[box.idx]=box.bmed
+  startidx[box.idx]=box.foot1>0
+  endidx[box.idx]=box.foot2>0
+  if tag_exist(box,'oidx') and $
+   tag_exist(box,'olength') and $
+   tag_exist(box,'obmed') and $
+   tag_exist(box,'ofoot1') and $
+   tag_exist(box,'ofoot2') then begin  
+   ofoot1=array_indices([sx,sy,sz]+[0,0,10],/dim,box.ofoot1)
+   ofoot2=array_indices([sx,sy,sz]+[0,0,10],/dim,box.ofoot2)
+   omin=min([min(ofoot1[2,*]),min(ofoot2[2,*])])
+   good=where(((ofoot2[2,*] eq omin) and (ofoot1[2,*] gt omin)) or ((ofoot1[2,*] eq omin) and (ofoot2[2,*] gt omin)),count)
+   if count ne 0 then begin
+   ofoot1=ofoot1[*,good]
+   ofoot2=ofoot2[*,good]
+   oidx=box.oidx[good]
+   status[oidx]=(status[oidx] or 16L) or 2l
+   physLength[oidx]=box.olength[good]
+   avField[oidx]=box.obmed[good]
+   startidx[oidx]=box.ofoot1[good]>0
+   endidx[oidx]=box.ofoot2[good]>0
+  end  
+  endif
+  volume->Add2ROM,status=status,physLength=physLength,avField=avField,startidx=startidx,endidx=endidx,$
+    q0_coeff=[0.1e-3,1e2,1e9,0,0],q0_formula='q[0]',q_formula='q0*(B/q[1])/(L/q[2])'
+endif  
+
+tags2remove=[tags2remove,'length','bmed','foot1','foot2','oidx','olength','obmed','ofoot1','ofoot2']
+
+if  ~(tag_exist(box,'idx') and $
+    tag_exist(box,'N') and $
+    tag_exist(box,'T')) then tags2remove=[tags2remove,'idx']
+
+volume->Add2ROM,_extra=rem_tag(box,tags2remove)
+
  model=obj_new('gxmodel')
  model->SetProperty,NS=NS,EW=EW,$
    XCOORD_CONV=XCOORD_CONV,YCOORD_CONV=YCOORD_CONV,ZCOORD_CONV=ZCOORD_CONV,$

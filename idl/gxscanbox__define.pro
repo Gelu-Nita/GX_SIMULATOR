@@ -89,11 +89,11 @@ xrange=xrange,yrange=yrange,zrange=zrange,Nx=Nx,Ny=Ny,Nz=Nz,nthreads=nthreads,_e
 main_base=get_tlb(wExecBase) 
 scan_base=widget_info(main_base,find_by_uname='SCANBASE')
 geometry3=widget_info(scan_base,/geometry)
-wEBTELToolbarBase = widget_base(scan_base, /row, /frame,/TOOLBAR,map=1)
-self.wSelectEBTEL= widget_button( wEBTELToolbarBase, $
-  value=gx_bitmap(filepath('open.bmp', subdirectory=['resource', 'bitmaps'])), $
-  /bitmap,tooltip='Select EBTEL Table',uname='EBTEL')
-self.wEBTELTable=widget_text(font=!defaults.font,wEBTELToolbarBase,value=gx_ebtel_path(),SCR_XSIZE=geometry1.SCR_XSIZE-geometry3.SCR_XSIZE,/wrap);-3*geometry2.SCR_XSIZE
+;wEBTELToolbarBase = widget_base(scan_base, /row, /frame,/TOOLBAR,map=1)
+;self.wSelectEBTEL= widget_button( wEBTELToolbarBase, $
+;  value=gx_bitmap(filepath('open.bmp', subdirectory=['resource', 'bitmaps'])), $
+;  /bitmap,tooltip='Select EBTEL Table',uname='EBTEL')
+;self.wEBTELTable=widget_text(font=!defaults.font,wEBTELToolbarBase,value=gx_ebtel_path(),SCR_XSIZE=geometry1.SCR_XSIZE-geometry3.SCR_XSIZE,/wrap);-3*geometry2.SCR_XSIZE
   
  self->CreateArrayInputControls
  self.wScan=widget_info(main_base,find_by_uname='SCAN_START')
@@ -1212,7 +1212,14 @@ pro gxScanBox::ReplaceEBTELtables,path=path
  end
  path=gx_ebtel_valid_path(path)?path:dialog_pickfile(path=file_dirname(gx_findfile('ebtel.sav')),default='.sav')
  if gx_ebtel_valid_path(path) then begin
-  widget_control,self.wEbtelTable,set_value=gx_ebtel_path(path)
+  if widget_valid(self.wEbtelTable) then widget_control,self.wEbtelTable,set_value=gx_ebtel_path(path)
+  widget_control,widget_info(get_tlb(self.wBase),Find_By_Uname='STATEBASE'),get_uvalue=state
+  models=state.sun->get(isa='gxmodel',/all)
+  for k=0,n_elements(models)-1 do begin
+    models[k]->GetProperty,wParent=wParent
+    wEbtelPath=widget_info(wParent,find_by_uname='EBTELpath')
+    if widget_valid(wEbtelPath) then widget_control,wEbtelPath,set_value=gx_ebtel_path(path)
+  endfor
   bridges=self.bridges->Get(/all,count=count)
   for i=0, count-1 do begin
     self->BridgeResetEBTEL,bridges[i]
@@ -1931,7 +1938,7 @@ ROI:obj_new(),slicer:obj_new(),wParmsTable:0l,wScan:0L,wPause:0L,wAbort:0L,wDebu
 renderer:'',wRenderer:0l,wSelectRenderer:0l,pData:ptr_new(),grid:ptr_new(),info:ptr_new(),bridges:obj_new(),$
 pause:0b,active:0b,new_view:0b,log:0l,t_start:0d,wPlotLOSOptions:0L,wLOS:0L,wPlotLOS:0L,wModelInfo:0l,profiler:obj_new(),$
 Grid2Update:0L,wGrid2Update:0L,wMinVolume:0l,wMaxVolume:0l,wPowerIndexVolume:0l,wResetVolumeScale:0l,$
-wSelectEbtel:0l,wEbtelTable:0ll,wParmBase:0l,wArrayParmBase:0l,wNparms:0l,wRparms:0l,$
+wSelectEbtel:0l,wEbtelTable:0l,wParmBase:0l,wArrayParmBase:0l,wNparms:0l,wRparms:0l,$
 wUploadFreqList:0l,wFreqList:0l,wUseFreqList:0l,wDelFreqList:0l,wUndoFreqList:0l,$
 wResetFreqList:0l,wSaveFreqList:0l,wEditedFreqList:0l,Rsun:(pb0r())[2]*60,wObserver:0L,wTopView:0L,wL0:0l,wB0:0l,wR:0L}
 end

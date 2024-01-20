@@ -170,12 +170,12 @@ pro gxWidget::CreatePanel,_extra=_extra
             UNITS='', $
             VALUE=subgridpts,Sensitive=1)
     end      
-    if keyword_set(expert) and WinOS then begin
-    wWinOS=cw_bgroup(font=font,wLocation,$
-      ['use DLL (Win-OS only)'],$
-      set_value=[winOS],$
-      /nonexclusive,/return_index,uname=prefix+'WinOS')
-    endif
+;    if keyword_set(expert) and WinOS then begin
+;    wWinOS=cw_bgroup(font=font,wLocation,$
+;      ['use DLL (Win-OS only)'],$
+;      set_value=[winOS],$
+;      /nonexclusive,/return_index,uname=prefix+'WinOS')
+;    endif
     volume=self.subject->GetVolume()
     flags=volume->getflags()  
     
@@ -282,37 +282,37 @@ pro gxWidget::CreatePanel,_extra=_extra
      endif else widget_control,wTscale,set_value=Tscale
    end 
    
-   if flags.hasBL  then begin
-        
-     volume->GetVertexAttributeData,'q0_coeff',q
-     if n_elements(q) eq 0 then begin
-       q=[0.415e-3,1e2,1e9,0,0]
-       volume->SetVertexAttributeData,'q0_coeff',q
-     end
-     
-     volume->GetVertexAttributeData,'q0_formula',q0_formula
-     q0_formula=volume->SetQ0(q0_formula,q_formula=q_formula)    
-  
-     wParmBase=widget_base(wBase,/column,uname=prefix+'q_formula_base')
-     wqBase=widget_base(wParmBase,/row,/frame)
-     wq=cw_objArray( wqBase,uname=prefix+'q',xtextsize=5,format='(g0)',units='',value=[q],label='q',/frame)
-     wqreset=widget_button(font=font, wqBase,value='Reset to default',uname=prefix+'q_reset')
-     
-     wq0FormulaBase=widget_base(wParmBase,/row,/frame)
-     label=widget_label(font=font,wq0FormulaBase,value='     q0=  ')
-     g=widget_info(wq,/geo)
-     gl=widget_info(label,/geo)
-     wq0f=widget_text(font=font,wq0FormulaBase,value=q0_formula,scr_xsize=g.scr_xsize-gl.scr_xsize,/edit,uname=prefix+'q0_formula')
-     wq0freset=widget_button(font=font,wq0FormulaBase,value='Reset to default',uname=prefix+'q0_formula_reset')
-     
-     wqFormulaBase=widget_base(wParmBase,/row,/frame)
-     label=widget_label(font=font,wqFormulaBase,value='     Q=  ',scr_xsize=gl.scr_xsize)
-     
-     wqf=widget_text(font=font,wqFormulaBase,value=q_formula,scr_xsize=g.scr_xsize-gl.scr_xsize,/edit,uname=prefix+'q_formula')
-     wqfreset=widget_button(font=font,wqFormulaBase,value='Reset to default',uname=prefix+'q_formula_reset')
-     
-
-   endif 
+;   if flags.hasBL  then begin
+;        
+;     volume->GetVertexAttributeData,'q0_coeff',q
+;     if n_elements(q) eq 0 then begin
+;       q=[0.415e-3,1e2,1e9,0,0]
+;       volume->SetVertexAttributeData,'q0_coeff',q
+;     end
+;     
+;     volume->GetVertexAttributeData,'q0_formula',q0_formula
+;     q0_formula=volume->SetQ0(q0_formula,q_formula=q_formula)    
+;  
+;     wParmBase=widget_base(wBase,/column,uname=prefix+'q_formula_base')
+;     wqBase=widget_base(wParmBase,/row,/frame)
+;     wq=cw_objArray( wqBase,uname=prefix+'q',xtextsize=5,format='(g0)',units='',value=[q],label='q',/frame)
+;     wqreset=widget_button(font=font, wqBase,value='Reset to default',uname=prefix+'q_reset')
+;     
+;     wq0FormulaBase=widget_base(wParmBase,/row,/frame)
+;     label=widget_label(font=font,wq0FormulaBase,value='     q0=  ')
+;     g=widget_info(wq,/geo)
+;     gl=widget_info(label,/geo)
+;     wq0f=widget_text(font=font,wq0FormulaBase,value=q0_formula,scr_xsize=g.scr_xsize-gl.scr_xsize,/edit,uname=prefix+'q0_formula')
+;     wq0freset=widget_button(font=font,wq0FormulaBase,value='Reset to default',uname=prefix+'q0_formula_reset')
+;     
+;     wqFormulaBase=widget_base(wParmBase,/row,/frame)
+;     label=widget_label(font=font,wqFormulaBase,value='     Q=  ',scr_xsize=gl.scr_xsize)
+;     
+;     wqf=widget_text(font=font,wqFormulaBase,value=q_formula,scr_xsize=g.scr_xsize-gl.scr_xsize,/edit,uname=prefix+'q_formula')
+;     wqfreset=widget_button(font=font,wqFormulaBase,value='Reset to default',uname=prefix+'q_formula_reset')
+;     
+;
+;   endif 
    
     
     wPlotBase=widget_base(wbase,/row,uname=prefix+'ATTRIBUTEPLOTBASE')
@@ -351,30 +351,9 @@ pro gxWidget::CreatePanel,_extra=_extra
    wPlotOptions=cw_objPlotOptions(font=font,wOptionBase,uname=prefix+'AttributePlotOptions',/ylog,/xlog)            
   
   if flags.hasBL  then begin
-   if keyword_set(expert) then begin
-    for avgdem=0, 6 do begin
-      dem_interpolate,avgdem=avgdem, method=method,/expert,/info
-      buttons=n_elements(buttons) eq 0?method:[buttons,method]
-    endfor
-   endif else begin
-    for avgdem=0, 3 do begin
-      dem_interpolate,avgdem=avgdem, method=method,/info
-      buttons=n_elements(buttons) eq 0?method:[buttons,method]
-    endfor
-   endelse
-   wLabel=widget_label(wOptionBase,value='DEM/DDM Interpolation Method',font=font)
-   if keyword_set(expert) then begin
-     valid=gx_ebtel_path(has_ddm=has_ddm)
-     wDEMDDM=cw_bgroup(font=font,wOptionBase,$
-       ['Use DEM','Use DDM'],$
-       set_value=has_ddm ,$
-       /exclusive,/return_index,/no_release,uname=prefix+'DEM/DDM',/row)
-   end  
-   wDEMinterpolate=cw_bgroup(font=font,wOptionBase,$
-      buttons,$
-      set_value=0 ,$
-      /exclusive,/return_index,/no_release,uname=prefix+'DEMAVG')
-   wLabel=widget_label(wOptionBase,value='',font=font,/dynamic,uname=prefix+'DEMDT',/Align_left)
+   
+   wH2Vpage=Widget_Base(wComponentTab, title='EBTEL Heating Model')
+   wh2v=cw_heat2volume(wH2Vpage,volume,uname=prefix+'heat2volume')
    
    wTRPage=Widget_Base(wComponentTab, title='Transition Region Attributes')
    if !version.os_family eq 'Windows' then set_plot,'win' else set_plot,'x'
@@ -1074,10 +1053,10 @@ end
                widget_control,event.id,get_value=value
                self.subject->SetProperty,subgridpts=value
               END
-     'GXMODEL:WINOS': BEGIN
-                widget_control,event.id,get_value=value
-                self.subject->SetProperty,winos=value[0]
-              END         
+;     'GXMODEL:WINOS': BEGIN
+;                widget_control,event.id,get_value=value
+;                self.subject->SetProperty,winos=value[0]
+;              END         
     'GXMODEL:LINESFROMSEEDS':begin
                               model=self.subject
                               sz=model->Size()
@@ -1300,49 +1279,7 @@ end
                           endcase
                          endfor
                        End 
-                       
-  
-     'GXMODEL:Q_RESET':Begin 
-                        volume=(self.subject->GetVolume())
-                        q=[0.000415,1e2,1e9,0,0]
-                        volume->SetVertexAttributeData,'q0_coeff',q
-                        self.subject->GetProperty,wParent=wParent
-                        widget_control,widget_info(wparent,find_by_uname='GXMODEL:q'),set_value=q
-                        q0_formula=volume->SetQ0(q0_formula)                  
-                       End                 
-     'GXMODEL:Q':     Begin
-                          volume=(self.subject->GetVolume())
-                          volume->GetVertexAttributeData,'q0_formula',q0_formula
-                          q0_formula=string(q0_formula)
-                          widget_control,event.id,get_value=q
-                          volume->SetVertexAttributeData,'q0_coeff',q
-                          q0_formula=volume->SetQ0(q0_formula)      
-                       end                 
-     'GXMODEL:Q0_FORMULA': Begin
-                            widget_control,event.id,get_value=q0_formula
-                            q0_formula=q0_formula[0]
-                            volume=(self.subject->GetVolume())
-                            widget_control,event.id,set_value=volume->SetQ0(q0_formula)                           
-                           End     
-     'GXMODEL:Q0_FORMULA_RESET': Begin
-                                   volume=(self.subject->GetVolume())
-                                   self.subject->GetProperty,wParent=wParent
-                                   wq0f=widget_info(wparent,find_by_uname='GXMODEL:q0_formula')
-                                   widget_control,wq0f,set_value=volume->SetQ0()                                  
-                                 End  
-                                 
-     'GXMODEL:Q_FORMULA':       Begin
-                                   widget_control,event.id,get_value=q_formula
-                                   q_formula=q_formula[0]
-                                   volume=(self.subject->GetVolume())
-                                   widget_control,event.id,set_value=volume->SetQ(q_formula)
-                                 End                            
-     'GXMODEL:Q_FORMULA_RESET': Begin
-                                   volume=(self.subject->GetVolume())
-                                   self.subject->GetProperty,wParent=wParent
-                                   wqf=widget_info(wparent,find_by_uname='GXMODEL:q_formula')
-                                   widget_control,wqf,set_value=volume->SetQ() 
-                                 End     
+     
      'GXMODEL:UPDATE': Begin
                         volume=(self.subject->GetVolume())
                         volume->Update,/force
@@ -1377,24 +1314,6 @@ end
                          volume->PlotModelAttributes
                          all=self.subject->Get(/all,isa='GXFLUXTUBE',count=count)
                          for t=0,count-1 do all[t]->SelectThermalModel,usedem=usedem  
-                       END  
-     'GXMODEL:DEM/DDM': BEGIN
-                         volume=(self.subject->GetVolume())
-                         flags=volume->getflags()
-                         path=gx_ebtel_path(has_ddm=has_ddm,/quiet)
-                         if ~has_ddm and event.value eq 1 then begin
-                          answ=dialog_message('No DDM provided by the selected  EBTEL table, reverting to DEM interpolation!',/info)
-                          widget_control,event.id,set_value=0
-                         endif else flags=volume->setflags(/newNT)
-                       END
-     
-     'GXMODEL:DEMAVG': BEGIN
-                        widget_control,event.id,get_value=demavg
-                        volume=(self.subject->GetVolume())
-                        flags=volume->setflags(newNT=volume->NewNT())
-                        wnparms=widget_info(event.top,FIND_BY_UNAME='renderer:nparms')
-                        widget_control,widget_info(event.top,find_by_uname='Scanbox'),get_uvalue=scanbox
-                        scanbox->ReplaceParmValue,'DEMavg',demavg
                        END                    
      'GXMODEL:TRMASKMENU':begin
                             self.subject->ReplaceTRMask,event
@@ -1483,16 +1402,15 @@ end
                      if file ne '' then begin
                       model->GetProperty,parent=parent
                       parent->Remove,model
+                      ;temporary remove some recoverable properties to decrease file size
                       grid=model->GetGrid()
-                      if ptr_valid(grid) then begin
-                        grid_size=n_elements(*grid)*4/1024
-                        answ=dialog_message(strcompress(string(grid_size,format="('Do you want to save the scan grid along with the model (',g0,' kB increase in file size)?')")),/question)
-                        if strupcase(answ) eq 'NO' then begin
-                          model->SetGrid,ptr_new()
-                          save,model,file=file,/compress
-                          model->SetGrid,grid
-                        endif else save,model,file=file,/compress
-                      endif else save,model,file=file,/compress
+                      model->SetGrid,ptr_new()
+                      ram=(model->GetVolume())->SwapRam()
+                      ;save reduced size model
+                      save,model,file=file,/compress
+                      ;restore temporary removed properties
+                      ram=(model->GetVolume())->SwapRam(ram)
+                      model->SetGrid,grid
                       parent->Add,model
                      end
                     End

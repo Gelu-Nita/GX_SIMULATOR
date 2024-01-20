@@ -210,21 +210,17 @@ pro gxVolume::PlotModelAttributes
           xx=gx_rsun()*l
          end
       7: begin
-          self->GetVertexAttributeData,'Q'
-          xx=Q
-          xAttribute='Closed loop heating rate (Q)'
+          xx=self->GetVertexData('Q')
+          xAttribute='Loop heating rate (Q)'
          end 
       8: begin
-          self->GetVertexAttributeData,'alpha',alpha
-          xx=alpha
+          xx=self->GetVertexData('alpha')
          end  
       9: begin
-           self->GetVertexAttributeData,'Q0',Q0
-           xx=q0
+           xx=self->GetVertexData('Q0')
          end   
       10: begin
-           self->GetVertexAttributeData,'curlb',curlb
-           xx=curlb
+           xx=self->GetVertexAttributeData('curlb')
          end    
      else:
      endcase
@@ -244,21 +240,17 @@ pro gxVolume::PlotModelAttributes
           yy=gx_rsun()*l
          end 
       7: begin
-          self->GetVertexAttributeData,'Q',Q
-          yy=Q  
-          yAttribute='Closed loop heating rate (Q)'
+          yy=self->GetVertexData('Q')
+          yAttribute='Loop heating rate (Q)'
          end  
          8: begin
-           self->GetVertexAttributeData,'alpha',alpha
-           yy=alpha
+           yy=self->GetVertexData('alpha')
          end 
          9: begin
-           self->GetVertexAttributeData,'Q0',Q0
-           yy=q0
+           yy=self->GetVertexData('Q0')
          end
          10: begin
-           self->GetVertexAttributeData,'curlb',curlb
-           yy=curlb
+           yy=self->GetVertexData('curlb')
          end     
      else:
      endcase
@@ -309,8 +301,9 @@ pro gxVolume::PlotModelAttributes
             ebtel_file=gx_ebtel_path()
             if gx_ebtel_valid_path(ebtel_file) then begin
               restore,ebtel_file
-              if xselect eq 6 and widget_info(wRotateXY,/button_set) eq 0 then oplot,2*lrun,qrun,psym=1,color=250 else $
-              oplot,qrun,2*lrun,psym=1,color=250
+              psym=3
+              if xselect eq 6 and widget_info(wRotateXY,/button_set) eq 0 then oplot,2*lrun,qrun,psym=psym,color=250 else $
+              oplot,qrun,2*lrun,psym=psym,color=250
             end
           end
         endif
@@ -366,11 +359,12 @@ function gxVolume::SetQ,q_formula,quiet=quiet
     q=[0.415e-3,1e2,1e9,0,0]
     self->SetVertexAttributeData,'q0_coeff',q
   end
+  mask=self->GetHeat2VolumeFactor(idx=idx)
+  alpha=(self->GetVertexData('alpha'))[idx]
+  curlb=(self->GetVertexData('curlb'))[idx]
   self->GetVertexAttributeData,'Q0',Q0
   self->GetVertexAttributeData,'Q',oldQ
   self->GetVertexAttributeData,'bmed',B
-  self->GetVertexAttributeData,'alpha',alpha 
-  self->GetVertexAttributeData,'curlb',curlb 
   self->GetVertexAttributeData,'length',L
   self->GetVertexAttributeData,'dz',dz
   default,oldQ,L*0
@@ -392,8 +386,8 @@ function gxVolume::SetQ,q_formula,quiet=quiet
     result=execute('newQ='+q_formula)
   endif
   skip:
-  self->SetVertexAttributeData,'q_formula',byte(q_formula)
-  self->SetVertexAttributeData,'Q',newQ
+  self->SetVertexAttributeData,'q_formula',q_formula
+  self->SetVertexAttributeData,'Q',newQ,/ram
   flags=self->setflags(newNT=total(abs(minmax(oldq-newq))) ne 0)
   if flags.newNT then self->PlotModelAttributes
   return,q_formula
@@ -415,10 +409,16 @@ function gxVolume::SetQ0,q0_formula,q_formula=q_formula,quiet=quiet
     goto,skip
   end
   self->GetVertexAttributeData,'q0_coeff',q
+  if n_elements(q) eq 0 then begin
+    q=[0.415e-3,1e2,1e9,0,0]
+    self->SetVertexAttributeData,'q0_coeff',q
+  end
+  mask=self->GetHeat2VolumeFactor(idx=idx)
   self->GetVertexAttributeData,'bmed',B
-  self->GetVertexAttributeData,'alpha',alpha 
-  self->GetVertexAttributeData,'curlb',curlb 
   self->GetVertexAttributeData,'length',L
+  alpha=(self->GetVertexData('alpha'))[idx] 
+  curlb=(self->GetVertexData('curlb'))[idx]  
+
   l=gx_rsun()*l/2
   result=execute('q0='+q0_formula)
   if result eq  0 then begin
@@ -427,7 +427,7 @@ function gxVolume::SetQ0,q0_formula,q_formula=q_formula,quiet=quiet
     result=execute('q0='+q0_formula)
   endif
   skip:
-  self->SetVertexAttributeData,'q0_formula',byte(q0_formula)
+  self->SetVertexAttributeData,'q0_formula',q0_formula
   self->SetVertexAttributeData,'Q0',Q0
   self->GetVertexAttributeData,'q_formula',q_formula
   q_formula=self->SetQ(q_formula)
@@ -580,15 +580,15 @@ function gxVolume::VoxelId
  return,voxel_id
 end  
 
-function gxVolume::GetVertexData,var
+function gxVolume::GetVertexData,var,shader=shader
   if (size(var,/tname) eq 'STRING') and ~isa(var,/array) then $
-    self->GetVertexAttributeData,var,data
-  return,isa(data,/number)?data:!null
+    self->GetVertexAttributeData,var,data,shader=shader
+  return,isa(data)?data:!null
 end
 
 pro gxVolume::Update,select,data=data,plot_model_attributes=plot_model_attributes,getdata=getdata,$
               force=force,update=update,chromo_view=chromo_view,range=range,pwr_idx=pwr_idx,$
-              nt_update=nt_update,use_dem=use_dem,has_used_ddm=has_used_ddm
+              nt_update=nt_update,use_dem=use_dem,has_used_ddm=has_used_ddm,quiet=quiet
   compile_opt hidden
   catch, error_stat
  if error_stat ne 0 then begin
@@ -603,9 +603,11 @@ pro gxVolume::Update,select,data=data,plot_model_attributes=plot_model_attribute
     return
   endif
   if self.flags.newNT then begin
-    if ~keyword_set(quiet) then if dialog_message(['Volume n-T configuration needs to be updated!','Do you want to recompute n-T now?',$
+    if ~keyword_set(quiet) then begin
+      if dialog_message(['Volume n-T configuration needs to be updated!','Do you want to recompute n-T now?',$
       'If you need to do more volume changes before this potentially time consuming action, you can later do it manualy by pressing the "Store/Compute n-T from EBTEL" button located in the Model tab'],$ 
       /question) eq 'Yes' then self->ComputeNT
+    endif else self->ComputeNT,/quiet
   endif
   self->UpdateVoxelId,force=force;It will do it only if self.flags.NewID is set or explicitely requested by /force keyword is set
   if ~(self.flags.newData or  keyword_set(update)) then return; nothing to update or no explicit request
@@ -645,82 +647,55 @@ pro gxVolume::Update,select,data=data,plot_model_attributes=plot_model_attribute
    'curlB':begin
           if n_elements(select) eq 0 then goto, no_recompute
           widget_control,/hourglass
-          data=self.parent->box2volume('idx','curlb',box2vol=box2vol)
+          data=self.parent->box2volume('curlb',/full)
           if ~isa(data,/number) then begin
-            ;compute curl
-            box=self.parent->BBOX()
-            m=max(box.dr)
-            dx=box.dr[0]/m
-            dy=box.dr[1]/m
-            dz=box.dr[2]/m
-            curl,box.bx,box.by,box.bz,cx,cy,cz,order=3, dx=dx, dy=dy, dz=dz
-            data=sqrt(cx^2+cy^2+cz^2)
-            ;curl computed
-            data=data[box2vol]
+            ;compute curl and alpha
+           self.parent->ComputeCurlBandAlpha
+           data=self.parent->box2volume('curlb',/full)
           endif 
         end   
    'divB+':begin
           if n_elements(select) eq 0 then goto, no_recompute
           widget_control,/hourglass
-          ;compute divB
-          box=self.parent->BBOX()
-          m=max(box.dr)
-          dx=box.dr[0]/m
-          dy=box.dr[1]/m
-          dz=box.dr[2]/m
-          div,box.bx,box.by,box.bz,data,order=3, dx=dx, dy=dy, dz=dz
-          void=self.parent->box2volume(box2vol=box2vol)
-          data=data[box2vol]>0
+          data=self.parent->box2volume('divb',/full)
+          if ~isa(data,/number) then begin
+            ;compute divB
+            self.parent->ComputeDivB
+            data=self.parent->box2volume('divb',/full)
+          end
+          data=data>0
         end
     'divB-':begin
           if n_elements(select) eq 0 then goto, no_recompute
           widget_control,/hourglass
-          ;compute divB
-          box=self.parent->BBOX()
-          m=max(box.dr)
-          dx=box.dr[0]/m
-          dy=box.dr[1]/m
-          dz=box.dr[2]/m
-          div,box.bx,box.by,box.bz,data,order=3, dx=dx, dy=dy, dz=dz
-          void=self.parent->box2volume(box2vol=box2vol)
-          data=data[box2vol]<0
+          data=self.parent->box2volume('divb',/full)
+          if ~isa(data,/number) then begin
+            ;compute divB
+            self.parent->ComputeDivB
+            data=self.parent->box2volume('divb',/full)
+          end
+          data=data<1
         end    
     'helB-':begin
           if n_elements(select) eq 0 then goto, no_recompute
           widget_control,/hourglass
-          data=self.parent->box2volume('idx','alpha',box2vol=box2vol)
+          data=self.parent->box2volume('alpha',/full)
           if ~isa(data,/number) then begin
-            ;compute curl
-            box=self.parent->BBOX()
-            m=max(box.dr)
-            dx=box.dr[0]/m
-            dy=box.dr[1]/m
-            dz=box.dr[2]/m
-            curl,box.bx,box.by,box.bz,cx,cy,cz,order=3, dx=dx, dy=dy, dz=dz
-            ;curl computed
-            data=box.bx*cx+box.by*cy+box.bz*cz
-            data=data/(box.bx^2+box.by^2+box.bz^2)
-            data=data[box2vol]
+           ;compute curl and alpha
+           self.parent->ComputeCurlBandAlpha
+           data=self.parent->box2volume('alpha',/full)
           endif 
           data[where(data gt 0)]=1./0
         end    
-      'helB+':begin
+    'helB+':begin
           if n_elements(select) eq 0 then goto, no_recompute
           widget_control,/hourglass
-          data=self.parent->box2volume('idx','alpha',box2vol=box2vol)
+          data=self.parent->box2volume('alpha',/full)
           if ~isa(data,/number) then begin
-            ;compute curl
-            box=self.parent->BBOX()
-            m=max(box.dr)
-            dx=box.dr[0]/m
-            dy=box.dr[1]/m
-            dz=box.dr[2]/m
-            curl,box.bx,box.by,box.bz,cx,cy,cz,order=3, dx=dx, dy=dy, dz=dz
-            ;curl computed
-            data=box.bx*cx+box.by*cy+box.bz*cz
-            data=data/(box.bx^2+box.by^2+box.bz^2)
-            data=data[box2vol]
-          endif
+           ;compute curl and alpha
+           self.parent->ComputeCurlBandAlpha
+           data=self.parent->box2volume('alpha',/full)
+          endif 
           data[where(data lt 0)]=1./0
         end                              
      'n_0': data=self->GetVertexData('n0')
@@ -864,19 +839,18 @@ pro gxVolume::Update,select,data=data,plot_model_attributes=plot_model_attribute
    flags=self->setflags(newData=0)
 end
 
-
-function gxVolume::hasBL,length=lenght,bmed=bmed,idx=idx
-  self->GetVertexAttributeData,'length',length
-  self->GetVertexAttributeData,'bmed',bmed
-  self->GetVertexAttributeData,'idx',idx
-  return,n_elements(idx) ne 0 and ((n_elements(length) eq n_elements(bmed)) and (n_elements(length) eq n_elements(idx)))
+function gxVolume::hasBL,length=length,bmed=bmed,idx=idx,shader=shader
+    self->GetVertexAttributeData,'length',length,shader=shader
+    self->GetVertexAttributeData,'bmed',bmed,shader=shader
+    self->GetVertexAttributeData,'idx',idx,shader=shader
+    return,n_elements(idx) gt 1 and ((n_elements(length) eq n_elements(bmed)) and (n_elements(length) eq n_elements(idx))) 
 end
 
-function gxVolume::hasNT,n=n,t=t,idx=idx
-  self->GetVertexAttributeData,'n',n
-  self->GetVertexAttributeData,'T',t
-  self->GetVertexAttributeData,'idx',idx
-  return,n_elements(idx) ne 0 and ((n_elements(n) eq n_elements(t)) and (n_elements(n) eq n_elements(idx)))
+function gxVolume::hasNT,n=n,t=t,idx=idx,shader=shader
+  self->GetVertexAttributeData,'n',n,shader=shader
+  self->GetVertexAttributeData,'T',t,shader=shader
+  self->GetVertexAttributeData,'idx',idx,shader=shader
+  return,n_elements(idx) gt 1 and ((n_elements(n) eq n_elements(t)) and (n_elements(n) eq n_elements(idx)))
 end
 
 pro gxVolume::RequestVolumeUpdate,condition=condition,_extra=extra
@@ -918,14 +892,14 @@ function gxVolume::NewNT,newkey,oldkey
   self->GetVertexAttributeData,'NTkey',oldkey
   self.parent->GetProperty,wparent=wparent
   if widget_valid(wparent) then begin
-    id=widget_info(wparent,find_by_uname='GXMODEL:DEMAVG')
+    id=widget_info(wparent,find_by_uname='GXVOLUME:DEMAVG')
     if widget_valid(id) then widget_control,id,get_value=demavg 
   endif
-  default,oldkey,byte('')
+  default,oldkey,('')
   default,newkey,oldkey
-   if self.flags.NTDEM then newkey=byte(strcompress('q=['+arr2str(q0_coeff)+'] & q0='+string(byte(q0_formula))+' & q='+string(byte(q_formula))+$
+   if self.flags.NTDEM then newkey=(strcompress('q=['+arr2str(q0_coeff)+'] & q0='+string((q0_formula))+' & q='+string((q_formula))+$
     ' & NTDEM='+string(self.flags.NTDEM))+(n_elements(demavg) gt 0? string(demavg,format="(' & DEMAVG=',i1)"):'')+' & EBTEL='+file_basename(gx_ebtel_path()))
-  if self.flags.NTSS then newkey=byte(strcompress('q=['+arr2str(q0_coeff)+'] & q0='+string(byte(q0_formula))+' & q='+string(byte(q_formula))+$
+  if self.flags.NTSS then newkey=(strcompress('q=['+arr2str(q0_coeff)+'] & q0='+string((q0_formula))+' & q='+string((q_formula))+$
     ' & NTSS='+string(self.flags.NTSS))+(n_elements(demavg) gt 0? string(demavg,format="(' & DEMAVG=',i1)"):'')+'& EBTEL=Analytical SS')
   flags=self->setflags(newNT=(string(newkey) ne string(oldkey)))
   return,flags.newNT
@@ -952,21 +926,25 @@ pro gxVolume::ComputeNT,question=question,quiet=quiet,force=force,NTDEM=NTDEM,NT
       widget_control,/hourglass
       self.parent->GetProperty,wparent=wparent
       if widget_valid(wparent) then begin
-        id=widget_info(wparent,find_by_uname='GXMODEL:DEMAVG')
+        id=widget_info(wparent,find_by_uname='GXVOLUME:DEMAVG')
         if widget_valid(id) then widget_control,id,get_value=avgdem
       end
       if widget_valid(wparent) then begin
-        id=widget_info(wparent,find_by_uname='GXMODEL:DEM/DDM')
+        id=widget_info(wparent,find_by_uname='GXVOLUME:DEM/DDM')
         if widget_valid(id) then begin
           widget_control,id,get_value=useDDM
           use_dem=~keyword_set(useDDM)
         endif
       end
-      dem_interpolate,n,t,Qarr=Q,Larr=L,avgdem=avgdem,duration=duration,use_dem=use_dem,has_used_ddm=has_used_ddm
+      widget_control,/hourglass
       if widget_valid(wparent) then begin
-        id=widget_info(wparent,find_by_uname='GXMODEL:DEMDT')
+        wdemdt=widget_info(wparent,find_by_uname='GXVOLUME:DEMDT')
+        if widget_valid(wdemdt) then widget_control,wdemdt,set_value='Updating n-T...'
+      end
+      dem_interpolate,n,t,Qarr=Q,Larr=L,avgdem=avgdem,duration=duration,use_dem=use_dem,has_used_ddm=has_used_ddm
+      if widget_valid(wdemdt) then begin
         method=keyword_set(has_used_ddm)?'DDM':'DEM'
-        if widget_valid(id) then widget_control,id,set_value=strcompress(string(method,duration,format="(a4,' interpolation computed in',f7.2,' s')"))
+        if widget_valid(id) then widget_control,wdemdt,set_value=strcompress(string(method,duration,format="(a4,' interpolation computed in',f7.2,' s')"))
       end
       self->SetVertexAttributeData,'n',n
       self->SetVertexAttributeData,'T',t
@@ -1379,16 +1357,241 @@ function gxVolume::setflags,_extra=flags
 end
 
 
+function gxVolume::GetHeat2Volume
+ if ptr_valid(self.heat2volume) then return,self.heat2volume
+ self->SetHeat2Volume 
+ return,self.heat2volume   
+end
+
+ 
+pro gxVolume::Add2RAM,replaced=replaced,_extra=_extra
+ self.RAM=gx_add2pointer(self.RAM,replaced=replaced,_extra=_extra)
+end 
+
+pro gxVolume::SetVertexAttributeData,name,value,ram=ram,shader=shader
+ if keyword_set(shader)then begin
+  ;here the parent class procedure if used if explicitely requested
+  self->IDLgrVolume::SetVertexAttributeData,name,value
+  return
+ endif
+ ;here the attributes with the same names set in the previous versions, if any are removed
+ self->IDLgrVolume::GetVertexAttributeData,name,old_value
+ if n_elements(old_value) ne 0 then begin
+  self->IDLgrVolume::SetVertexAttributeData,name,0b
+ endif
+ default,value,old_value
+ 
+ if keyword_set(ram) then self.Add2RAM,_extra=create_struct(name,value)$
+                     else self.Add2ROM,_extra=create_struct(name,value)
+end
+
+pro gxVolume::GetVertexAttributeData,name,value,shader=shader
+  if keyword_set(shader)then begin
+    ;here the parent class procedure if used if explicitely requested
+    self->IDLgrVolume::GetVertexAttributeData,name,value
+    return
+  endif
+  ;check the ROM first
+  if ptr_valid(self.rom) then begin
+    if tag_exist(*self.rom,name,index=index) then begin
+      value=(*self.rom).(index)
+      return
+    endif
+  endif
+  ;check the RAM second
+  if ptr_valid(self.ram) then begin
+    if tag_exist(*self.ram,name,index=index) then begin
+      value=(*self.ram).(index)
+      return
+    endif
+  endif
+  ;check special cases for backward compatibility
+  if ptr_valid(self.rom) then begin
+    if tag_exist(*self.rom,'status') and tag_exist(*self.rom,'physLength') and tag_exist(*self.rom,'avField')then begin
+      if ptr_valid(self.ram) then if tag_exist(*self.ram,'idx') then begin 
+      case strlowcase(name) of
+        'length':value=(*self.rom).physLength[(*self.ram).idx]
+        'bmed':value=(*self.rom).avField[(*self.ram).idx]
+        'foot1':value=(*self.rom).startidx[(*self.ram).idx]
+        'foot2':value=(*self.rom).endidx[(*self.ram).idx]
+        else:
+      endcase
+      if n_elements(value) ne 0 then return
+      endif
+    endif
+  end  
+  ;finaly check the shader attributes
+  self->IDLgrVolume::GetVertexAttributeData,name,value
+end
+
+
+function gxVolume::GetRAM
+  return,self.RAM
+end
+
+function gxVolume::SwapRAM,newRAM
+  default,newRam,ptr_new()
+  RAM=self.RAM
+  if size(newRAM,/tname) eq 'POINTER' then self.RAM=newRAM
+  return,RAM
+end
+
+pro gxVolume::Add2ROM,replaced=replaced,_extra=_extra
+  self.ROM=gx_add2pointer(self.ROM,replaced=replaced,_extra=_extra)
+end
+
+
+function gxVolume::GetROM
+  return,self.ROM
+end
+
+pro gxVolume::SetHeat2Volume,seeds=seeds,mask=mask
+  if ptr_valid(self.heat2volume) then heat2volume=*self.heat2volume
+  default,heat2volume,$
+    {in:1.0,$
+    nw:1.0,$
+    enw:1.0,$
+    pl:1.1,$
+    fac:1.2,$
+    pen:1.3,$
+    umb:1.4,$
+    umb2umb:0.1,$
+    seeded:1,$
+    olines:0,$
+    mask:fltarr(7,7),$
+    oscale:'1.1-z/max(z)'}
+  if n_elements(seeds) eq 8 then begin
+    for k=0,7 do heat2volume.(k)=seeds[k]
+    heat2volume.seeded=1
+  endif
+  if n_elements(mask) eq 49 then begin
+    heat2volume.mask=mask
+    heat2volume.seeded=0
+  endif
+  if heat2volume.seeded then begin
+    for i=0, 6 do begin
+      for j=0,6 do begin
+        heat2volume.mask[i,j]=heat2volume.(i)*heat2volume.(j)
+      endfor
+    endfor
+    heat2volume.mask[6,6]=heat2volume.umb2umb
+  endif
+  ptr_free,self.heat2volume
+  self.heat2volume=ptr_new(heat2volume)
+  flags=self->SetFlags(/NewNT)
+end
+
+function gxVolume::GetQ0formula,mask=mask
+ self->GetVertexAttributeData,'q0_formula',q0_formula
+ q0_formula=n_elements(q0_formula) gt 0? string(q0_formula):''
+ mask=strlowcase(stregex(q0_formula,'mask',/extract,/fold))
+ return,q0_formula
+end
+
+function gxVolume::GetQformula,mask=mask
+  self->GetVertexAttributeData,'q_formula',q_formula
+  q_formula=n_elements(q_formula) gt 0? string(q_formula):''
+  return,q_formula
+end
+
+function gxVolume::GetHeat2VolumeKey
+ h2v=self->GetHeat2Volume()
+ key='q0_selection={'
+ names=tag_names(*h2v)
+ for k=0,8 do key+=strlowcase(names[k])+':'+string((*h2v).(k),',',format="(g0,a0)")
+ if ~(*h2v).seeded then key+=strlowcase(names[10])+':['+arr2str((*h2v).(10))+'],'
+ key+=strlowcase(names[9])+':'+string((*h2v).(9),format="(g0,a0)")
+ key+=~(*h2v).olines?'}':','+strlowcase(names[11])+":'"+(*h2v).(11)+"'}"
+ return,strcompress(key)
+end
+
+function gxVolume::GetHeat2VolumeFactor,idx=idx,compute=compute
+  h2vfactor= self->GetVertexData('h2vfactor')
+  if ~isa(h2vfactor)then compute=1
+  if keyword_set(compute) then begin  
+   h2v=self->GetHeat2Volume()
+   refmaps=self.parent->RefMaps()
+   if ptr_valid(refmaps) then begin
+     refmaps=(*refmaps)[0]
+     ref_count=refmaps->Get(/count)
+     for i=0,ref_count-1 do begin
+       if strupcase(refmaps->Get(i,/id)) eq strupcase('BASE CHROMO_MASK') or $
+         strupcase(refmaps->Get(i,/id)) eq strupcase('CEA-CHROMO MASK') then begin
+         mask=refmaps->Get(i,/data)
+         goto,mask_exit
+       endif
+     endfor
+   end
+   mask_exit:
+   sz=self.parent->Size()
+   if ptr_valid(self.RAM) then begin
+     if ~tag_exist(*self.RAM, 'alpha') then self.parent->ComputeCurlBandAlpha
+   endif else self.parent->ComputeCurlBandAlpha
+ 
+   idx=where(((*self.ROM).status and 4l) eq 4l)
+   if n_elements(mask) eq sz[1]*sz[2] then begin
+    foot1=(*self.ROM).startidx[idx]
+    foot2=(*self.ROM).endidx[idx]
+    foot1=array_indices(sz[1:3]+[0,0,10],/dim,foot1)
+    foot2=array_indices(sz[1:3]+[0,0,10],/dim,foot2)
+    foot1=reform(mask[foot1[0,*],foot1[1,*]])-1
+    foot2=reform(mask[foot2[0,*],foot2[1,*]])-1
+    h2vfactor=(*h2v).mask[foot1,foot2] 
+    if (*h2v).olines then begin
+       oidx=where(((*self.ROM).status and 16l) eq 16l)
+       foot1=(*self.ROM).startidx[oidx]
+       foot2=(*self.ROM).endidx[oidx]
+       foot1=array_indices(sz[1:3]+[0,0,10],/dim,foot1)
+       foot2=array_indices(sz[1:3]+[0,0,10],/dim,foot2)
+       omin=min([min(foot1[2,*]),min(foot2[2,*])])
+       base_idx=where(foot1[2,*] eq omin,base_count,comp=side_idx,ncomp=side_count)
+       seeds=[]
+       for k=0,6 do seeds=[seeds,(*h2v).(k)]
+       if base_count gt 0 then  begin 
+        base=seeds[reform(mask[foot1[0,base_idx],foot1[1,base_idx]])-1]
+        z=findgen(sz[3])
+        z=z[foot2[2,base_idx]]
+        curlb=(*self.RAM).curlb[oidx[base_idx]]
+        alpha=(*self.RAM).alpha[oidx[base_idx]]
+        Bx=(self->GetVertexData('Bx'))[oidx[base_idx]]
+        By=(self->GetVertexData('By'))[oidx[base_idx]]
+        Bz=(self->GetVertexData('Bz'))[oidx[base_idx]]
+        dummy=execute('side=reform('+(*h2v).oscale+')')
+        h2vfactor=[h2vfactor,base*side[lindgen(n_elements(z))]]
+        idx=[idx,oidx[base_idx]]
+        if side_count gt 0 then  begin
+           base=seeds[reform(mask[foot2[0,side_idx],foot2[1,side_idx]])-1]
+           z=findgen(sz[3])
+           z=z[foot1[2,side_idx]]
+           curlb=(*self.RAM).curlb[oidx[side_idx]]
+           alpha=(*self.RAM).alpha[oidx[side_idx]]
+           Bx=(self->GetVertexData('Bx'))[oidx[side_idx]]
+           By=(self->GetVertexData('By'))[oidx[side_idx]]
+           Bz=(self->GetVertexData('Bz'))[oidx[side_idx]]
+           dummy=execute('side=reform('+(*h2v).oscale+')')
+           h2vfactor=[h2vfactor,base*side[lindgen(n_elements(z))]]
+           idx=[idx,oidx[side_idx]]
+         endif
+       endif
+     endif
+   endif else  h2vfactor=replicate(1,(*h2v).olines?n_elements(idx):(n_elements(idx)+n_elements(oidx)))
+   self->Add2RAM,_extra={h2vfactor:h2vfactor,idx:idx}
+   q0_formula=self->SetQ0(self->GetVertexData('q0_formula'))
+   self->Update,/quiet
+ endif
+ idx=self->GetVertexData('idx')
+ return,h2vfactor
+end
+
 
 
 pro gxVolume__define
  struct_hide,{gxVolume,inherits IDLgrVolume,wParent:0l,select:'',$
-  bscale:0d,nscale:0d,tscale:0d,gyro:0d,$
+  bscale:0d,nscale:0d,tscale:0d,gyro:0d,heat2volume:ptr_new(),rom:ptr_new(),ram:ptr_new(),$
   flags: {gxflags,$
           NTstored:0L,$
           NTdem:0L,$
           NTss:0L,$
-          ;NTssdem:0L,$
           hasNT:0L,$
           TRadd:0L,$
           TRMask:0L,$
@@ -1399,6 +1602,5 @@ pro gxVolume__define
           newData:0L,$
           storedNTdem:0L,$
           storedNTss:0L,$
-          ;storedNTssdem:0L,$
           hasBL:0L}}
 end
