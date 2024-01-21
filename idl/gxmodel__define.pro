@@ -647,8 +647,14 @@ pro gxModel::UpdateDef
         self.Volume->Add2ROM,status=status,physLength=physLength,avField=avField,startidx=startidx,endidx=endidx
      endif  
   endif 
+  
+  if ptr_valid(self.Volume->GetROM()) then begin
+    if tag_exist(*(self.Volume->GetROM()),'status') then begin
+      flags=self.volume->setflags(/ntdem)
+      Heat2VolumeFactor=self.volume->GetHeat2VolumeFactor(/compute)
+    end
+  end
 
-  if tag_exist(*(self.Volume->GetROM()),'status') then Heat2VolumeFactor=self.volume->GetHeat2VolumeFactor(/compute)
   flags=self.volume->setflags(hasBL=self.volume->hasBL())
   flags=self.volume->setflags(hasNT=self.volume->hasNT())
   

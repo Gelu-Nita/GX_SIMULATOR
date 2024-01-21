@@ -941,13 +941,16 @@ pro gxVolume::ComputeNT,question=question,quiet=quiet,force=force,NTDEM=NTDEM,NT
         wdemdt=widget_info(wparent,find_by_uname='GXVOLUME:DEMDT')
         if widget_valid(wdemdt) then widget_control,wdemdt,set_value='Updating n-T...'
       end
+      message,'Computing n-T from DEM/DDM....',/info
+      t0=systime(/s)
       dem_interpolate,n,t,Qarr=Q,Larr=L,avgdem=avgdem,duration=duration,use_dem=use_dem,has_used_ddm=has_used_ddm
+      message,string(systime(/s)-t0,format="('n-T computed from DEM/DDM in ', g0,' seconds')"),/info
       if widget_valid(wdemdt) then begin
         method=keyword_set(has_used_ddm)?'DDM':'DEM'
         if widget_valid(id) then widget_control,wdemdt,set_value=strcompress(string(method,duration,format="(a4,' interpolation computed in',f7.2,' s')"))
       end
-      self->SetVertexAttributeData,'n',n
-      self->SetVertexAttributeData,'T',t
+      self->SetVertexAttributeData,'n',n,/ram
+      self->SetVertexAttributeData,'T',t,/ram
       flags=self->setflags(/storedNTDEM)
     end
   end
@@ -957,8 +960,8 @@ pro gxVolume::ComputeNT,question=question,quiet=quiet,force=force,NTDEM=NTDEM,NT
     T = 74 * (Q/Q1)^(2./7.) * (L)^(4./7.)
     n= self.nscale*1.3e6 * T^2 / L
     T = self.Tscale*T
-    self->SetVertexAttributeData,'n',n
-    self->SetVertexAttributeData,'T',t
+    self->SetVertexAttributeData,'n',n,/ram
+    self->SetVertexAttributeData,'T',t,/ram
     flags=self->setflags(/storedNTSS)
   endif
   newNT=self->NewNT(newkey)
