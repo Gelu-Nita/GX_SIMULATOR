@@ -506,7 +506,7 @@ compile_opt hidden
      (sz[3]+3):begin
              xprofile=coeff*xprofile[*,0]/f2[fidx]
              yprofile=coeff*yprofile[*,0]/f2[fidx]
-             spectrum=coeff*spectrum[*,0]/f2/2
+             spectrum=coeff*spectrum[*,0]/f2
             end
      (sz[3]+4):begin
              xprofile=coeff*xprofile[*,1]/f2[fidx]

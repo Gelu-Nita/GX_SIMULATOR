@@ -5,7 +5,7 @@
 ;To plot on a prexisting LOS map, use /over
 pro gx_model2world,model,lines=lines,fluxtubes=fluxtubes,fov=fov,box=box,over=over,$
                   scolor=scolor,lcolor=lcolor,ocolor=ocolor,box_color=box_color,fcolor=fcolor,$
-                  sthick=sthick,lthick=lthick,refmap=ref,_extra=_extra,all=all
+                  sthick=sthick,lthick=lthick, lstyle=lstyle,refmap=ref,_extra=_extra,all=all
   default,model,obj_new()
   default,scolor,250
   default,lcolor,150
@@ -14,6 +14,7 @@ pro gx_model2world,model,lines=lines,fluxtubes=fluxtubes,fov=fov,box=box,over=ov
   default,fcolor,50
   default,sthick,3
   default,cthick,1
+  default,lstyle,1
   
   if keyword_set(all) then begin
     lines=1
@@ -52,11 +53,19 @@ pro gx_model2world,model,lines=lines,fluxtubes=fluxtubes,fov=fov,box=box,over=ov
   if keyword_set(lines) then begin
     lines=model->get(/all,isa='gxbline')
     if obj_valid(lines[0]) then begin
+      lcolor2=lcolor
+      ocolor2=ocolor
+      lthick2=lthick
+      lstyle2=lstyle
       for k=0,n_elements(lines)-1 do begin
         if obj_isa(lines[k],'gxbline') then begin
             lines[k]->getproperty,data=ldata,open=open
             ldata=gx_transform(ldata,model->GetSTM(),/inv)*ref.rsun
-            oplot,ldata[0,*],ldata[1,*],color=open?ocolor:lcolor,thick=lthick,psym=0
+            oplot,ldata[0,*],ldata[1,*],color=open?ocolor2[0]:lcolor2[0],thick=lthick2[0],linestyle=lstyle2[0],psym=0
+            lcolor2=shift(lcolor2,1)
+            ocolor2=shift(ocolor2,1)
+            lthick2=shift(lthick2,1)
+            lstyle2=shift(lstyle2,1)
         endif
       endfor
       endif else message,'No field lines found in this model!',/info
