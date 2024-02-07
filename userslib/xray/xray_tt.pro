@@ -9,6 +9,7 @@
 ;gnita@njit 07-Dec-2017 change explicit TR index from 2L to gx_voxelid(/tr) to allow future redefinition if needed
 ;modified by Gelu@NJIT 24 Dec 2022  - added relative_abundances user input
 ;Gelu@njit 28-may-2023 added scaling for non-AU observations and added interface input for R_sun in arcseconds
+;Ed@Glasgow 07-Feb-2024 changed the minimum temperature to 0.25 keV that is accepted by CHIANTI via f_vth 
 
 pro xray_tt,parms,rowdata,rparms,xray_cs=xray_cs,info=info
  if arg_present(info) then begin
@@ -90,10 +91,18 @@ pro xray_tt,parms,rowdata,rparms,xray_cs=xray_cs,info=info
    e_data_tt  =fltarr(N_elements(ee))
    eph_dataout=fltarr(N_elements(eph))
    
-   Te_thr=0.09 ; keV
+   
+   Te_thr=0.25 ; keV
    ; lowest temperature that can be calculated for thermal plasma SXR emission
+   ;Eduard changed from Te_thr=0.09 keV to 0.25 keV after the update of 
+   ; "packages\xray\idl\setup_chianti_lines.pro"
+   ;"packages\xray\idl\f_2vth_abun_ext.pro"
+   ;"packages\xray\idl\f_vth_abun_ext.pro"
+   ; updates were made in 02-June-2023 in SSW
+   
    abun =rparms[0]
    ; fractional element abunadences with respect to coronal
+   ;print,'here is abun... =',abun
    
    ; constant KK is defined for Coloumb log =20, 
    ; kk= 2\pi e^4*20 keV^2cm^4
@@ -339,7 +348,9 @@ pro xray_tt,parms,rowdata,rparms,xray_cs=xray_cs,info=info
    
    IF (Te GT Te_thr) THEN eph_dataout+=f_vth(eph_2n, [EM49[i],Te,abun])
    IF (Te LE Te_thr) THEN eph_dataout+=xray_cs#(e_dist*DE)
-
+   
+   IF finite(total(eph_dataout)) EQ 0 THEN stop
+;   IF (Te LE Te_thr) THEN stop
    ; electron flux for 3D maxwellian
   ; ENDIF
    ;**********************************************************
