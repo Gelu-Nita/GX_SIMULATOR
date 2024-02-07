@@ -10,6 +10,8 @@
 ;modified by Gelu@NJIT 24 Dec 2022  - added relative_abundances user input
 ;Gelu@njit 28-may-2023 added scaling for non-AU observations and added interface input for R_sun in arcseconds
 ;Ed@Glasgow 07-Feb-2024 changed the minimum temperature to 0.25 keV that is accepted by CHIANTI via f_vth 
+; Eduard emailed NASA/Goddard regarding f_vth - no reply so far ; it works with the latest SSW XRAY package
+; 
 
 pro xray_tt,parms,rowdata,rparms,xray_cs=xray_cs,info=info
  if arg_present(info) then begin
@@ -92,9 +94,9 @@ pro xray_tt,parms,rowdata,rparms,xray_cs=xray_cs,info=info
    eph_dataout=fltarr(N_elements(eph))
    
    
-   Te_thr=0.25 ; keV
+   Te_thr=0.1 ; keV
    ; lowest temperature that can be calculated for thermal plasma SXR emission
-   ;Eduard changed from Te_thr=0.09 keV to 0.25 keV after the update of 
+   ;Eduard changed from Te_thr=0.09 keV to 0.1 keV after the update of 
    ; "packages\xray\idl\setup_chianti_lines.pro"
    ;"packages\xray\idl\f_2vth_abun_ext.pro"
    ;"packages\xray\idl\f_vth_abun_ext.pro"
