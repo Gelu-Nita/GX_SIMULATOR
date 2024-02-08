@@ -12,6 +12,9 @@
 ; Eduard@Glasgow & Gelu@njit 19-June-2018 changed albedo matrix interpolation
 ; Eduard@Glasgow 26-may-2023 added scaling for non-AU observations; requires R_sun in arcseconds
 ; Gelu@njit 26-may-2023 added interface input for R_sun in arcseconds
+;Ed@Glasgow 07-Feb-2024 changed the minimum temperature to 0.1 keV that is accepted by CHIANTI via f_vth 
+; Eduard emailed NASA/Goddard regarding f_vth - no reply so far ; it works with the latest SSW XRAY package
+; 
 
 
 pro xray_tt_albedo,parms,rowdata,rparms,xray_cs=xray_cs,albedo=albedo,info=info
@@ -153,7 +156,8 @@ pro xray_tt_albedo,parms,rowdata,rparms,xray_cs=xray_cs,albedo=albedo,info=info
       eph_dataout[*]=0
 
       Ve= sqrt(2.*EE*1.6e-9/9.8d-28)
-      Te_thr=0.09 ; keV
+      Te_thr=0.1 ; keV
+      ; changed to fix the check in v_th
       ; lowest temperature that can be calculated for thermal plasma SXR emission
       abun =rparms[0]
       ; fractional element abunadences with respect to coronal
@@ -402,7 +406,7 @@ pro xray_tt_albedo,parms,rowdata,rparms,xray_cs=xray_cs,albedo=albedo,info=info
         E_dist_norm=total(E_dist*dE)
         ;EM49=E_dist_norm*1d-49
 
-        ;f_vth Valid range is 1.01 - 998.0 MegaKelvin or 0.0870317 - 85.9977 keV
+        ;f_vth Valid range is above 0.1 keV after updated CHIANTI June 2023
 
         IF (Te GT Te_thr) THEN eph_dataout+=f_vth(eph_2n, [EM49[i],Te,abun])
         IF (Te LE Te_thr) THEN eph_dataout+=xray_cs#(e_dist*DE)
