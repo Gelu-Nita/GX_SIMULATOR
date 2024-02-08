@@ -15,6 +15,8 @@
 ; Eduard@Glasgow 13-April-2023: corrected the errors in array units
 ; Eduard@Glasgow 26-may-2023 added scaling for non-AU observations; requires R_sun in arcseconds
 ; Gelu@njit 26-may-2023 added interface input for R_sun in arcseconds
+; Eduard@Glasgow 07-Fen-2024 changed the minimum temperature
+
 
 pro xray_tt_albedo_arr,parms,rowdata,nparms,rparms,xray_cs=xray_cs,albedo=albedo,E_arr,mu_arr,f_arr,info=info
   if arg_present(info) then begin
@@ -287,7 +289,8 @@ endcase
       eph_dataout[*]=0
 
       Ve= sqrt(2.*EE*1.6e-9/9.8d-28)
-      Te_thr=0.09 ; keV
+      Te_thr=0.1 ; keV
+      ; changed to fix the issues with June 2023 update
       ; lowest temperature that can be calculated for thermal plasma SXR emission
       abun =rparms[relative_abundance_idx]
       ; fractional element abunadences with respect to coronal
