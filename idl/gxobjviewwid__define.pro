@@ -4,7 +4,7 @@ function gxObjViewWid::Init,wParent, oSubjects, toolbar_parent=toolbar_parent,_e
  
  self.wZoom2View=widget_button(Zoom2ViewBase,$
               value=gx_bitmap(filepath('find.bmp', subdirectory=['resource', 'bitmaps'])), $
-              /bitmap,tooltip='Zoom to FOV',sensitive=1)                  
+              /bitmap,tooltip='Zoom to FOV',sensitive=1,uname='zoom2view')                  
  result=self->IDLexObjViewWid::Init(wParent,oSubjects, toolbar_parent=toolbar_parent,_extra=_extra)
  if result eq 1 then begin
    widget_control,self.wLabel,/destroy
@@ -19,13 +19,13 @@ function gxObjViewWid::Init,wParent, oSubjects, toolbar_parent=toolbar_parent,_e
      value=gx_bitmap(filepath('zoom_out.bmp', subdirectory=['resource', 'bitmaps'])), $
      /bitmap,tooltip='Zoomout',sensitive=1)
    self.wXY= widget_button( ViewBase, $
-              value='XY',tooltip='Show XY view',font=!defaults.font $
+              value='XY',tooltip='Show XY view',font=!defaults.font,uname='xyview' $
               )
    self.wXZ= widget_button( ViewBase, $
-              value='XZ',tooltip='Show XZ view',font=!defaults.font $
+              value='XZ',tooltip='Show XZ view',font=!defaults.font,uname='xzview' $
               )
    self.wZY= widget_button( ViewBase, $
-              value='ZY',tooltip='Show ZY view',font=!defaults.font $
+              value='ZY',tooltip='Show ZY view',font=!defaults.font,uname='zyview' $
               )
    self.wMovie=widget_button( ViewBase, $
               value=gx_bitmap(filepath('eba_meth_ex_cm.bmp', subdirectory=*self.pBitmapPath)), $
@@ -249,7 +249,6 @@ case event.id of
            oCurrent = self.oViewgroup->Get(/current)
            oSun=oCurrent->Get(/all)
            scanbox=oSun->GetByname('scanboxobject')
-           ;(oSun->GetByname('Solar Grid'))->SetProperty,hide=1
            r=scanbox->GetLocation()
            void=get_obj_range(osun,ocurrent,odestination,range)
            suncenter=total(range,2)/2
@@ -270,20 +269,17 @@ case event.id of
               end                  
  self.wXY:begin
            self->Reset,/full
-           ;self->Zoom
            self->Draw
           end
  self.wXZ:begin
            self->Reset,/full
            self->Rotate,[1,0,0],-90
-           ;self->Zoom
            self->Draw
           end
  self.wZY:begin
            self->Reset,/full
            self->Rotate,[1,0,0],-90
            self->Rotate,[0,1,0],-90
-           ;self->Zoom
            self->Draw
           end
  self.wMovie:self->OnMovie         

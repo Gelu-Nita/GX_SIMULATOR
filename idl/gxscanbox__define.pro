@@ -324,16 +324,19 @@ case size(renderer,/tname) of
                  info=renderer.info
                  fovmap=renderer.fovmap
                  data=renderer.data
-                 if tag_exist(renderer,'EBTEL') then widget_control,self.wEbtelTable,set_value=gx_ebtel_path(renderer.ebtel)
-                 gx_fovmap2scanbox,fovmap,xc=xc,yx=yc,xfov=xfov,yfov=yfov,xrange=xrange,yrange=yrange,nx=nx,ny=ny,rsun=rsun,b0=b0,l0=l0
-                 self.Rsun=rsun
-                 self.nx=nx
-                 self.ny=ny
-                 self.xrange=xrange
-                 self.yrange=yrange
-                 self.ImgViewWid->GetProperty,model=model
-                 if isa(model,'gxmodel') then begin
-                   newgrid=model->SetFOV(xc=xc,yc=yc,xfov=xfov, yfov=yfov,nx=nx,ny=ny)
+                 if tag_exist(renderer,'EBTEL') then self->ReplaceEbtelTables,path=renderer.ebtel
+                 self->ComputeFOV,fovmap=fovmap,/compute
+                 self->DrawSlicer 
+                 tlb=get_tlb(self.wlos)
+                 if widget_valid(tlb) then begin
+                  wZoom2View=widget_info(tlb,find_by_uname='zoom2view')
+                  wZoom2XY=widget_info(tlb,find_by_uname='xyview')
+                  if widget_valid(wZoom2View) and widget_valid(wZoom2XY)then begin
+                    case widget_info(wZoom2view,/sensitive) of
+                      1: zoom2view=1
+                      else: zoom2xy=1
+                    endcase            
+                  endif
                  endif
                end       
     else:return       
@@ -349,16 +352,20 @@ if size(info,/tname) eq 'STRUCT' then begin
  self.pData=(self.ImgViewWid)->NewView(self.info,renderer=self.renderer,nx=nx,ny=ny,xrange=xrange,yrange=yrange,data=data,fovmap=fovmap)
  self->CreateArrayInputControls
  self->UpdateAllParms
- self.ImgViewWid->Draw
+; self.ImgViewWid->Draw
  self->ComputeFOV,/compute_grid
  self->MakeGrid
  self->Slice
  self->ResetAllBridges
  widget_control,self.wSliceSelect,set_combobox_select=(where(((*self.info).parms).name eq 'n_0'))[0],set_value=[((*self.info).parms).name,'B','curlB','divB+','divB-','helB+','helB-','Q0','Q','VoxelID']
+ if keyword_set(zoom2view) then widget_control,wZoom2view,send_event={id:wZoom2view,top:tlb,handler:wZoom2view,select:1l}
+ if keyword_set(zoom2xy) then widget_control,wZoom2xy,send_event={id:wZoom2xy,top:tlb,handler:wZoom2xy,select:1l}
  endif else begin
   self.renderer=current
   answ=dialog_message(/error,'Invalid rendering method selected. Operation aborted!')
  end 
+ if n_elements(data) ne 0 then self.ImgViewWid->Movedata,data
+ self.ImgViewWid->Draw
 end
 
 function gxScanBox::name2idx,name
@@ -1214,8 +1221,20 @@ pro gxScanBox::ReplaceEBTELtables,path=path
  if gx_ebtel_valid_path(path) then begin
   if widget_valid(self.wEbtelTable) then widget_control,self.wEbtelTable,set_value=gx_ebtel_path(path)
   widget_control,widget_info(get_tlb(self.wBase),Find_By_Uname='STATEBASE'),get_uvalue=state
-  models=state.sun->get(isa='gxmodel',/all)
-  for k=0,n_elements(models)-1 do begin
+  models=state.sun->get(isa='gxmodel',/all,count=count)
+  self.ImgViewWid->GetProperty,model=MOI 
+  if count gt 0 then begin
+    if isa(MOI) then begin
+      models=[models,MOI]
+      count+=1
+    end
+  endif else begin
+    if isa(MOI) then begin
+      models=moi
+      count=1
+    endif
+  endelse
+  for k=0,count-1 do begin
     models[k]->GetProperty,wParent=wParent
     wEbtelPath=widget_info(wParent,find_by_uname='EBTELpath')
     if widget_valid(wEbtelPath) then widget_control,wEbtelPath,set_value=gx_ebtel_path(path)
@@ -1224,7 +1243,6 @@ pro gxScanBox::ReplaceEBTELtables,path=path
   for i=0, count-1 do begin
     self->BridgeResetEBTEL,bridges[i]
   endfor
-  self.ImgViewWid->GetProperty,model=MOI 
   if isa(MOI) then begin
     volume=moi->GetVolume()
     flags=(volume->setflags(newNT=volume->NewNT()))
