@@ -207,9 +207,8 @@ pro gx_simulator_event,event
                                   'New Jersey Institute of Technology'+string(10b)+$
                                   'Newark, NJ, 07102, U.S.A.',/info,title='About GX_Simulator')
  state.wHelp: begin
-               spawn,gx_findfile('GX_Simulator.chm',folder='doc'),unit=unit
-               wait,0.5
-               free_lun,unit 
+               help='https://iopscience.iop.org/article/10.3847/1538-4365/acd343'
+               if !version.os_family eq 'Windows' then spawn,'start /max '+help else answ=dialog_message(' For help, please open ' +help+' in your preferred browser.')
               end                             
  state.wFOV:begin
               state.scanbox->ComputeFOV,/auto
