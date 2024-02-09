@@ -365,7 +365,6 @@ if size(info,/tname) eq 'STRUCT' then begin
   answ=dialog_message(/error,'Invalid rendering method selected. Operation aborted!')
  end 
  if n_elements(data) ne 0 then self.ImgViewWid->Movedata,data
- self.ImgViewWid->Draw
 end
 
 function gxScanBox::name2idx,name
