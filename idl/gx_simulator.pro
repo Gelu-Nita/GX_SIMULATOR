@@ -201,7 +201,7 @@ pro gx_simulator_event,event
  ENDCASE
 
  case event.id of
- state.wAbout:answ=dialog_message('GX Simulator v4.0 (February 2018)'+string(10b)+$
+ state.wAbout:answ=dialog_message('GX Simulator (February 2024)'+string(10b)+$
                                   'Gelu M. Nita (gnita@njit.edu)'+string(10b)+$
                                   'Center for Solar-Terrestrial Research'+string(10b)+$
                                   'New Jersey Institute of Technology'+string(10b)+$
