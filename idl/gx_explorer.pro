@@ -49,7 +49,7 @@ file=GETENV('IDL_TMPDIR')+GETENV('USER')+'GX_Simulator.log'
   datadim=size(rec.data,/dim)
   datadim[1]=ny
   row=lonarr(ny)
-  parms=make_array(parmdim,/float)
+  parms=make_array(parmdim,/double)
   data=make_array(datadim,/float)
   for i=0,ny-1 do begin
     rec=MULTI_RESTORE(lun,file=file)

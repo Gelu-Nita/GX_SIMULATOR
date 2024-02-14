@@ -19,7 +19,7 @@ pro gx_readlos,parms,data,grid,header=header,file=file
     griddim=[griddim[0],ny,griddim[1:*]]
  endif
  row=lonarr(ny)
- parms=make_array(parmdim,/float)
+ parms=make_array(parmdim,/double)
  if hasdata then data=make_array(datadim,/float)
  if hasgrid then grid=make_array(griddim,/float)
  for i=0,ny-1 do begin
