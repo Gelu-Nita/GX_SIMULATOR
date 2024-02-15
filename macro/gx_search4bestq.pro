@@ -97,7 +97,7 @@ function gx_search4bestq, gxmpath=gxmpath,a_arr=a_arr,b_arr=b_arr,q_start=q_star
           modDir=modDir,psDir=psDir,$
           levels=levels,resize=resize,$
           file_arr=file_arr,apply2=apply2,done=force_done,$
-          refdatapath=refdatapath,gxmpath=gxmpath,q_start=q_start,counter=counter)
+          refdatapath=refdatapath,gxmpath=gxmpath,q_start=q_start,counter=counter,_extra=_extra)
         if size(result,/tname) eq 'STRUCT' then begin
           add_q=(apply2 eq 1)?((result.res2_done eq 0) and (result.chi2_done  eq 0)):((result.res2_done eq 0) or (result.chi2_done  eq 0))
           if add_q eq 1 then begin

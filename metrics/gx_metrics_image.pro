@@ -52,7 +52,7 @@
   ;  Modification history:
   ;  07/08/20-Gelu Nita (gnita@njit.edu) Redefined metrics and addded the option of using SDEV images
   ;  06/07/23-Gelu Nita (gnita@njit.edu) added the no_renorm keyword to allow computation of classic metrics
-
+  ;  02/15/24-Gelu Nita (gnita@njit.edu) fixed bug related to byte image mask
 function gx_metrics_image, data_model, data_obs, data_sdev,mask=mask,apply2=apply2,n_free=n_free,no_renorm=no_renorm
   if ~isa(data_model) or ~isa(data_obs) then begin
     message, 'Model Data, Observational Data, or both, not provided',/info
@@ -85,7 +85,7 @@ function gx_metrics_image, data_model, data_obs, data_sdev,mask=mask,apply2=appl
       endcase
       
     endif else begin
-      if array_equal(size(img_mask),size(data_obs)) then begin
+      if array_equal(size(mask,/dim),size(data_obs,/dim)) then begin
         ;this is assumed to be an already precompute image mask
         img_mask=mask
       endif else begin

@@ -40,7 +40,7 @@ end
 
 function gx_processmodels_ebtel,ab=ab,ref=ref,$
                        modDir=modDir,modFiles=modFiles,psDir=psDir,$
-                       levels=levels,resize=resize,$
+                       levels=levels,mask=mask,resize=resize,$
                        file_arr=file_arr,q_arr=q_arr,corr_beam=corr_beam,$
                        apply2=apply2,charsize=charsize,counter=counter,_extra=_extra
  ;++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -96,6 +96,22 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
  counter+=1
  G=(1d0+sqrt(5d0))/2;golden ratio
  if ~isa(levels) then levels=[12,20,30,50,80]
+ if isa(mask) then begin
+  if size('str',/tname) then begin
+     CATCH, Error_status
+   IF Error_status NE 0 THEN BEGIN
+      PRINT, 'Error index: ', Error_status
+      PRINT, 'Error message: ', !ERROR_STATE.MSG
+      ; Handle the error by ignoring the mask
+      dummy=temporary(mask)
+      CATCH, /CANCEL
+      goto,skip_mask_string
+   ENDIF
+   restore,mask
+   skip_mask_string:
+  endif
+ endif
+ if ~isa(mask) then mask=levels[0]
  if n_elements(ab) eq 2 then begin
    if moddir ne '' then modFiles=find_files(string(ab,format="('*a',f0.2,'b',f0.2,'*.map')"),modDir)
  endif else if moddir ne '' then modFiles=find_files('*.map',modDir)
@@ -196,7 +212,7 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
     modI=map->get(modidx,/map)
     obj_destroy,map
     if n_elements(ObsBeam) gt 0 then modI.data=convol_fft(modI.data, ObsBeam)  
-    obj_metrics_arr[i]=gx_metrics_map(modI, _obsI,_obsIsdev,mask=levels[0],metrics=metrics,apply2=apply2,/no_renorm)
+    obj_metrics_arr[i]=gx_metrics_map(modI, _obsI,_obsIsdev,mask=mask,metrics=metrics,apply2=apply2,/no_renorm)
     res2[i]=metrics.res2_norm
     chi2[i]=metrics.chi2
    endfor
