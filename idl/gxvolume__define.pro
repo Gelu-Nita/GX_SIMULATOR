@@ -611,7 +611,7 @@ pro gxVolume::Update,select,data=data,plot_model_attributes=plot_model_attribute
   endif
   self->UpdateVoxelId,force=force;It will do it only if self.flags.NewID is set or explicitely requested by /force keyword is set
   if ~(self.flags.newData or  keyword_set(update)) then return; nothing to update or no explicit request
-  self->GetVertexAttributeData,'voxel_id',voxel_id
+
   corona=self.parent->Corona()
   if ~keyword_set(chromo_view) then begin
     if obj_isa(corona,'gxCorona') then begin
