@@ -453,7 +453,7 @@ pro gxVolume::UpdateVoxelId,force=force
   endif
   prog_id = gx_progmeter(/INIT,label='VoxelID Update Progress')
   self->GetVertexAttributeData,'voxel_id',id
-  old_id=id
+  if n_elements(id) eq 0 then return
   id[*]=gx_voxelid(/corona)
   sz=size(id)
   corona=self.parent->Corona()  
