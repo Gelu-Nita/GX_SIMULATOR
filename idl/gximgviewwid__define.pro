@@ -569,12 +569,16 @@ compile_opt hidden
    if spec_range eq 'Auto' then SpecPlotOptions->SetProperty,xrange=keyword_set(spec_xlog)?10^!x.crange:!x.crange, yrange=keyword_set(spec_ylog)?10^!y.crange:!y.crange
    if hasref then begin
     loadct,39
+    oplot,xref,yref,psym=2,color=0
     if n_elements(yref) eq n_elements(yerr) then $
-    oplot_err,xref,yref,yerr=yerr,psym=3,color=0,bcolor=250,thick=2 $
-    else oplot,xref,yref,psym=2,color=0
+    oplot_err,xref,yref,yerr=yerr,psym=3,color=0,bcolor=250,thick=3
     
     data = SPLINE( axis, spectrum, xref )
-    metrics=gx_metrics_spectrum(data,yref,yerr)
+    if n_elements(spec_pxrange) eq 2 then begin
+      good=where(xref ge spec_pxrange[0] and xref le spec_pxrange[1],count)
+      if count gt 0 then range_idx=good
+    endif
+    metrics=gx_metrics_spectrum(data,yref,yerr,range_idx=range_idx)
     rdev=metrics.res2_norm
     widget_control,self.wRESCHI,get_value=reschi
     
