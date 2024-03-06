@@ -14,7 +14,8 @@ pro gx_model2world,model,lines=lines,fluxtubes=fluxtubes,fov=fov,box=box,over=ov
   default,fcolor,50
   default,sthick,3
   default,cthick,1
-  default,lstyle,1
+  default,lstyle,0
+  default,lthick,1
   
   if keyword_set(all) then begin
     lines=1
