@@ -85,9 +85,9 @@ function gxVolume::GetBz,volume=volume
   return,bz
 end
 
-function gxVolume::Size
- self->GetProperty,data0=data0
- return,size(data0)
+function gxVolume::Size,volume=volume
+ Bz=self->GetBz(volume=volume)
+ return,size(Bz)
 end
 
 pro gxVolume::SetProperty,wParent=wParent,select=select,tscale=tscale,nscale=nscale,bscale=bscale,gyro=gyro,_extra=extra

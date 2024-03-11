@@ -182,7 +182,7 @@ function gxh2v::HandleEvent, event
              widget_control,wslicer,get_value=current_idx
              if event.select then begin
                widget_control,event.id,get_uvalue=stored_idx
-               widget_control,wslicer,set_slider_max=(self.Volume->Size())[event.value+1]-1,$
+               widget_control,wslicer,set_slider_max=(self.Volume->Size(/volume))[event.value+1]-1,$
                                       set_value=stored_idx[event.value]
                                       
              endif else begin
