@@ -32,10 +32,10 @@ function gx_euvrender_ebtel,model,renderer,info=info,ebtel_path=ebtel_path,q_par
   message,'EBTEL heating rate formula in use: '+q_formula,/info
   volume->Update,/nt,use_dem=use_dem,has_used_ddm=has_used_ddm
   volume->Update,/force
+  gxcube=gx_render(model,renderer,_extra=_extra)
   fovmap=(model->GetFovMap())->get(/map)
   add_prop,fovmap,gx_key=string(model->GetVertexData('NTkey')),/replace
   (model->GetFovMap())->setmap,0,fovmap
-  gxcube=gx_render(model,renderer,_extra=_extra)
   return,gx_gxcube2maps(gxcube)
   skip:
   return,isa(map)?map:!null
