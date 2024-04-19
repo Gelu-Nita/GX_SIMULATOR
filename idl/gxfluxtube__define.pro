@@ -2205,13 +2205,17 @@ PRO gxFluxTube::CLEANUP
   self->IDLgrModel::CLEANUP
 END
 
+function gxFLuxTube::GetBase
+ return, self.base
+end
+
 PRO gxFluxTube::GetProperty,wParent=wParent,a=a,b=b,phi=phi,nrho=nrho,nphi=nphi,centerline=centerline,centerindex=centerindex,lock=lock,$
   p_nth=p_nth,nr_nth=nr_nth,q_nth=q_nth,ns_nth=ns_nth,n_nth=n_nth,$
   p_th=p_th,q_th=q_th,nr_th=nr_th,nz_th=nz_th,n_th=n_th,T0=T0,$
   dist_e=dist_e,dist_ang=dist_ang,eps=eps,kappa=kappa,emin=emin,emax=emax,ebreak=ebreak,$
   delta1=delta1,delta2=delta2,theta_c0=theta_c0,theta_b0=theta_b0,dMu0=dMu0,parm_a4_0=parm_a4_0,use_clg=use_clg,s0=s0,$
   centerbase=centerbase,fkey=fkey,fparms=fparms,$
-  ftime_idx=ftime_idx,spine_idx=spine_idx,nb_arr=nb_arr,_ref_extra=extra
+  ftime_idx=ftime_idx,spine_idx=spine_idx,nb_arr=nb_arr,owner=owner,_ref_extra=extra
   wParent=self.wParent
   centerline=self.centerline
   centerindex=self.centerindex
@@ -2251,6 +2255,7 @@ PRO gxFluxTube::GetProperty,wParent=wParent,a=a,b=b,phi=phi,nrho=nrho,nphi=nphi,
   ftime_idx=self.ftime_idx
   nb_arr=self.nb_arr
   spine_idx=self.spine_idx
+  owner=self.owner
   fparms=ptr_valid(self.fparms)?*(self.fparms):!null
   centerbase=self->GetByName('Base')
   self->IDLgrModel::GetProperty,_extra=extra
@@ -2360,7 +2365,7 @@ PRO gxFluxTube::SetProperty,wParent=wParent,centerindex=centerindex,a=a,b=b,phi=
   dist_e=dist_e,dist_ang=dist_ang,eps=eps,kappa=kappa,emin=emin,emax=emax,ebreak=ebreak,$
   delta1=delta1,delta2=delta2,theta_c0=theta_c0,theta_b0=theta_b0,dMu0=dMu0,$
   parm_a4_0=parm_a4_0,use_clg=use_clg,s0=s0,fkey=fkey,$
-  ftime_idx=ftime_idx,spine_idx=spine_idx,nb_arr=nb_arr,_extra=_extra
+  ftime_idx=ftime_idx,spine_idx=spine_idx,nb_arr=nb_arr,owner=owner,_extra=_extra
   if exist(wParent) then self.wParent=wParent
   if exist(centerindex) then self.centerindex=centerindex
   if exist(nrho) then self.nrho=nrho
@@ -2402,12 +2407,13 @@ PRO gxFluxTube::SetProperty,wParent=wParent,centerindex=centerindex,a=a,b=b,phi=
   if exist(ftime_idx) then self.ftime_idx=ftime_idx
   if exist(nb_arr) then self.nb_arr=nb_arr
   if exist(spine_idx) then self.spine_idx=spine_idx
+  if exist(owner) then self.owner=owner
   self->IDLgrModel::SetProperty,_extra=_extra
 END
 
 PRO gxFluxTube__define
   self={gxFluxTube, inherits IDLgrModel, wParent:0l,$
-    centerindex:0l,a:0d,b:0d,phi:0d,n:[0d,0,0],ex:[0d,0,0],ey:[0d,0,0],nphi:0l,nrho:0l,centerline:obj_new(),base:obj_new(),lock:0l,$
+    centerindex:0l,a:0d,b:0d,phi:0d,n:[0d,0,0],ex:[0d,0,0],ey:[0d,0,0],nphi:0l,nrho:0l,centerline:obj_new(),base:obj_new(),lock:0l,owner:0l,$
     p_nth:'',nr_nth:'',q_nth:'',ns_nth:'',p_th:'',q_th:'',nr_th:'',nz_th:'',n_th:0.0,T0:0.0,n_nth:0.0,$
     dist_e:0,dist_ang:0,eps:0.0,kappa:0.0,emin:0.0,emax:0.0,ebreak:0.0,delta1:0.0,delta2:0.0,theta_c0:0.0,$
     theta_b0:0.0,dMu0:0.0,a4_0:0.0,use_clg:0b,s0:0.0,fkey:0,ftime_idx:0l,spine_idx:0l,nb_arr:0d,fparms:ptr_new()}

@@ -412,7 +412,7 @@ pro gxWidget::CreatePanel,_extra=_extra
     self.subject->GetProperty,centerline=centerline,centerindex=centerindex,nrho=nrho,nphi=nphi,$
                              lock=lock,p_nth=p_nth,nr_nth=nr_nth,q_nth=q_nth,ns_nth=ns_nth,$
                              p_th=p_th,q_th=q_th,nr_th=nr_th,nz_th=nz_th,n_th=n_th,T0=T0,$
-                             a=ra,b=rb,phi=phi,n_nth=n_nth,s0=s0,hide=hide,length=l
+                             a=ra,b=rb,phi=phi,n_nth=n_nth,s0=s0,hide=hide,length=l,owner=owner
     centerline->GetProperty,data=line
     sz=size(line)
     wRemoveBase=widget_base(wToolbarBase,/toolbar,/row)
@@ -494,6 +494,14 @@ pro gxWidget::CreatePanel,_extra=_extra
       value=gx_bitmap(gx_findfile('clean.bmp')), $
       /bitmap,tooltip='Remove array-defined non-thermal electrons distributions',uname=prefix+'REMOVE APARMS')        
    
+    if keyword_set(expert) then begin
+      wLockOwnership= widget_button(font=font, wButtonBase, $
+        value=lock?gx_bitmap(gx_findfile('lock.bmp')):gx_bitmap(gx_findfile('unlock.bmp')), $
+        /bitmap,tooltip='Lock/Unlock volume ownership',uname=prefix+'OWNER')
+      widget_control,wLockOwnership,set_button=owner
+    endif
+
+    
     xtextsize=7
    
     wCrossBase=widget_base(wGeometry,/row)
@@ -1447,6 +1455,13 @@ end
                gx_bitmap(gx_findfile('unlock.bmp')),/bitmap
                widget_control,widget_info(event.handler,find_by_uname='GXFLUXTUBE:REMOVE'),sensitive=~lock
               END
+     'GXFLUXTUBE:OWNER': BEGIN
+                self.subject->SetProperty,owner=event.select
+                self.subject->GetProperty,owner=owner
+                widget_control,event.id,set_value=owner?gx_bitmap(gx_findfile('lock.bmp')):$
+                gx_bitmap(gx_findfile('unlock.bmp')),/bitmap
+                self.subject->UpdateAll
+              END         
      'GXFLUXTUBE:CENTER': BEGIN
                widget_control,event.id,get_value=value
                self.subject->SetProperty,Centerindex=value
