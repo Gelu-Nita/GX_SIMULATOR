@@ -26,3 +26,6 @@
 [submodule "ratan"]
 	path = ratan
 	url = https://github.com/Alexey-Stupishin/RATAN-in-GX
+[submodule "external/nlfff"]
+	path = external/nlfff
+	url = https://github.com/Alexey-Stupishin/Magnetic-Field_Library
