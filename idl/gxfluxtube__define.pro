@@ -613,7 +613,7 @@ PRO gxFluxTube::Draw_N_th
   gx_plot_label,0.1,0.8,'n!Dr!N(x,0)',color=50,charthick=2,charsize=2
   oplot,p.y,p.ny,color=250,thick=3,linesty=2
   gx_plot_label,0.1,0.6,'n!Dr!N(0,y)',color=250,charthick=2,charsize=2
-  plot,p.s,p.nz*self.n_th,xmargin=xmargin,xticks=xticks,color=0,/xsty,xtitle='s/l',thick=3,/ysty,ytitle='n(s)'
+  plot,p.s,p.nz,xmargin=xmargin,xticks=xticks,color=0,/xsty,xtitle='s/l',thick=3,/ysty,ytitle='n(s)'
   gx_plot_label,0.1,0.8,'n(s)',color=0,charthick=2,charsize=2
   !p.multi=pmulti
   tvlct,rgb_curr
@@ -1030,9 +1030,7 @@ pro gxFluxtube::Draw_N_NTH
     gx_plot_label,0.6,0.7,'n!Dana!N',color=50,charthick=2,charsize=2
     gx_plot_label,0.6,0.5,'n!Darr!N',color=160,charthick=2,charsize=2
   endif else begin
-;    plot,p.s,p.ns*self.n_nth*norm,xmargin=xmargin,xticks=xticks,$
-;      color=0,/xsty,/ysty,xtitle='s/l',ytitle='nb(s)',thick=2
-      plot,p.s,p.ns,xmargin=xmargin,xticks=xticks,$
+    plot,p.s,p.ns,xmargin=xmargin,xticks=xticks,$
         color=0,/xsty,/ysty,xtitle='s/l',ytitle='nb(s)',thick=2
   endelse
   oplot,[1,1]*s0/l,!y.crange,color=0
