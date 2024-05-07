@@ -1030,8 +1030,10 @@ pro gxFluxtube::Draw_N_NTH
     gx_plot_label,0.6,0.7,'n!Dana!N',color=50,charthick=2,charsize=2
     gx_plot_label,0.6,0.5,'n!Darr!N',color=160,charthick=2,charsize=2
   endif else begin
-    plot,p.s,p.ns*self.n_nth*norm,xmargin=xmargin,xticks=xticks,$
-      color=0,/xsty,/ysty,xtitle='s/l',ytitle='nb(s)',thick=2
+;    plot,p.s,p.ns*self.n_nth*norm,xmargin=xmargin,xticks=xticks,$
+;      color=0,/xsty,/ysty,xtitle='s/l',ytitle='nb(s)',thick=2
+      plot,p.s,p.ns,xmargin=xmargin,xticks=xticks,$
+        color=0,/xsty,/ysty,xtitle='s/l',ytitle='nb(s)',thick=2
   endelse
   oplot,[1,1]*s0/l,!y.crange,color=0
   !p.multi=pmulti
