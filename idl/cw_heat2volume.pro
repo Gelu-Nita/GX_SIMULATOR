@@ -296,7 +296,11 @@ function gxh2v::HandleEvent, event
                          if obj_valid(scanbox) then scanbox->ReplaceParmValue,'DEMavg',demavg
                         end
                       END                                       
-    else:
+    else: begin
+           if tag_exist(event,'select') then begin
+            if ~event.select then goto,exit_point
+           endif
+          end
   endcase
   self->Display,compute=compute
   exit_point:
