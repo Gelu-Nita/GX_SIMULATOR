@@ -1,1 +1,0 @@
-This is a test file uploaded on May 8 2024, to test the functionality of the automatic update of the SSW repository. After the test is compleeted, this file will be removed from the repository.
