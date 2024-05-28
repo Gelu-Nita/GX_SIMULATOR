@@ -1601,7 +1601,7 @@ function gxVolume::GetHeat2VolumeFactor,idx=idx,compute=compute
    endif else  h2vfactor=replicate(1,(*h2v).olines?n_elements(idx):(n_elements(idx)+n_elements(oidx)))
    self->Add2RAM,_extra={h2vfactor:h2vfactor,idx:idx}
    q0_formula=self->SetQ0(self->GetVertexData('q0_formula'))
-   self->Update,/quiet
+   self->RequestVolumeUpdate;self->Update,/quiet
  endif
  idx=self->GetVertexData('idx')
  return,h2vfactor
