@@ -15,6 +15,6 @@ function gx_getEBTELparms,gx_key,a,b,q,parms=parms,formula=formula,ebtel_path=eb
   if n_elements(b) ne 0 then b=-float(double(arr2str(b)))
   if n_elements(q0) ne 0 then q=float(double(arr2str(q0)))
   idx=where(strmatch(keys,'*EBTEL=*'),count)
-  if count eq 1 then ebtel_path=(strsplit(keys[idx],'=',/extract))[1]
+  if count eq 1 then ebtel_path=str_replace(keys[idx],'EBTEL=','')
   return,keys
 end

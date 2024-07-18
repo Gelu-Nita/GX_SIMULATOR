@@ -234,8 +234,8 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
    chi2_done=chi2_solution.done
    q_chi2_best=chi2_solution.q_best
    chi2_best=double(chi2_solution.metrics_best)
-   chi2_best_file=setfiles[chi2_solution.metrics_best_idx]
-   chi2_best_metrics=obj_clone(obj_metrics_arr[chi2_solution.metrics_best_idx])
+   chi2_best_file=(setfiles[sort_idx])[chi2_solution.metrics_best_idx]
+   chi2_best_metrics=obj_clone((obj_metrics_arr[sort_idx])[chi2_solution.metrics_best_idx])
    
    chi2_range_idx=sort(chi2)
    chi2_range_idx=chi2_range_idx[0:(n_elements(chi2_range_idx)-1)<5]
@@ -254,8 +254,8 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
    res2_done=res2_solution.done
    q_res2_best=res2_solution.q_best
    res2_best=double(res2_solution.metrics_best)
-   res2_best_file=setfiles[res2_solution.metrics_best_idx]
-   res2_best_metrics=obj_clone(obj_metrics_arr[res2_solution.metrics_best_idx])
+   res2_best_file=(setfiles[sort_idx])[res2_solution.metrics_best_idx]
+   res2_best_metrics=obj_clone((obj_metrics_arr[sort_idx])[res2_solution.metrics_best_idx])
    res2_range_idx=sort(res2)
    res2_range_idx=res2_range_idx[0:(n_elements(res2_range_idx)-1)<5]   
    
@@ -319,8 +319,8 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
    sy=sz[2]/100.
    xyouts,x[10*sx,90*sy],y[10*sx,90*sy],string(dx,dy,format="('!4D!3x=',f7.3,' !4D!3y=',f7.3)"),charsize=charsize,color=255
    xyouts,x[10*sx,90*sy],y[10*sx,80*sy],string(q[range_idx[k]],format="('q=',g0)"),charsize=charsize,color=255
-   xyouts,x[10*sx,90*sy],y[10*sx,20*sy],string(res2[range_idx[k]],format="(' Res!U2!N=',g0)")+(range_idx[k] eq res2_solution.metrics_best_idx?' BEST':''),charsize=charsize,color=255
-   xyouts,x[10*sx,90*sy],y[10*sx,10*sy],string(chi2[range_idx[k]],format="(' Chi!U2!N=',g0)")+(range_idx[k] eq chi2_solution.metrics_best_idx?' BEST':''),charsize=charsize,color=255
+   xyouts,x[10*sx,90*sy],y[10*sx,20*sy],string(res2[range_idx[k]],format="(' Res!U2!N=',g0)")+(obj_metrics->get(7,/roi_metrics) eq res2_best?' BEST':''),charsize=charsize,color=255
+   xyouts,x[10*sx,90*sy],y[10*sx,10*sy],string(chi2[range_idx[k]],format="(' Chi!U2!N=',g0)")+(obj_metrics->get(9,/roi_metrics) eq chi2_best?' BEST':''),charsize=charsize,color=255
  end  
   
  device,/close
@@ -355,7 +355,7 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
  close_lun,/all
  set_plot,thisDevice
  tvlct,rgb
- if !version.os_family eq 'Windows' then cgPS2PDF,filename_copy,/delete_ps; convert to pdf if on windows platform as GSVIEW stopped being supported
+ ;if !version.os_family eq 'Windows' then cgPS2PDF,filename_copy,/delete_ps; convert to pdf if on windows platform as GSVIEW stopped being supported
  return,result
 end
 

@@ -34,7 +34,8 @@ pro aia,parms,rowdata,nparms,rparms,path=path,logtdem=logtdem,dem_run=dem_run,qr
        restore,response_path
        rparms=[{name:'dS',value:0d,unit:'(cm^2)',user:0,hint:'Source pixel/area'},$
                {name:'AIA_response_date',value:gx_utcstr2time(response.date,/seconds),unit:'(UTsec)',user:0,hint:gx_utcstr2time(response.date)},$
-               {name:'n_hi0',value:1d,unit:'cm^{-3}',user:1,Hint:'Neutral H density coronal cutoff'}]
+               {name:'n_hi0',value:1d,unit:'cm^{-3}',user:1,Hint:'Neutral H density coronal cutoff'},$
+               {name:'Relative',value:1d,unit:'',user:1,Hint:'Relative to coronal abundance for Chianti'}                                                                                      ]
 
     endif else begin
       parms=info.parms
@@ -69,7 +70,7 @@ pro aia,parms,rowdata,nparms,rparms,path=path,logtdem=logtdem,dem_run=dem_run,qr
    avgdem=nparms[6]
    evenorm=nparms[7]
    chiantifix=nparms[8]
-   norm_tr=rparms[0]/((4.5e7)^2)
+   norm_tr=rparms[3]*rparms[0]/((4.5e7)^2)
    n_hi0=rparms[2]
    sz=size(rowdata,/dim)
    Npix=sz[0]

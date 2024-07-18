@@ -360,6 +360,6 @@ if arg_present(maps_best) then return_best_maps=1
  a=a_arr
  b=b_arr
  set_plot,thisDEvice
- if !version.os_family eq 'Windows' then cgPS2PDF,psDir+'\Best of Bests.ps',/delete_ps; convert to pdf if on windows platform as GSVIEW stopped being supported
+ if !version.os_family eq 'Windows' then cgPS2PDF,psDir+'\Best of Bests.ps'; convert to pdf if on windows platform as GSVIEW stopped being supported
 end
 
