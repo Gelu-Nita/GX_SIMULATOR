@@ -33,6 +33,14 @@ function gx_gxcube2maps,gxcube,map,idx=idx
  add_prop,amap,datatype=(((info).spectrum).x.label)
  add_prop,amap,dataunit=(((info).spectrum).x.unit)
  add_prop,amap,renderer=file_basename(gxcube.renderer),/replace
+ if tag_exist(info,'rparms') then begin
+    idx=where(strcompress(strupcase((info.rparms).name),/rem) eq strcompress(strupcase('relative_abundance'),/rem) $
+      or strcompress(strupcase((info.rparms).name),/rem) eq strcompress(strupcase('relative'),/rem) ,count)
+    if count eq 1 then begin
+      rparms=info.rparms
+      amap.gx_key=amap.gx_key + string(rparms[idx].value,format="('& relative_abundance=',g0)")
+    endif
+ end
  i=map->get(/count) 
  sz=size(gxcube.data)
  if sz[0] gt 3 then begin

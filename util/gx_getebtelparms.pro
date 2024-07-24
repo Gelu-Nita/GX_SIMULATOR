@@ -1,4 +1,4 @@
-function gx_getEBTELparms,gx_key,a,b,q,parms=parms,formula=formula,ebtel_path=ebtel_path
+function gx_getEBTELparms,gx_key,a,b,q,parms=parms,formula=formula,ebtel_path=ebtel_path,relative_abundance=relative_abundance
   ;this routine extract key parameters from a GX map produced using an EBTEL coronal heating model
   ;++++++++++++++++++++++++++++++++++++++++++++++++++++++
   ;a key is arbitrarily defined here for testing purposes
@@ -16,5 +16,7 @@ function gx_getEBTELparms,gx_key,a,b,q,parms=parms,formula=formula,ebtel_path=eb
   if n_elements(q0) ne 0 then q=float(double(arr2str(q0)))
   idx=where(strmatch(keys,'*EBTEL=*'),count)
   if count eq 1 then ebtel_path=str_replace(keys[idx],'EBTEL=','')
+  idx=where(strmatch(keys,'*relative_abundance*'),count)
+  if count eq 1 then relative_abundance=float(str_replace(keys[idx],'relative_abundance=',''))
   return,keys
 end

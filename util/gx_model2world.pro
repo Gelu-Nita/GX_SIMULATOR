@@ -4,13 +4,13 @@
 ;To selectevely plot only some components, use the corresponding keywords
 ;To plot on a prexisting LOS map, use /over
 pro gx_model2world,model,lines=lines,fluxtubes=fluxtubes,fov=fov,box=box,over=over,$
-                  scolor=scolor,lcolor=lcolor,ocolor=ocolor,box_color=box_color,fcolor=fcolor,$
+                  scolor=scolor,lcolor=lcolor,ocolor=ocolor,bcolor=bcolor,fcolor=fcolor,$
                   sthick=sthick,lthick=lthick, lstyle=lstyle,refmap=ref,_extra=_extra,all=all
   default,model,obj_new()
   default,scolor,250
   default,lcolor,150
   default,ocolor,200
-  default,box_color,250
+  default,bcolor,250
   default,fcolor,50
   default,sthick,3
   default,cthick,1
@@ -98,6 +98,6 @@ pro gx_model2world,model,lines=lines,fluxtubes=fluxtubes,fov=fov,box=box,over=ov
   if keyword_set(box) then begin
    (model->GetRoi())->GetProperty,data=data
    boxdata=gx_transform(data,model->GetSTM(),/inv)*ref.rsun
-   oplot,boxdata[0,[indgen(16),0]],boxdata[1,[indgen(16),0]],color=box_color,_extra=_extra
+   oplot,boxdata[0,[indgen(16),0]],boxdata[1,[indgen(16),0]],color=bcolor,_extra=_extra
   end
 end

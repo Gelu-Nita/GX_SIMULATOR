@@ -212,7 +212,7 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
     modI=map->get(modidx,/map)
     obj_destroy,map
     if n_elements(ObsBeam) gt 0 then modI.data=convol_fft(modI.data, ObsBeam)  
-    obj_metrics_arr[i]=gx_metrics_map(modI, _obsI,_obsIsdev,mask=mask,metrics=metrics,apply2=apply2,/no_renorm)
+    obj_metrics_arr[i]=gx_metrics_map(modI, _obsI,_obsIsdev,mask=mask,metrics=metrics,apply2=apply2,/no_renorm,_extra=_extra)
     res2[i]=metrics.res2_norm
     chi2[i]=metrics.chi2
    endfor
@@ -307,8 +307,8 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
    modI=obj_metrics->get(0,/map)
    modI.id=strmid(modI.id,strpos(modI.id,'GX'))
    obsI=obj_metrics->get(1,/map)
-   dx=obsI.xc-obsI.orig_xc
-   dy=obsI.yc-obsI.orig_yc
+   dx=tag_exist(obsI,'orig_xc')?(obsI.xc-obsI.orig_xc):0.0
+   dy=tag_exist(obsI,'orig_yc')?(obsI.yc-obsI.orig_yc):0.0
    obsIsdev=obj_metrics->get(2,/map)
    plot_map,modI,charsize=charsize,title=modI.id
    plot_map,modI,/over,levels=levels,/perc,color=0,thick=3
