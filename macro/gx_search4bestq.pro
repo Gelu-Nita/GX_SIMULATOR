@@ -3,7 +3,7 @@ function gx_search4bestq, gxmpath=gxmpath,a_arr=a_arr,b_arr=b_arr,q_start=q_star
                      ebtel_path=ebtel_path,renderer=renderer,info=info,$
                      xc=xc,yc=yc,xfov=xfov,yfov=yfov,nx=nx,ny=ny,$
                      levels=levels,resize=resize,save_gxc=save_gxc,redo=redo,$
-                     save_result=save_result,plot_best=plot_best,_extra=_extra
+                     save_result=save_result,plot_best=plot_best,freq=freq,chan=chan,_extra=_extra
   final_result=[]
   catch, error_status
   if error_status ne 0 then begin

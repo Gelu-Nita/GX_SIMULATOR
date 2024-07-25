@@ -3,8 +3,8 @@ function gx_chmp2maps,obj_metrics
   modI=obj_metrics->get(0,/map)
   R=modI.roi_metrics
   obsI=obj_metrics->get(1,/map)
-  dx=obsI.xc-obsI.orig_xc
-  dy=obsI.yc-obsI.orig_yc
+  dx=tag_exist(obsI,'orig_xc')?(obsI.xc-obsI.orig_xc):0.0
+  dy=tag_exist(obsI,'orig_yc')?(obsI.yc-obsI.orig_yc):0.0
   obsIsdev=obj_metrics->get(2,/map)
   mod_dS=modI.dx*modI.dy
   npix=obj_metrics->get(3,/roi_metrics)

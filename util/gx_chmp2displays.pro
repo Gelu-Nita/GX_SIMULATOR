@@ -34,8 +34,8 @@ chi2_max=chi2_max,xsize=xsize,ysize=ysize,metrics_log=metrics_log,_extra=_extra
  plot_map,maps.obsI,/over,levels=levels,/perc,color=200,thick=3
  get_map_coord,maps.modI,x,y
  sz=size(maps.modI.data)
- dx=maps.obsI.xc-maps.obsI.orig_xc
- dy=maps.obsI.yc-maps.obsI.orig_yc
+ dx=tag_exist(maps.obsI,'orig_xc')?(maps.obsI.xc-maps.obsI.orig_xc):0.0
+ dy=tag_exist(maps.obsI,'orig_yc')?(maps.obsI.yc-maps.obsI.orig_yc):0.0
  sx=sz[1]/100.
  sy=sz[2]/100. 
  xyouts,x[10*sx,90*sy],y[10*sx,70*sy],string(maps.R,format="(' R=',g0)"),_extra=_extra,color=255

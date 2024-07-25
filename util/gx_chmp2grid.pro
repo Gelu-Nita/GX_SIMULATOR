@@ -62,8 +62,8 @@ compile_opt idl2
       modI=obj_metrics->get(0,/map)
       R[i]=modI.roi_metrics      
       obsI=obj_metrics->get(1,/map)
-      dx=obsI.xc-obsI.orig_xc
-      dy=obsI.yc-obsI.orig_yc
+      dx=tag_exist(obsI,'orig_xc')?(obsI.xc-obsI.orig_xc):0.0
+      dy=tag_exist(obsI,'orig_yc')?(obsI.yc-obsI.orig_yc):0.0
       obsIsdev=obj_metrics->get(2,/map)        
   ;       0 MAP:R
   ;       1 REF
@@ -81,7 +81,7 @@ compile_opt idl2
       
       RES_NORM_MAP=obj_metrics->get(5,/map)
       res[i]=res_norm_map.roi_metrics
-      
+       
 ;      bad=where(RES_NORM_MAP.data eq 1,nbad,ncomp=ncomp)
 ;      if nbad gt 0 then RES_NORM_MAP.data[bad]=0
       
