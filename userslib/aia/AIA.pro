@@ -35,7 +35,8 @@ pro aia,parms,rowdata,nparms,rparms,path=path,logtdem=logtdem,dem_run=dem_run,qr
        rparms=[{name:'dS',value:0d,unit:'(cm^2)',user:0,hint:'Source pixel/area'},$
                {name:'AIA_response_date',value:gx_utcstr2time(response.date,/seconds),unit:'(UTsec)',user:0,hint:gx_utcstr2time(response.date)},$
                {name:'n_hi0',value:1d,unit:'cm^{-3}',user:1,Hint:'Neutral H density coronal cutoff'},$
-               {name:'relative_abundance',value:1d,unit:'',user:1,Hint:'Relative to coronal abundance for Chianti'}                                                                                      ]
+               {name:'relative_abundance',value:1d,unit:'',user:1,Hint:'Relative to coronal abundance for Chianti'},$
+               {name:'rsun',value:960d,unit:'arcseconds',user:1,Hint:"Observer's solar radius"}]
 
     endif else begin
       parms=info.parms
@@ -72,6 +73,7 @@ pro aia,parms,rowdata,nparms,rparms,path=path,logtdem=logtdem,dem_run=dem_run,qr
    chiantifix=nparms[8]
    norm_tr=rparms[3]*rparms[0]/((4.5e7)^2)
    n_hi0=rparms[2]
+   r_sun=rparms[4]
    sz=size(rowdata,/dim)
    Npix=sz[0]
    Nchan=sz[1]
@@ -128,5 +130,6 @@ pro aia,parms,rowdata,nparms,rparms,path=path,logtdem=logtdem,dem_run=dem_run,qr
         end
        end
      end
-   endfor  
+   endfor 
+   rowdata*=(R_sun/960.)^2 
 end
