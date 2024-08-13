@@ -178,7 +178,8 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
     if n_elements(resize) ne 0 then begin
       if n_elements(resize) eq 1 then resize=[resize,resize]
       for k=0, map->get(/count)-1 do begin
-        rmap=gx_rebin_map(map->get(k,/map),resize[0],resize[1])
+        ;added option of preserving total flux if the map is an EUV map, which is expected to have a CHAN tag
+        rmap=gx_rebin_map(map->get(k,/map),resize[0],resize[1],total=is_number(map->get(k,/chan)))
         rmap.id='rebinned_'+rmap.id
         map->setmap,k,rmap
       endfor
@@ -211,6 +212,17 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
     
     modI=map->get(modidx,/map)
     obj_destroy,map
+    
+    ;here handle the _obsI and _obsIsdev maps if tey are EUV maps, to conserve flux
+    if n_elements(ref_chan) gt 0 then begin
+      sub_map,_obsI,_obsI,ref=modI
+      sub_map,_obsIsdev,_obsIsdev,ref=modI
+      sz=size(modI.data)
+      _obsI=gx_rebin_map(_obsI,sz[1],sz[2],/total)
+      _obsIsdev=gx_rebin_map(_obsIsdev,sz[1],sz[2],/total)
+    endif
+    ;EUV special handling of flix conservation done
+    
     if n_elements(ObsBeam) gt 0 then modI.data=convol_fft(modI.data, ObsBeam)  
     obj_metrics_arr[i]=gx_metrics_map(modI, _obsI,_obsIsdev,mask=mask,metrics=metrics,apply2=apply2,/no_renorm,_extra=_extra)
     res2[i]=metrics.res2_norm
