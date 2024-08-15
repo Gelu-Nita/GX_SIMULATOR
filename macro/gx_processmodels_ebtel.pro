@@ -1,3 +1,27 @@
+function q_sigma,x,y
+  ; Fit the data to a parabolic curve y = a*x^2 + b*x + c
+  fit = POLY_FIT(x, y, 2,yfit=yfit)
+  a = fit[2]
+  b = fit[1]
+  c = fit[0]
+
+  ; Calculate the vertex (minimum) of the parabola
+  ; The vertex x-coordinate is at x = -b / (2*a)
+  estimated_param = -b / (2*a)
+
+  ; Calculate the second derivative of the parabola at the vertex
+  ; The second derivative is 2*a
+  second_derivative = 2*a
+
+  ; Estimate the uncertainty using the curvature
+  ; Assuming that the uncertainty in y (dy) is uniform and given by the standard deviation of y
+  dy = STDDEV(y)
+
+  ; The uncertainty in the estimated parameter can be approximated by
+  ; uncertainty = dy / sqrt(2*a)
+  return, dy / SQRT(second_derivative)
+end
+
 function metrics_min,Qgrid,metrics,acc,done=done
  chi2=metrics;call it chi2 for convenience
  default, acc,1d-1
@@ -31,7 +55,9 @@ function metrics_min,Qgrid,metrics,acc,done=done
             q_best=((Qc-Qb) gt (Qb-Qa)) ? Qb+(Qc-Qb)*(1d0-1d0/G) : Qb-(Qb-Qa)*(1d0-1d0/G)
             done=0 or keyword_set(done)
           endelse
-          q_range=[Qa,Qc] 
+;          q_range=[Qa,Qc] 
+          sigma=q_sigma(Qgrid,chi2)
+          q_range=[(Qb-sigma)<Qa,(Qb+sigma)>Qc]
         end  
  endcase
   return,{acc:acc,q_best:q_best,q_range:q_range,metrics_best:chi2_b,done:done,metrics_best_idx:ib,tol:(Qc-Qa)/(Qc+Qa)}
@@ -273,40 +299,46 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
    
    !p.multi=[0,1,2]
    !p.font=2
-   xrange=minmax(q[[res2_range_idx,chi2_range_idx]])*[1/G,G]
-   yrange=minmax([0,res2[res2_range_idx],2*res2[res2_range_idx[0]]])
-   plot, Q[sort_idx], res2[sort_idx], psym=-4, /xlog, xstyle=0, ystyle=1, xticks=4,$
+;   xrange=minmax(q[[res2_range_idx,chi2_range_idx]])*[1/G,G]
+;   yrange=minmax([0,res2[res2_range_idx],2*res2[res2_range_idx[0]]])
+   yrange=[0,max(res2,/nan)]
+   plot, Q[sort_idx], res2[sort_idx], psym=-4, xlog=xlog, xstyle=0, ystyle=1, xticks=4,$
      xrange=xrange, yrange=yrange, $
      xtitle='!18Q!3', ytitle='!17 RES!S!U2!N!R!Dnorm!N!3', thick=2,charsize=1.2*charsize,title=_obsI.ID
-   oplot,q_res2_best[[0,0]],!y.crange,color=250,thick=3,linesty=res2_done?0:1
-   gx_plot_label,0.01,0.9,/xlog, string(a[0],b[0],format="('a=',f5.2,'; ','b=',f5.2)"),charsize=charsize
-   gx_plot_label,0.01,0.8, 'PROJECTED SOLUTION:',/xlog,charsize=charsize
-   gx_plot_label,0.01,0.7, string([q_res2_best,q_res2_range-q_res2_best], format="('Q!Dres2_best!N = ',g0,'!S!D',g0,'!R!U+',g0)") ,/xlog,charsize=charsize
+   oplot,q_res2_best[[0,0]],!y.crange,color=250,thick=3,linesty=res2_done?0:2
+   oplot,q_res2_range[[0,0]],!y.crange,color=250,thick=3,linesty=1
+   oplot,q_res2_range[[1,1]],!y.crange,color=250,thick=3,linesty=1
+   gx_plot_label,0.01,0.9,xlog=xlog, string(a[0],b[0],format="('a=',f5.2,'; ','b=',f5.2)"),charsize=charsize
+   gx_plot_label,0.01,0.8, 'PROJECTED SOLUTION:',xlog=xlog,charsize=charsize
+   gx_plot_label,0.01,0.7, string([q_res2_best,q_res2_range-q_res2_best], format="('Q!Dres2_best!N = ',g0,'!S!D',g0,'!R!U+',g0)") ,xlog=xlog,charsize=charsize
    if res2_done eq 1 then begin
-     gx_plot_label,0.01,0.3, 'FINAL SOLUTION:',/xlog,charsize=charsize
-     gx_plot_label,0.01,0.1, string([q_res2_best,q_res2_range-q_res2_best], format="('Q = ',g0,'!S!D',g0,'!R!U+',g0)") ,/xlog,charsize=charsize
+     gx_plot_label,0.01,0.3, 'FINAL SOLUTION:',xlog=xlog,charsize=charsize
+     gx_plot_label,0.01,0.1, string([q_res2_best,q_res2_range-q_res2_best], format="('Q = ',g0,'!S!D',g0,'!R!U+',g0)") ,xlog=xlog,charsize=charsize
    end
-   gx_plot_label,0.01,0.2, string(res2_best, format="('RES!S!U2!N!R!Dnorm!N = ',g0)") ,/xlog,charsize=charsize
-   gx_plot_label,0.7,0.2, string(res2_solution.tol, format="('tol = ',g0)") ,/xlog,charsize=charsize
-   gx_plot_label,0.7,0.1, string(counter,format="('Run#: ',g0)"),/xlog,charsize=charsize
+   gx_plot_label,0.01,0.2, string(res2_best, format="('RES!S!U2!N!R!Dnorm!N = ',g0)") ,xlog=xlog,charsize=charsize
+   gx_plot_label,0.7,0.2, string(res2_solution.tol, format="('tol = ',g0)") ,xlog=xlog,charsize=charsize
+   gx_plot_label,0.7,0.1, string(counter,format="('Run#: ',g0)"),xlog=xlog,charsize=charsize
 
-   ;xrange=minmax(q[chi2_range_idx])*[1/G,G]
-   yrange=minmax([0,chi2[chi2_range_idx],2*chi2[chi2_range_idx[0]]])
-   plot, q[sort_idx], chi2[sort_idx], psym=-4, /xlog,  xstyle=0, ystyle=1, xticks=4,$
+;   xrange=minmax(q[chi2_range_idx])*[1/G,G]
+;   yrange=minmax([0,chi2[chi2_range_idx],2*chi2[chi2_range_idx[0]]])
+   yrange=[0,max(chi2,/nan)]
+   plot, q[sort_idx], chi2[sort_idx], psym=-4, xlog=xlog,  xstyle=0, ystyle=1, xticks=4,$
      xrange=xrange, yrange=yrange, $
      xtitle='!18Q!3', ytitle='!17 Chi!U2!N!3', thick=2,charsize=1.2*charsize,title=_obsI.ID
-   oplot,q_chi2_best[[0,0]],!y.crange,color=250,thick=3,linesty=chi2_done?0:1
+   oplot,q_chi2_best[[0,0]],!y.crange,color=250,thick=3,linesty=chi2_done?0:2
+   oplot,q_chi2_range[[0,0]],!y.crange,color=250,thick=3,linesty=1
+   oplot,q_chi2_range[[1,1]],!y.crange,color=250,thick=3,linesty=1
    !p.font=2
-   gx_plot_label,0.01,0.9,/xlog, string(a[0],b[0],format="('a=',f5.2,'; ','b=',f5.2)"),charsize=charsize
-   gx_plot_label,0.01,0.8, 'PROJECTED SOLUTION:',/xlog,charsize=charsize
-   gx_plot_label,0.01,0.7, string([q_chi2_best,q_chi2_range-q_chi2_best], format="('Q!Dchi2_best!N = ',g0,'!S!D',g0,'!R!U+',g0)") ,/xlog,charsize=charsize
+   gx_plot_label,0.01,0.9,xlog=xlog, string(a[0],b[0],format="('a=',f5.2,'; ','b=',f5.2)"),charsize=charsize
+   gx_plot_label,0.01,0.8, 'PROJECTED SOLUTION:',xlog=xlog,charsize=charsize
+   gx_plot_label,0.01,0.7, string([q_chi2_best,q_chi2_range-q_chi2_best], format="('Q!Dchi2_best!N = ',g0,'!S!D',g0,'!R!U+',g0)") ,xlog=xlog,charsize=charsize
    if chi2_done then begin
-     gx_plot_label,0.01,0.3, 'FINAL SOLUTION:',/xlog,charsize=charsize
-     gx_plot_label,0.01,0.1, string([q_chi2_best,q_chi2_range-q_chi2_best], format="('Q = ',g0,'!S!D',g0,'!R!U+',g0)") ,/xlog,charsize=charsize
+     gx_plot_label,0.01,0.3, 'FINAL SOLUTION:',xlog=xlog,charsize=charsize
+     gx_plot_label,0.01,0.1, string([q_chi2_best,q_chi2_range-q_chi2_best], format="('Q = ',g0,'!S!D',g0,'!R!U+',g0)") ,xlog=xlog,charsize=charsize
    end
-     gx_plot_label,0.01,0.2, string(chi2_best,format="('Chi!U2!N=',g0)") ,/xlog,charsize=charsize
-     gx_plot_label,0.7,0.2, string(chi2_solution.tol, format="('tol = ',g0)") ,/xlog,charsize=charsize
-     gx_plot_label,0.7,0.1, string(counter,format="('Run#: ',g0)"),/xlog,charsize=charsize
+     gx_plot_label,0.01,0.2, string(chi2_best,format="('Chi!U2!N=',g0)") ,xlog=xlog,charsize=charsize
+     gx_plot_label,0.7,0.2, string(chi2_solution.tol, format="('tol = ',g0)") ,xlog=xlog,charsize=charsize
+     gx_plot_label,0.7,0.1, string(counter,format="('Run#: ',g0)"),xlog=xlog,charsize=charsize
    !p.font=-1
  endif
  
