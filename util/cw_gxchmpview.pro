@@ -427,8 +427,8 @@ function gxchmpview::combobox_index,w
   return,(where(value eq selected_value))[0]
 end
 
-pro gxchmpview::UpdateDisplays,update,best=best
- if ~keyword_set(update) or ~ptr_valid(self.summary) then return 
+pro gxchmpview::UpdateDisplays,best=best
+ if ~ptr_valid(self.summary) then return 
  widget_control,/hourglass
  thisP=!p
  thisD=!d.name
@@ -448,7 +448,7 @@ pro gxchmpview::UpdateDisplays,update,best=best
  !p.charsize=charsize
  set_plot,self.WinOS?'win':'x'
  widget_control,widget_info(self.wBase,find_by_uname='plot_legends'), get_value=legends
- if (update and 1) ne 0 then begin
+
   dummy=execute('data=(*self.summary).data.'+selected_metrics)
   data=data[*,*,index_freq]
   if keyword_set(best) then begin
@@ -513,7 +513,7 @@ pro gxchmpview::UpdateDisplays,update,best=best
              c_charsize=charsize,c_charthick=cc_thick/2>1
   endif
   widget_control,self.wmetrics,set_uvalue={x:!x,y:!y,z:!z,p:!p}
-   if (update and 4) eq 4 then begin
+
     loadct,0
     linecolors
     gx_rgb_white2black
@@ -557,10 +557,7 @@ pro gxchmpview::UpdateDisplays,update,best=best
     endelse
     al_legend,string(a[index_a],b[index_b],format="('a=',g0,'; b=',g0)"),back='grey',/top,/left
     widget_control,self.wmetrics_spectrum_extra,set_value=value,set_uvalue=value
-  endif
- endif
- 
- if (update and 2) ne 0 then begin
+
   index_a=self.combobox_index(self.wa)
   index_b=self.combobox_index(self.wb)
   index_x=self.combobox_index(self.wx)
@@ -647,7 +644,7 @@ pro gxchmpview::UpdateDisplays,update,best=best
     oplot,!x.crange,(*self.summary).y[index_y[[1,1]]],color=255,thick=3,linesty=2
   endif 
   widget_control,self.wmap,set_uvalue={x:!x,y:!y,z:!z,p:!p} 
-  if (update and 4) eq 4 then begin
+
     loadct,0
     linecolors
     gx_rgb_white2black
@@ -720,8 +717,7 @@ pro gxchmpview::UpdateDisplays,update,best=best
      al_legend,string((*self.summary).x[index_x],'"',(*self.summary).y[index_y],'"',format="('x=',g0,a0,'; y=',g0,a0)"),back='grey',/top,/left
     endelse
     widget_control,self.wmaps_spectrum_extra,set_value=value,set_uvalue=value
-  endif
-  end
+
  !p=thisp
  !x=thisX
  !y=thisY
@@ -782,7 +778,6 @@ IF TAG_NAMES(event, /STRUCTURE_NAME) EQ 'WIDGET_DRAW' THEN BEGIN
                         mindb=min((*self.summary).b-b,index_b,/abs)
                         widget_control,self.wa,set_combobox_select=index_a
                         widget_control,self.wb,set_combobox_select=index_b
-                        update=1+4
                        end
         self.wmap: begin
                         cursor,x,y,/nowait,/data
@@ -790,64 +785,20 @@ IF TAG_NAMES(event, /STRUCTURE_NAME) EQ 'WIDGET_DRAW' THEN BEGIN
                         mindy=min((*self.summary).y-y,index_y,/abs)
                         widget_control,self.wx,set_combobox_select=index_x
                         widget_control,self.wy,set_combobox_select=index_y
-                        update=2+4
                   end
         else:
       endcase
     endif
   end
 ENDIF
-case event.id of
-  self.wMetrics_select:update=1+4
-  self.wMap_Select:update=2+4
-  self.wa:update=1+4
-  self.wb:update=1+4
-  self.wfreq:update=3+4
-  self.wx:update=2+4
-  self.wy:update=2+4
-  self.wmetrics_spectrum_extra:update=1+4
-  self.wmaps_spectrum_extra:update=2+4
-  else:
-endcase
+
 case widget_info(event.id,/uname) of
-  'log_metrics':update=1
-  'log_map':update=2
   'metrics_lct':begin 
               self->OnPallete,/metrics
-              update=1
              end 
   'map_lct':begin
              self->OnPallete,/map
-             update=2
             end   
-  'charsize':update=3 
-  
-  'metrics_contours':update=1
-  'metrics_colors':update=1
-  'metrics_thick':update=1
-  'metrics_percent':update=1
-
-  'cc_contours':update=1
-  'cc_colors':update=1
-  'cc_thick':update=1
-  'cc_percent':update=1
-  
-  'data_contours':update=2 
-  'data_colors':update=2
-  'data_thick':update=2 
-  'data_percent':update=2 
-
-  'model_contours':update=2
-  'model_colors':update=2
-  'model_thick':update=2
-  'model_percent':update=2
-  
-  'plot_legends':update=3+4
-
-  'overplot_select':update=3+4   
-  'overplot_colors':update=3+4
-  'overplot_thick':update=3+4
-  'overplot_styles':update=3+4
   
   'maps_levels':begin
     widget_control,event.id,get_value=value,get_uvalue=uvalue
@@ -857,7 +808,6 @@ case widget_info(event.id,/uname) of
       widget_control,event.id,set_value=uvalue
     endif else begin
       widget_control,event.id,set_uvalue=uvalue
-      update=1
     endelse
   end 
   'cc_levels':begin
@@ -868,7 +818,6 @@ case widget_info(event.id,/uname) of
       widget_control,event.id,set_value=uvalue
     endif else begin
       widget_control,event.id,set_uvalue=uvalue
-      update=1
     endelse
   end  
   'data_levels':begin
@@ -879,7 +828,6 @@ case widget_info(event.id,/uname) of
       widget_control,event.id,set_value=uvalue
     endif else begin
       widget_control,event.id,set_uvalue=uvalue
-      update=2
     endelse
   end
   'model_levels':begin
@@ -890,7 +838,6 @@ case widget_info(event.id,/uname) of
       widget_control,event.id,set_value=uvalue
     endif else begin
       widget_control,event.id,set_uvalue=uvalue
-      update=2
     endelse
   end                      
   'resultsdir':begin
@@ -914,14 +861,12 @@ case widget_info(event.id,/uname) of
               widget_control,widget_info(self.wbase,find_by_uname='resultsdir_update'),sensitive=1
               self->UpdateSummary
               widget_control,event.top,tlb_set_title='CHMP Rresults Viewer [MODEL: '+file_basename((*self.summary).MODEL)+'; EBTEL Table: '+file_basename((*self.summary).ebtel)+']'
-              update=3+4
               best=1
             endif else answ=dialog_message('No new files have been added to the CHMP results directory, no updates necessary!',/info)
           endif
          widget_control,widget_info(self.wBase,find_by_uname='resultsdir'),set_value=self.resultsdir
        end  
      'metrics_best':begin
-                    update=3+4
                     best=1  
                    end  
      'plot2png':begin
@@ -937,7 +882,7 @@ case widget_info(event.id,/uname) of
       'help_about':answ=dialog_message('This application may be used to visualize the results created by the code located in the GX Simulator /external/chmp submodule contributed by Alexey Kuznetsov',/info)                    
      else:
  endcase
- self->UpdateDisplays,update,best=best
+ self->UpdateDisplays,best=best
  end      
 
 function cw_gxchmpview,Base,_extra=_extra
