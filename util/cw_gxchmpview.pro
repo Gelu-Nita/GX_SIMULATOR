@@ -34,7 +34,7 @@ pro gxchmpview::CreatePanel,xsize=xsize,ysize=ysize
   styles=['Solid', 'Dotted', 'Dashed', 'Dash-Dot']+ ' Line'
   symbols = ['No Symbols','Plus', 'Asterisk', 'Period', 'Diamond' , 'Triangle','Square']
   metrics=['Eta','CHI','Rho','bestQ','CC']
-  maps=['Data','Model', 'Convolved Model','Eta','Rho','Chi']
+  maps=['Data', 'Convolved Model','Model','Eta','Rho','Chi']
 
   toolbar= widget_base(self.wBase, /row,/toolbar)
   wAbout=widget_button( toolbar, $
@@ -149,7 +149,7 @@ pro gxchmpview::CreatePanel,xsize=xsize,ysize=ysize
   
   
   tvlct,rgb_curr,/get
-  loadct,39,//silent
+  loadct,39,/silent
   gx_rgb_white2black
   tvlct,rgb,/get
   tvlct,rgb_curr
@@ -448,7 +448,7 @@ pro gxchmpview::UpdateMaps
 end
 
 pro gxchmpview::UpdateDisplays,best=best
- if ~ptr_valid(self.summary) or ~ptr_valid(self.maps) then return 
+ if ~ptr_valid(self.summary) then return 
  widget_control,/hourglass
  thisP=!p
  thisD=!d.name
