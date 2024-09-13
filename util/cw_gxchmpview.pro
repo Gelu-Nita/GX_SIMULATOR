@@ -20,7 +20,7 @@ end
 
 pro gxchmpview__define
   struct_hide,{gxchmpview, inherits gxwidget,$
-               ResultsDir:'',pfiles:ptr_new(),summary:ptr_new(),$
+               ResultsDir:'',pfiles:ptr_new(),summary:ptr_new(),maps:ptr_new(),$
                WinOS:0l,wmetrics:0l,wmap:0l,wmetrics_spectrum:0l,$
                wmap_spectrum:0l,wmetrics_select:0l,wmap_select:0l,$
                wa:0l,wb:0l,wfreq:0l,wx:0l,wy:0l,wmaps_spectrum_extra:0l,wmetrics_spectrum_extra:0l}
@@ -31,7 +31,8 @@ pro gxchmpview::CreatePanel,xsize=xsize,ysize=ysize
 
   subdirectory=['resource', 'bitmaps']
   colors=['black','maroon','red','pink','orange','yellow','olive','green','dark green','cyan','blue','dark_blue','magenta','purple']
-  styles=['Solid', 'Dotted', 'Dashed', 'Dash-Dot']
+  styles=['Solid', 'Dotted', 'Dashed', 'Dash-Dot']+ ' Line'
+  symbols = ['No Symbols','Plus', 'Asterisk', 'Period', 'Diamond' , 'Triangle','Square']
   metrics=['Eta','CHI','Rho','bestQ','CC']
   maps=['Data','Model', 'Convolved Model','Eta','Rho','Chi']
 
@@ -80,14 +81,14 @@ pro gxchmpview::CreatePanel,xsize=xsize,ysize=ysize
   levels='[50,70,90]'
   metrics_colors=widget_combobox(metrics_contours_base,value=colors,uname='metrics_colors')
   widget_control,metrics_colors,set_combobox_select=5
-  wThick=cw_objfield(metrics_contours_base,label='thickness:',value=1.0,format='(f0.1)',inc=1,uname='metrics_thick')
+  wThick=cw_objfield(metrics_contours_base,label='thick:',value=1.0,format='(f0.1)',inc=1,min=1,uname='metrics_thick')
   wLevels=widget_text(metrics_contours_base,value=levels,/editable,uname='metrics_levels',uvalue=levels,xsize=12)
   wpercent=cw_bgroup(metrics_contours_base,/exclusive,/row,['value','%'],uname='metrics_percent',set_value=[1])
   wContours=cw_bgroup(metrics_contours_base,/nonexclusive,/row,['Metrics Contours'],label_left='',uname='metrics_contours',set_value=[0])
 
   cc_colors=widget_combobox(cc_contours_base,value=colors,uname='cc_colors')
   widget_control,cc_colors,set_combobox_select=10
-  wThick=cw_objfield(cc_contours_base,label='thickness:',value=1.0,format='(f0.1)',inc=1,uname='cc_thick')
+  wThick=cw_objfield(cc_contours_base,label='thick:',value=1.0,format='(f0.1)',inc=1,min=1,uname='cc_thick')
   wLevels=widget_text(cc_contours_base,value='0.9',/editable,uname='cc_levels',uvalue=levels,xsize=12)
   wpercent=cw_bgroup(cc_contours_base,/exclusive,/row,['value','%'],uname='cc_percent',set_value=[0])
   wContours=cw_bgroup(cc_contours_base,/nonexclusive,/row,['CC Contours'],label_left='',uname='cc_contours',set_value=[0])
@@ -133,14 +134,14 @@ pro gxchmpview::CreatePanel,xsize=xsize,ysize=ysize
   levels='[15,30,60,90]'
   data_colors=widget_combobox(data_contours_base,value=colors,uname='data_colors')
   widget_control,data_colors,set_combobox_select=5
-  wThick=cw_objfield(data_contours_base,label='thickness:',value=1.0,format='(f0.1)',inc=1,uname='data_thick')
+  wThick=cw_objfield(data_contours_base,label='thick:',value=1.0,format='(f0.1)',inc=1,min=1,uname='data_thick')
   wLevels=widget_text(data_contours_base,value=levels,/editable,uname='data_levels',uvalue=levels,xsize=14)
   wpercent=cw_bgroup(data_contours_base,/exclusive,/row,['value','%'],uname='data_percent',set_value=[1])
   wContours=cw_bgroup(data_contours_base,/nonexclusive,/row,['Data Contours'],label_left='',uname='data_contours',set_value=[0])
 
   model_colors=widget_combobox(model_contours_base,value=colors,uname='model_colors')
   widget_control,model_colors,set_combobox_select=10
-  wThick=cw_objfield(model_contours_base,label='thickness:',value=1.0,format='(f0.1)',inc=1,uname='model_thick')
+  wThick=cw_objfield(model_contours_base,label='thick:',value=1.0,format='(f0.1)',inc=1,min=1,uname='model_thick')
   wLevels=widget_text(model_contours_base,value=levels,/editable,uname='model_levels',uvalue=levels,xsize=14)
   wpercent=cw_bgroup(model_contours_base,/exclusive,/row,['value','%'],uname='model_percent',set_value=[1])
   wContours=cw_bgroup(model_contours_base,/nonexclusive,/row,['Model Contours'],label_left='',uname='model_contours',set_value=[0])
@@ -148,7 +149,7 @@ pro gxchmpview::CreatePanel,xsize=xsize,ysize=ysize
   
   
   tvlct,rgb_curr,/get
-  loadct,39,/silent
+  loadct,39,//silent
   gx_rgb_white2black
   tvlct,rgb,/get
   tvlct,rgb_curr
@@ -253,9 +254,9 @@ pro gxchmpview::CreatePanel,xsize=xsize,ysize=ysize
   metrics_spectrum_overplot2=widget_base(metrics_spectrum_overplot,/frame,/row,uname='metrics_spectrum_overplot2')
   metrics_spectrum_overplot3=widget_base(metrics_spectrum_overplot,/frame,/row,uname='metrics_spectrum_overplot3')
   
-  wlabel=widget_label(metrics_spectrum_overplot1,value='Overplot 1: ')
-  wlabel=widget_label(metrics_spectrum_overplot2,value='Overplot 2: ')
-  wlabel=widget_label(metrics_spectrum_overplot3,value='Overplot 3: ')
+  wlabel=widget_label(metrics_spectrum_overplot1,value='Over: ')
+  wlabel=widget_label(metrics_spectrum_overplot2,value='Over: ')
+  wlabel=widget_label(metrics_spectrum_overplot3,value='Over: ')
   
   overplot1=widget_combobox(metrics_spectrum_overplot1,value=['None',metrics],uname='overplot_select')
   overplot2=widget_combobox(metrics_spectrum_overplot2,value=['None',metrics],uname='overplot_select')
@@ -265,13 +266,17 @@ pro gxchmpview::CreatePanel,xsize=xsize,ysize=ysize
   overplot2_color=widget_combobox(metrics_spectrum_overplot2,value=colors,uname='overplot_colors')
   overplot3_color=widget_combobox(metrics_spectrum_overplot3,value=colors,uname='overplot_colors')
   
-  overplot1style=widget_combobox(metrics_spectrum_overplot1,value=styles,uname='overplot_styles')
+  overplot1_symbol=widget_combobox(metrics_spectrum_overplot1,value=symbols,uname='overplot_symbols')
+  overplot2_symbol=widget_combobox(metrics_spectrum_overplot2,value=symbols,uname='overplot_symbols')
+  overplot3_symbol=widget_combobox(metrics_spectrum_overplot3,value=symbols,uname='overplot_symbols')
+  
+  overplot1_style=widget_combobox(metrics_spectrum_overplot1,value=styles,uname='overplot_styles')
   overplot2_style=widget_combobox(metrics_spectrum_overplot2,value=styles,uname='overplot_styles')
   overplot3_style=widget_combobox(metrics_spectrum_overplot3,value=styles,uname='overplot_styles')
 
-  overplot1__thick=cw_objfield(metrics_spectrum_overplot1,label='thickness:',value=1.0,format='(f0.1)',inc=1,uname='overplot_thick')
-  overplot2__thick=cw_objfield(metrics_spectrum_overplot2,label='thickness:',value=1.0,format='(f0.1)',inc=1,uname='overplot_thick')
-  overplot3__thick=cw_objfield(metrics_spectrum_overplot3,label='thickness:',value=1.0,format='(f0.1)',inc=1,uname='overplot_thick')
+  overplot1__thick=cw_objfield(metrics_spectrum_overplot1,label='thick:',value=1.0,min=0,format='(f0.1)',inc=1,uname='overplot_thick')
+  overplot2__thick=cw_objfield(metrics_spectrum_overplot2,label='thick:',value=1.0,min=0,format='(f0.1)',inc=1,uname='overplot_thick')
+  overplot3__thick=cw_objfield(metrics_spectrum_overplot3,label='thick:',value=1.0,min=0,format='(f0.1)',inc=1,uname='overplot_thick')
   
  
   maps_spectrum_extra_base=widget_base(maps_spectrum_base_selectors,/frame,/row)
@@ -285,9 +290,9 @@ pro gxchmpview::CreatePanel,xsize=xsize,ysize=ysize
   maps_spectrum_overplot2=widget_base(maps_spectrum_overplot,/frame,/row,uname='maps_spectrum_overplot2')
   maps_spectrum_overplot3=widget_base(maps_spectrum_overplot,/frame,/row,uname='maps_spectrum_overplot3')
 
-  wlabel=widget_label(maps_spectrum_overplot1,value='Overplot 1: ')
-  wlabel=widget_label(maps_spectrum_overplot2,value='Overplot 2: ')
-  wlabel=widget_label(maps_spectrum_overplot3,value='Overplot 3: ')
+  wlabel=widget_label(maps_spectrum_overplot1,value='Over: ')
+  wlabel=widget_label(maps_spectrum_overplot2,value='Over: ')
+  wlabel=widget_label(maps_spectrum_overplot3,value='Over: ')
 
   overplot1=widget_combobox(maps_spectrum_overplot1,value=['None',maps],uname='overplot_select')
   overplot2=widget_combobox(maps_spectrum_overplot2,value=['None',maps],uname='overplot_select')
@@ -296,14 +301,19 @@ pro gxchmpview::CreatePanel,xsize=xsize,ysize=ysize
   overplot1_color=widget_combobox(maps_spectrum_overplot1,value=colors,uname='overplot_colors')
   overplot2_color=widget_combobox(maps_spectrum_overplot2,value=colors,uname='overplot_colors')
   overplot3_color=widget_combobox(maps_spectrum_overplot3,value=colors,uname='overplot_colors')
+  
+  
+  overplot1_symbol=widget_combobox(maps_spectrum_overplot1,value=symbols,uname='overplot_symbols')
+  overplot2_symbol=widget_combobox(maps_spectrum_overplot2,value=symbols,uname='overplot_symbols')
+  overplot3_symbol=widget_combobox(maps_spectrum_overplot3,value=symbols,uname='overplot_symbols')
 
-  overplot1style=widget_combobox(maps_spectrum_overplot1,value=styles,uname='overplot_styles')
+  overplot1_style=widget_combobox(maps_spectrum_overplot1,value=styles,uname='overplot_styles')
   overplot2_style=widget_combobox(maps_spectrum_overplot2,value=styles,uname='overplot_styles')
   overplot3_style=widget_combobox(maps_spectrum_overplot3,value=styles,uname='overplot_styles')
 
-  overplot1__thick=cw_objfield(maps_spectrum_overplot1,label='thickness:',value=1.0,format='(f0.1)',inc=1,uname='overplot_thick')
-  overplot2__thick=cw_objfield(maps_spectrum_overplot2,label='thickness:',value=1.0,format='(f0.1)',inc=1,uname='overplot_thick')
-  overplot3__thick=cw_objfield(maps_spectrum_overplot3,label='thickness:',value=1.0,format='(f0.1)',inc=1,uname='overplot_thick')
+  overplot1__thick=cw_objfield(maps_spectrum_overplot1,label='thick:',value=1.0,min=0,format='(f0.1)',inc=1,uname='overplot_thick')
+  overplot2__thick=cw_objfield(maps_spectrum_overplot2,label='thick:',value=1.0,min=0,format='(f0.1)',inc=1,uname='overplot_thick')
+  overplot3__thick=cw_objfield(maps_spectrum_overplot3,label='thick:',value=1.0,min=0,format='(f0.1)',inc=1,uname='overplot_thick')
 
 end   
 
@@ -427,8 +437,18 @@ function gxchmpview::combobox_index,w
   return,(where(value eq selected_value))[0]
 end
 
+pro gxchmpview::UpdateMaps
+  if ~ptr_valid(self.summary) then return
+  index_a=self.combobox_index(self.wa)
+  index_b=self.combobox_index(self.wb)
+  filename=(*self.summary).files[index_a,index_b]
+  maps=gx_filevars2struct(filename)
+  ptr_free,self.maps
+  self.maps=ptr_new(maps)
+end
+
 pro gxchmpview::UpdateDisplays,best=best
- if ~ptr_valid(self.summary) then return 
+ if ~ptr_valid(self.summary) or ~ptr_valid(self.maps) then return 
  widget_control,/hourglass
  thisP=!p
  thisD=!d.name
@@ -461,6 +481,7 @@ pro gxchmpview::UpdateDisplays,best=best
    index_b=index[1]
    widget_control,self.wa,set_combobox_select=index_a
    widget_control,self.wb,set_combobox_select=index_b
+   self->UpdateMaps
   endif
   index_a=self.combobox_index(self.wa)
   index_b=self.combobox_index(self.wb)
@@ -514,7 +535,7 @@ pro gxchmpview::UpdateDisplays,best=best
   endif
   widget_control,self.wmetrics,set_uvalue={x:!x,y:!y,z:!z,p:!p}
 
-    loadct,0
+    loadct,0,/silent
     linecolors
     gx_rgb_white2black
     widget_control,self.wmetrics_spectrum,get_value=win
@@ -535,7 +556,7 @@ pro gxchmpview::UpdateDisplays,best=best
       overplot_base=widget_info(self.wBase,find_by_uname='metrics_spectrum_overplot')
       overplot_legend=[]
       tvlct,rgb,/get
-      loadct,0
+      loadct,0,/silent
       linecolors
       overplot_all=widget_info(overplot_base,/all)
       for k=0,n_elements(overplot_all)-1 do begin
@@ -545,13 +566,15 @@ pro gxchmpview::UpdateDisplays,best=best
           color=self->combobox_index(widget_info(overplot_all[k],find_by_uname='overplot_colors'))
           widget_control,widget_info(overplot_all[k],find_by_uname='overplot_thick'),get_value=thick
           linestyle=self->combobox_index(widget_info(overplot_all[k],find_by_uname='overplot_styles'))
+          psym=self->combobox_index(widget_info(overplot_all[k],find_by_uname='overplot_symbols'))
+          if thick eq 0 then linestyle=!null else psym*=-1
           code=execute('odata=(*self.summary).data.'+metrics[self->combobox_index(wSelect)])
-          oplot,(*self.summary).freq,odata[index_a,index_b,*],thick=thick,color=color,linestyle=linestyle
-          overplot_legend=[overplot_legend,{items:+metrics[self->combobox_index(wSelect)],line_thick:thick,textcolors:color,linestyle:linestyle}]
+          oplot,(*self.summary).freq,odata[index_a,index_b,*],thick=thick,color=color,linestyle=linestyle,psym=psym
+          overplot_legend=[overplot_legend,{items:metrics[self->combobox_index(wSelect)],line_thick:thick,textcolors:color,linestyle:exist(linestyle)?linestyle:0L,psym:psym}]
         end    
       endfor
       if n_elements(overplot_legend) ne 0 then begin
-        al_legend,overplot_legend.items,textcolors=overplot_legend.textcolors,colors=overplot_legend.textcolors,line_thick=overplot_legend.line_thick,linestyle=overplot_legend.linestyle,/top,/right,back='grey'
+        al_legend,overplot_legend.items,textcolors=overplot_legend.textcolors,colors=overplot_legend.textcolors,line_thick=overplot_legend.line_thick,linestyle=overplot_legend.linestyle,psym=overplot_legend.psym,/top,/right,back='grey'
       endif
       tvlct,rgb
     endelse
@@ -563,29 +586,20 @@ pro gxchmpview::UpdateDisplays,best=best
   index_x=self.combobox_index(self.wx)
   index_y=self.combobox_index(self.wy)
   filename=(*self.summary).files[index_a,index_b]
-  o=obj_new('IDL_Savefile', filename)
-  o->Restore,'MODIMAGEARR'
-  o->Restore,'MODIMAGECONVARR'
-  o->Restore,'OBSIMAGEARR'
-  obsI=OBSIMAGEARR->get(index_freq,/map)
-  modI=MODIMAGECONVARR->get(index_freq,/map)
-  idx=where(o->names() eq 'OBSSIMAGEARR',has_sigma)
-  if has_sigma then begin
-    o->Restore,'OBSSIMAGEARR'
-    obsSigma=OBSSIMAGEARR->get(index_freq,/map)
-  endif else obsSigma=obsI
-  idx=where(o->names() eq 'THRESHOLD',count)
-  if count gt 0 then begin
-    o->Restore,'THRESHOLD'
-  endif else THRESHOLD=float(strmid(file_basename(filename),11,5))
+  obsI=(*self.Maps).OBSIMAGEARR->get(index_freq,/map)
+  modI=(*self.Maps).MODIMAGEARR->get(index_freq,/map)
+  cmodI=(*self.Maps).MODIMAGECONVARR->get(index_freq,/map)
+  has_sigma=tag_exist((*self.Maps),'OBSSIMAGEARR')
+  obsSigma=has_sigma?(*self.Maps).OBSSIMAGEARR->get(index_freq,/map):obsI
+  THRESHOLD=tag_exist((*self.Maps),'THRESHOLD')?(*self.Maps).THRESHOLD:float(strmid(file_basename(filename),11,5))
   u=where((obsI.data lt max(obsI.data)*threshold) and (modI.data lt max(modI.data)*threshold), count)
   if legends[2] then $
     map_legend=string(a[index_a],b[index_b],freq[index_freq],format="('a=',g0,'; b=',g0,'; freq=',f0.2, 'GHz')") $
     else map_legend=[]
   case selected_map of
     'Data':map=obsI
-    'Model':map=MODIMAGEARR->get(index_freq,/map)
-    'Convolved Model':map=modI
+    'Model':map=modI
+    'Convolved Model':map=cmodI
     'Eta':begin
            map=ModI
            map.ID='Eta'
@@ -610,7 +624,6 @@ pro gxchmpview::UpdateDisplays,best=best
     else: begin
           end
   endcase
-  obj_destroy,o
   widget_control,widget_info(self.wBase,find_by_uname='map_lct'),get_uvalue=rgb
   tvlct,rgb
   widget_control,self.wmap,get_value=win
@@ -640,12 +653,13 @@ pro gxchmpview::UpdateDisplays,best=best
   if data_contours[0] eq 1 then plot_map,obsI,/over,levels=data_levels,percent=data_percent,color=data_color,thick=data_thick
   if model_contours[0] eq 1 then plot_map,modI,/over,levels=model_levels,percent=data_percent[0],color=model_color,thick=model_thick
   if legends[4] then begin
-    oplot,(*self.summary).x[index_x[[1,1]]],!y.crange,color=255,thick=3,linesty=2
-    oplot,!x.crange,(*self.summary).y[index_y[[1,1]]],color=255,thick=3,linesty=2
+    cross_color=(strlowcase(selected_map) eq 'eta' or strlowcase(selected_map) eq 'chi' or strlowcase(selected_map) eq 'rho')?0:255
+    oplot,(*self.summary).x[index_x[[1,1]]],!y.crange,color=cross_color,thick=3,linesty=2
+    oplot,!x.crange,(*self.summary).y[index_y[[1,1]]],color=cross_color,thick=3,linesty=2
   endif 
   widget_control,self.wmap,set_uvalue={x:!x,y:!y,z:!z,p:!p} 
 
-    loadct,0
+    loadct,0,/silent
     linecolors
     gx_rgb_white2black
     widget_control,self.wmap_spectrum,get_value=win
@@ -658,10 +672,10 @@ pro gxchmpview::UpdateDisplays,best=best
     sigma_spec=[]
  
     for k=0,n_elements((*self.summary).freq)-1 do begin
-      obs_spec=[obs_spec,(OBSIMAGEARR->get(k,/data))[index_x,index_y]]
-      mod_spec=[mod_spec,(MODIMAGEARR->get(k,/data))[index_x,index_y]]
-      cmod_spec=[cmod_spec,(MODIMAGECONVARR->get(k,/data))[index_x,index_y]]
-      sigma_spec=has_sigma?[sigma_spec,(OBSSIMAGECONVARR->get(k,/data))[index_x,index_y]]:obs_spec 
+      obs_spec=[obs_spec,((*self.maps).OBSIMAGEARR->get(k,/data))[index_x,index_y]]
+      mod_spec=[mod_spec,((*self.maps).MODIMAGEARR->get(k,/data))[index_x,index_y]]
+      cmod_spec=[cmod_spec,((*self.maps).MODIMAGECONVARR->get(k,/data))[index_x,index_y]]
+      sigma_spec=has_sigma?[sigma_spec,((*self.maps).OBSSIMAGECONVARR->get(k,/data))[index_x,index_y]]:obs_spec 
     endfor
     case strlowcase(selected_map) of
       'data':data=obs_spec
@@ -679,15 +693,14 @@ pro gxchmpview::UpdateDisplays,best=best
       value=new_value
       oplot,(*self.summary).freq[[index_freq,index_freq]],gx_vline(),linesty=2
       if legends[5] then begin
-        data=(MODIMAGECONVARR->get(index_freq,/data))[index_x,index_y]
-        map_legend=string(selected_map+': ',data,format="(a0,g0)")
-        al_legend,map_legend,position=[freq[index_freq],data],back='grey',$
+        map_legend=string(selected_map+': ',data[index_freq],format="(a0,g0)")
+        al_legend,map_legend,position=[freq[index_freq],data[index_freq]],back='grey',$
                   right=freq[index_freq] gt mean(freq)
       endif
       overplot_base=widget_info(self.wBase,find_by_uname='maps_spectrum_overplot')
       overplot_legend=[]
       tvlct,rgb,/get
-      loadct,0
+      loadct,0,/silent
       linecolors
       overplot_all=widget_info(overplot_base,/all)
       for k=0,n_elements(overplot_all)-1 do begin
@@ -697,6 +710,8 @@ pro gxchmpview::UpdateDisplays,best=best
           color=self->combobox_index(widget_info(overplot_all[k],find_by_uname='overplot_colors'))
           widget_control,widget_info(overplot_all[k],find_by_uname='overplot_thick'),get_value=thick
           linestyle=self->combobox_index(widget_info(overplot_all[k],find_by_uname='overplot_styles'))
+          psym=self->combobox_index(widget_info(overplot_all[k],find_by_uname='overplot_symbols'))
+          if thick eq 0 then linestyle=!null else psym*=-1
             case strlowcase(maps[self->combobox_index(wSelect)]) of
               'data':odata=obs_spec
               'model':odata=mod_spec
@@ -706,12 +721,12 @@ pro gxchmpview::UpdateDisplays,best=best
               'rho':odata=(mod_spec/obs_spec-1)^2
               else:
           endcase
-          oplot,(*self.summary).freq,odata,thick=thick,color=color,linestyle=linestyle
-          overplot_legend=[overplot_legend,{items:+maps[self->combobox_index(wSelect)],line_thick:thick,textcolors:color,linestyle:linestyle}]
+          oplot,(*self.summary).freq,odata,thick=thick,color=color,linestyle=linestyle,psym=psym
+          overplot_legend=[overplot_legend,{items:+maps[self->combobox_index(wSelect)],line_thick:thick,textcolors:color,linestyle:exist(linestyle)?linestyle:0L,psym:psym}]
         end
       endfor
       if n_elements(overplot_legend) ne 0 then begin
-        al_legend,overplot_legend.items,textcolors=overplot_legend.textcolors,colors=overplot_legend.textcolors,line_thick=overplot_legend.line_thick,linestyle=overplot_legend.linestyle,/top,/right,back='grey'
+        al_legend,overplot_legend.items,textcolors=overplot_legend.textcolors,colors=overplot_legend.textcolors,line_thick=overplot_legend.line_thick,linestyle=overplot_legend.linestyle,psym=overplot_legend.psym,/top,/right,back='grey'
       endif
       tvlct,rgb 
      al_legend,string((*self.summary).x[index_x],'"',(*self.summary).y[index_y],'"',format="('x=',g0,a0,'; y=',g0,a0)"),back='grey',/top,/left
@@ -778,6 +793,7 @@ IF TAG_NAMES(event, /STRUCTURE_NAME) EQ 'WIDGET_DRAW' THEN BEGIN
                         mindb=min((*self.summary).b-b,index_b,/abs)
                         widget_control,self.wa,set_combobox_select=index_a
                         widget_control,self.wb,set_combobox_select=index_b
+                        self->UpdateMaps
                        end
         self.wmap: begin
                         cursor,x,y,/nowait,/data
@@ -791,7 +807,11 @@ IF TAG_NAMES(event, /STRUCTURE_NAME) EQ 'WIDGET_DRAW' THEN BEGIN
     endif
   end
 ENDIF
-
+case event.id of
+  self.wa:Self->UpdateMaps
+  self.wb:Self->UpdateMaps
+  else:
+endcase
 case widget_info(event.id,/uname) of
   'metrics_lct':begin 
               self->OnPallete,/metrics
