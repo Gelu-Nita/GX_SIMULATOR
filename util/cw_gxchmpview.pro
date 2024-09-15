@@ -33,7 +33,7 @@ pro gxchmpview::CreatePanel,xsize=xsize,ysize=ysize
   colors=['black','maroon','red','pink','orange','yellow','olive','green','dark green','cyan','blue','dark_blue','magenta','purple']
   styles=['Solid', 'Dotted', 'Dashed', 'Dash-Dot']+ ' Line'
   symbols = ['No Symbols','Plus', 'Asterisk', 'Period', 'Diamond' , 'Triangle','Square']
-  metrics=['Eta','CHI','Rho','bestQ','CC']
+  metrics=['Eta','CHI','Rho','bestQ','CC','SHIFTX','SHIFTY']
   maps=['Data', 'Convolved Model','Model','Eta','Rho','Chi']
 
   toolbar= widget_base(self.wBase, /row,/toolbar)
@@ -381,6 +381,8 @@ pro gxchmpview::UpdateSummary
  Iobs=dblarr(N_a, N_b, N_freq)
  Imod=dblarr(N_a, N_b, N_freq)
  CC=dblarr(N_a, N_b, N_freq)
+ shiftx=dblarr(N_a, N_b, N_freq)
+ shifty=dblarr(N_a, N_b, N_freq)
  filenames=strarr(N_a,N_b)
  for k=0,n_ab-1 do begin
    o=obj_new('IDL_Savefile', files[k])
@@ -416,6 +418,12 @@ pro gxchmpview::UpdateSummary
    Imod[index_a,index_b,*]=ImodArr
    o->restore, 'CCarr
    CC[index_a,index_b,*]=CCArr
+   o->restore, 'obsImageArr'
+   for index_freq=0, obsimagearr->get(/count)-1 do begin
+     m=obsimagearr->get(index_freq,/map)
+     if tag_exist(m, 'shiftX') then shiftX[index_a,index_b,index_freq]=m.shiftX
+     if tag_exist(m, 'shiftY') then shiftY[index_a, index_b, index_freq]=m.shiftY
+   endfor
    obj_destroy,o
  endfor
  get_map_coord,modimagearr->get(0,/map),xp,yp
@@ -424,7 +432,7 @@ pro gxchmpview::UpdateSummary
                       a:a,b:b,freq:freq,x:reform(xp[*,0]),y:reform(yp[0,*]),files:filenames,$
                       data:{chi:chi,chiVar:chiVar,$
                       rho:rho,rhoVar:rhoVar,eta:eta,etaVar:etaVar,$
-                      bestQ:bestQ,iObs:iObs,Imod:Imod,CC:CC}})  
+                      bestQ:bestQ,iObs:iObs,Imod:Imod,CC:CC,shiftx:shiftx,shifty:shifty}})  
  widget_control,self.wa,set_value=string((*self.summary).a,format="(g0)")  
  widget_control,self.wb,set_value=string((*self.summary).b,format="(g0)")  
  widget_control,self.wfreq,set_value=string((*self.summary).freq,format="(f5.2, ' GHz')")
@@ -463,6 +471,8 @@ pro gxchmpview::UpdateDisplays
  case selected_metrics of
   'bestQ':best=0
   'CC':best=0
+  'SHIFTX':best=0
+  'SHIFTY':best=0
   else: best=widget_info(widget_info(self.wBase,find_by_uname='metrics_best'),/button_set)
  endcase
  widget_control,widget_info(self.wBase,find_by_uname='metrics_best'),set_button=best
@@ -877,11 +887,12 @@ case widget_info(event.id,/uname) of
        end     
   'resultsdir_select':begin
          resultsdir=dialog_pickfile(TITLE='Please select a valid CHMP results repository',path=curdir(),/dir,/must)
+         redo=1
          resultsdir_select:
          files=self.valid_repository(resultsdir)
          if n_elements(files) gt 0 then begin
           if ptr_valid(self.pfiles) then oldfiles=*self.pfiles else oldfiles=['']
-            if ~array_equal(files,oldfiles)then begin
+            if ~array_equal(files,oldfiles)or keyword_set(redo) then begin
               self.resultsdir=resultsdir
               ptr_free,self.pfiles
               self.pfiles=ptr_new(files)
