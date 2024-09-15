@@ -156,8 +156,7 @@ pro gxchmpview::CreatePanel,xsize=xsize,ysize=ysize
   wPalette = widget_button(metrics_toolbar, $
     value=gx_bitmap(filepath('palette.bmp', subdirectory=subdirectory)), $
     /bitmap,tooltip='Change Metrics Color Table',uname='metrics_lct',uvalue=rgb)
-  wBestMetrics=widget_button(metrics_toolbar,value=gx_bitmap(filepath('find.bmp', subdirectory=subdirectory)), $
-    /bitmap,tooltip='Display Best Metrics',uname='metrics_best')  
+ 
   wmetrics2PNG=widget_button(metrics_toolbar, $
     value=gx_bitmap(filepath('export.bmp', subdirectory=subdirectory)), $
     /bitmap,tooltip='Export plot as PNG',uname='plot2png',uvalue=self.wmetrics)
@@ -201,6 +200,8 @@ pro gxchmpview::CreatePanel,xsize=xsize,ysize=ysize
   self.wa=widget_combobox(selectors_base,value=['None'],/dynamic)
   wlabel=widget_label(selectors_base,value='b: ')
   self.wb=widget_combobox(selectors_base,value=['None'],/dynamic)
+  wBestMetrics=widget_button(widget_base(metrics_base_selectors,/nonexclusive), value='Lock To Best Metrics', $
+    tooltip='Lock [a,b] to the best metrics',uname='metrics_best');,value=gx_bitmap(filepath('find.bmp', subdirectory=subdirectory)),/bitmap
   
   frequency_base=widget_base(settings_base,/frame,/row)
   wleft=widget_base(frequency_base,/row)
@@ -447,7 +448,7 @@ pro gxchmpview::UpdateMaps
   self.maps=ptr_new(maps)
 end
 
-pro gxchmpview::UpdateDisplays,best=best
+pro gxchmpview::UpdateDisplays
  if ~ptr_valid(self.summary) then return 
  widget_control,/hourglass
  thisP=!p
@@ -459,6 +460,12 @@ pro gxchmpview::UpdateDisplays,best=best
  !x.margin=[6,6]
  !y.margin=[6,6]
  selected_metrics=widget_info(self.wmetrics_select,/COMBOBOX_GETTEXT)
+ case selected_metrics of
+  'bestQ':best=0
+  'CC':best=0
+  else: best=widget_info(widget_info(self.wBase,find_by_uname='metrics_best'),/button_set)
+ endcase
+ widget_control,widget_info(self.wBase,find_by_uname='metrics_best'),set_button=best
  selected_map=widget_info(self.wmap_select,/COMBOBOX_GETTEXT)
  index_freq=self.combobox_index(self.wfreq)
  a=(*self.summary).a
@@ -881,14 +888,12 @@ case widget_info(event.id,/uname) of
               widget_control,widget_info(self.wbase,find_by_uname='resultsdir_update'),sensitive=1
               self->UpdateSummary
               widget_control,event.top,tlb_set_title='CHMP Rresults Viewer [MODEL: '+file_basename((*self.summary).MODEL)+'; EBTEL Table: '+file_basename((*self.summary).ebtel)+']'
-              best=1
+              widget_control,widget_info(self.wBase,find_by_uname='metrics_best'),/set_button
             endif else answ=dialog_message('No new files have been added to the CHMP results directory, no updates necessary!',/info)
           endif
          widget_control,widget_info(self.wBase,find_by_uname='resultsdir'),set_value=self.resultsdir
        end  
-     'metrics_best':begin
-                    best=1  
-                   end  
+ 
      'plot2png':begin
                  filename=dialog_pickfile(filter='*.png',default='*.png',title='Save plot to PNG')
                  if filename ne '' then begin
@@ -902,7 +907,7 @@ case widget_info(event.id,/uname) of
       'help_about':answ=dialog_message('This application may be used to visualize the results created by the code located in the GX Simulator /external/chmp submodule contributed by Alexey Kuznetsov',/info)                    
      else:
  endcase
- self->UpdateDisplays,best=best
+ self->UpdateDisplays
  end      
 
 function cw_gxchmpview,Base,_extra=_extra
