@@ -21,9 +21,9 @@ end
 pro gxchmpview__define
   struct_hide,{gxchmpview, inherits gxwidget,$
                ResultsDir:'',pfiles:ptr_new(),summary:ptr_new(),maps:ptr_new(),$
-               WinOS:0l,wmetrics:0l,wmap:0l,wmetrics_spectrum:0l,$
+               WinOS:0l,wmetrics:0l,wmap:0l,wmetrics_spectrum:0l,wmetrics_solution:0l,$
                wmap_spectrum:0l,wmetrics_select:0l,wmap_select:0l,$
-               wa:0l,wb:0l,wfreq:0l,wx:0l,wy:0l,wmaps_spectrum_extra:0l,wmetrics_spectrum_extra:0l}
+               wa:0l,wb:0l,wfreq:0l,wx:0l,wy:0l,wmaps_spectrum_extra:0l,wmetrics_spectrum_extra:0l,wmetrics_solution_extra:0l}
 end
 
 
@@ -68,12 +68,15 @@ pro gxchmpview::CreatePanel,xsize=xsize,ysize=ysize
   
   
   metrics_spectrum_base=widget_base(right_tab,/column,title='Metrics Spectrum',/frame,uname='metrics_spectrum_base')
+  metrics_solution_base=widget_base(right_tab,/column,title='Metrics Solution',/frame,uname='metrics_solution_base')
   maps_spectrum_base=widget_base(left_tab,/column,title='Map Spectrum',/frame,uname='map_spectrum_page')
 
   metrics_spectrum_base_selectors=widget_base(metrics_spectrum_base,/row,/frame)
+  metrics_solution_base_selectors=widget_base(metrics_solution_base,/row,/frame)
   maps_spectrum_base_selectors    =widget_base(maps_spectrum_base,/row,/frame)
 
   metrics_spectrum_display_base=widget_base(metrics_spectrum_base,/frame,/column)
+  metrics_solution_display_base=widget_base(metrics_solution_base,/frame,/column)
   maps_spectrum_display_base    =widget_base(maps_spectrum_base,/frame,/column)
  
 
@@ -229,9 +232,18 @@ pro gxchmpview::CreatePanel,xsize=xsize,ysize=ysize
     /expose_events, $
     graphics_level=1 $
     )
+    
+  self.wmetrics_solution=WIDGET_DRAW(metrics_solution_display_base,scr_xsize=scr_xsize,scr_ysize=scr_ysize,UNAME='metrics_solution_display',$
+    ;/button_events, $
+    ;/motion_events, $
+    retain=1,$
+    /expose_events, $
+    graphics_level=1 $
+    )  
  
   g0=widget_info(metrics_base_selectors,/geometry)
   metrics_spectrum_toolbar=widget_base(metrics_spectrum_base_selectors,/toolbar,/row,scr_ysize=g0.scr_ysize) 
+  metrics_solution_toolbar=widget_base(metrics_solution_base_selectors,/toolbar,/row,scr_ysize=g0.scr_ysize) 
   maps_spectrum_toolbar=widget_base(maps_spectrum_base_selectors,/toolbar,/row,scr_ysize=g0.scr_ysize)  
 
   wMapSpectrum2PNG=widget_button(maps_spectrum_toolbar, $
@@ -243,12 +255,22 @@ pro gxchmpview::CreatePanel,xsize=xsize,ysize=ysize
     value=gx_bitmap(filepath('export.bmp', subdirectory=subdirectory)), $
     /bitmap,tooltip='Export plot as PNG',uname='plot2png',uvalue=self.wmetrics_spectrum) 
   
-  
+  wMetricsSolution2PNG=widget_button(metrics_solution_toolbar, $
+    value=gx_bitmap(filepath('export.bmp', subdirectory=subdirectory)), $
+    /bitmap,tooltip='Export plot as PNG',uname='plot2png',uvalue=self.wmetrics_solution)
+    
   metrics_spectrum_extra_base=widget_base(metrics_spectrum_base_selectors,/frame,/row)
   wlabel=widget_label(metrics_spectrum_extra_base,value='plot_extra: ')
   g1=widget_info(metrics_spectrum_toolbar,/geometry)
   g2=widget_info(wlabel,/geometry)
   self.wmetrics_spectrum_extra=widget_text(metrics_spectrum_extra_base,scr_xsize=scr_xsize-(g1.scr_xsize+g2.scr_xsize+12),/editable, value='/xlog,/xsty')     
+  
+  
+  metrics_solution_extra_base=widget_base(metrics_solution_base_selectors,/frame,/row)
+  wlabel=widget_label(metrics_solution_extra_base,value='plot_extra: ')
+  g2=widget_info(wlabel,/geometry)
+  self.wmetrics_solution_extra=widget_text(metrics_solution_extra_base,scr_xsize=scr_xsize-(g1.scr_xsize+g2.scr_xsize+12),/editable, value='/xsty')
+
   
   metrics_spectrum_overplot=widget_base(metrics_spectrum_base,/column,uname='metrics_spectrum_overplot')
   metrics_spectrum_overplot1=widget_base(metrics_spectrum_overplot,/frame,/row,uname='metrics_spectrum_overplot1')
@@ -749,6 +771,32 @@ pro gxchmpview::UpdateDisplays
      al_legend,string((*self.summary).x[index_x],'"',(*self.summary).y[index_y],'"',format="('x=',g0,a0,'; y=',g0,a0)"),back='grey',/top,/left
     endelse
     widget_control,self.wmaps_spectrum_extra,set_value=value,set_uvalue=value
+    
+ o=obj_new('IDL_Savefile', filename)   
+ o->Restore,'ALLMETRICS'
+ o->Restore,'ALLQ'
+ obj_destroy,o
+ loadct,0,/silent
+ linecolors
+ gx_rgb_white2black
+ widget_control,self.wmetrics_solution,get_value=win
+ widget_control,self.wmetrics_solution_extra,get_value=new_value,get_uvalue=old_value
+ _extra=strcompress(new_value[0],/rem) eq ''?'':', '+new_value[0]
+ wset,win
+ erase,0
+ code=execute("plot,allq,allmetrics[*,index_freq],xtitle='Heating Rate Q',ytitle='METRICS SOLUTION'"+_extra)
+ if code eq 0 then begin
+   value=exist(old_value)?old_value:""
+   widget_control,self.wmetrics_solution_extra,set_value=value,set_uvalue=value
+   al_legend,['Plot Extra Keywords Error(s) Detected!','   ',_extra],textcolors=2
+ endif else begin
+   value=new_value
+   best=min(allmetrics[*,index_freq],index_best)
+   oplot,allq[[index_best,index_best]],gx_vline(),linesty=2
+   alegend=string(a[index_a],b[index_b],freq[index_freq],format="('a=',g0,'; b=',g0,'; freq=',f0.2, 'GHz')")
+   alegend=[alegend,[string(allq[index_best],format="('Best Q=',g0)"),string( best, format="('Best Metrics=',g0)")]]
+   al_legend,alegend,back='grey',/top,/left   
+ end
 
  !p=thisp
  !x=thisX
