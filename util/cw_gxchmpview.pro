@@ -263,13 +263,13 @@ pro gxchmpview::CreatePanel,xsize=xsize,ysize=ysize
   wlabel=widget_label(metrics_spectrum_extra_base,value='plot_extra: ')
   g1=widget_info(metrics_spectrum_toolbar,/geometry)
   g2=widget_info(wlabel,/geometry)
-  self.wmetrics_spectrum_extra=widget_text(metrics_spectrum_extra_base,scr_xsize=scr_xsize-(g1.scr_xsize+g2.scr_xsize+12),/editable, value='/xlog,/xsty')     
+  self.wmetrics_spectrum_extra=widget_text(metrics_spectrum_extra_base,scr_xsize=scr_xsize-(g1.scr_xsize+g2.scr_xsize+12),/editable, value='/xlog, /xsty, xmargin=[10,3]')     
   
   
   metrics_solution_extra_base=widget_base(metrics_solution_base_selectors,/frame,/row)
   wlabel=widget_label(metrics_solution_extra_base,value='plot_extra: ')
   g2=widget_info(wlabel,/geometry)
-  self.wmetrics_solution_extra=widget_text(metrics_solution_extra_base,scr_xsize=scr_xsize-(g1.scr_xsize+g2.scr_xsize+12),/editable, value='/xsty')
+  self.wmetrics_solution_extra=widget_text(metrics_solution_extra_base,scr_xsize=scr_xsize-(g1.scr_xsize+g2.scr_xsize+12),/editable, value='/xsty, psym=-1, xmargin=[10,3]')
 
   
   metrics_spectrum_overplot=widget_base(metrics_spectrum_base,/column,uname='metrics_spectrum_overplot')
@@ -306,7 +306,7 @@ pro gxchmpview::CreatePanel,xsize=xsize,ysize=ysize
   wlabel=widget_label(maps_spectrum_extra_base,value='plot_extra: ')
   g1=widget_info(maps_spectrum_toolbar,/geometry)
   g2=widget_info(wlabel,/geometry)
-  self.wmaps_spectrum_extra=widget_text(maps_spectrum_extra_base,scr_xsize=scr_xsize-(g1.scr_xsize+g2.scr_xsize+12),/editable, value='/xlog,/xsty,/ylog')
+  self.wmaps_spectrum_extra=widget_text(maps_spectrum_extra_base,scr_xsize=scr_xsize-(g1.scr_xsize+g2.scr_xsize+12),/editable, value='/xlog,/xsty,/ylog, xmargin=[10,3]')
 
   maps_spectrum_overplot=widget_base(maps_spectrum_base,/column,uname='maps_spectrum_overplot')
   maps_spectrum_overplot1=widget_base(maps_spectrum_overplot,/frame,/row,uname='maps_spectrum_overplot1')
@@ -373,12 +373,15 @@ pro gxchmpview::UpdateSummary
  n_ab=n_elements(files)
  for k=0,n_ab-1 do begin
   o=obj_new('IDL_Savefile', files[k])
-  if k eq 0 then o->restore,'freqlist'
+  if k eq 0 then begin
+    o->restore,'freqlist'
+    o->restore, 'EBTELFILENAME'
+    o->restore, 'MODELFILENAME'
+    o->restore, 'MODIMAGEARR'
+    get_map_coord,modimagearr->get(0,/map),xp,yp
+  endif
   o->restore, 'a'
   o->restore, 'b'
-  o->restore, 'EBTELFILENAME'
-  o->restore,'MODELFILENAME'
-  o->restore,'MODIMAGEARR'
   a_arr=[a_arr,a]
   b_arr=[b_arr,b]
   obj_destroy,o
@@ -395,13 +398,8 @@ pro gxchmpview::UpdateSummary
 
  bestQ=dblarr(N_a, N_b, N_freq)
  chi=dblarr(N_a, N_b, N_freq)
- chiVar=dblarr(N_a, N_b, N_freq)
  rho=dblarr(N_a, N_b, N_freq)
- rhoVar=dblarr(N_a, N_b, N_freq)
  eta=dblarr(N_a, N_b, N_freq)
- etaVar=dblarr(N_a, N_b, N_freq)
- Iobs=dblarr(N_a, N_b, N_freq)
- Imod=dblarr(N_a, N_b, N_freq)
  CC=dblarr(N_a, N_b, N_freq)
  shiftx=dblarr(N_a, N_b, N_freq)
  shifty=dblarr(N_a, N_b, N_freq)
@@ -415,29 +413,19 @@ pro gxchmpview::UpdateSummary
    if count then begin
      o->restore, 'chiArr'
      chi[index_a,index_b,*]=chiArr
-     o->restore, 'chiVarArr'
-     chiVar[index_a,index_b,*]=chiVarArr
    end
    dummy=where(o->Names() eq 'RHOARR',count)
    if count then begin
      o->restore, 'rhoArr'
      rho[index_a,index_b,*]=rhoArr
-     o->restore, 'rhoVarArr'
-     rhoVar[index_a,index_b,*]=rhoVarArr
    end
    dummy=where(o->Names() eq 'ETAARR',count)
    if count then begin
      o->restore, 'etaArr'
      eta[index_a,index_b,*]=etaArr
-     o->restore, 'etaVarArr'
-     etaVar[index_a,index_b,*]=etaVarArr
    end
    o->restore, 'bestQarr'
    bestQ[index_a,index_b,*]=bestQArr
-   o->restore, 'IobsArr'
-   Iobs[index_a,index_b,*]=IobsArr
-   o->restore, 'ImodArr'
-   Imod[index_a,index_b,*]=ImodArr
    o->restore, 'CCarr
    CC[index_a,index_b,*]=CCArr
    o->restore, 'obsImageArr'
@@ -448,13 +436,12 @@ pro gxchmpview::UpdateSummary
    endfor
    obj_destroy,o
  endfor
- get_map_coord,modimagearr->get(0,/map),xp,yp
+ 
  ptr_free,self.summary
  self.summary=ptr_new({ebtel:EBTELFILENAME,model:MODELFILENAME,$
                       a:a,b:b,freq:freq,x:reform(xp[*,0]),y:reform(yp[0,*]),files:filenames,$
-                      data:{chi:chi,chiVar:chiVar,$
-                      rho:rho,rhoVar:rhoVar,eta:eta,etaVar:etaVar,$
-                      bestQ:bestQ,iObs:iObs,Imod:Imod,CC:CC,shiftx:shiftx,shifty:shifty}})  
+                      data:{eta:eta,chi:chi,rho:rho,$
+                      bestQ:bestQ,CC:CC,shiftx:shiftx,shifty:shifty}})  
  widget_control,self.wa,set_value=string((*self.summary).a,format="(g0)")  
  widget_control,self.wb,set_value=string((*self.summary).b,format="(g0)")  
  widget_control,self.wfreq,set_value=string((*self.summary).freq,format="(f5.2, ' GHz')")
@@ -490,7 +477,12 @@ pro gxchmpview::UpdateDisplays
  !x.margin=[6,6]
  !y.margin=[6,6]
  selected_metrics=widget_info(self.wmetrics_select,/COMBOBOX_GETTEXT)
- case selected_metrics of
+ if strupcase(selected_metrics) eq 'ETA' or $
+    strupcase(selected_metrics) eq 'CHI' or $
+    strupcase(selected_metrics) eq 'RHO' then $
+    selected_metrics='<'+selected_metrics+'!U2!N>'
+
+ case widget_info(self.wmetrics_select,/COMBOBOX_GETTEXT) of
   'bestQ':best=0
   'CC':best=0
   'SHIFTX':best=0
@@ -508,7 +500,7 @@ pro gxchmpview::UpdateDisplays
  set_plot,self.WinOS?'win':'x'
  widget_control,widget_info(self.wBase,find_by_uname='plot_legends'), get_value=legends
 
-  dummy=execute('data=(*self.summary).data.'+selected_metrics)
+  dummy=execute('data=(*self.summary).data.'+widget_info(self.wmetrics_select,/COMBOBOX_GETTEXT))
   data=data[*,*,index_freq]
   if keyword_set(best) then begin
    adata=data
@@ -532,8 +524,13 @@ pro gxchmpview::UpdateDisplays
   gx_data2grid, a, b, data, gridded_data=gdata, x_grid=xg, y_grid=yg, dx=dx, dy=dy
   map_metrics=make_map(gdata,xc=mean(xg),yc=mean(yg),dx=dx,dy=dy)
   map_metrics.id=selected_metrics
+  odmin=min(map_metrics.data,max=odmax,/nan)
+  if (odmin eq 0) && (odmax eq 0) then begin
+    map_metrics.data=1e-15
+    cbar=0
+  endif else cbar=1
   bad=where(gdata  le 0,nbad)
-  plot_map,map_metrics,/cbar,log=log_metrics,top=254,bottom=(nbad eq 0)?1:0,cb_title=selected_metrics,xtitle='a',ytitle='b'
+  plot_map,map_metrics,cbar=cbar,log=log_metrics,top=254,bottom=(nbad eq 0)?1:0,cb_title=selected_metrics,xtitle='a',ytitle='b'
   if legends[0] then begin
     oplot,a[index_a[[1,1]]],!y.crange,color=0,thick=3,linesty=2
     oplot,!x.crange,b[index_b[[1,1]]],color=0,thick=3,linesty=2
@@ -573,7 +570,6 @@ pro gxchmpview::UpdateDisplays
              c_charsize=charsize,c_charthick=cc_thick/2>1
   endif
   widget_control,self.wmetrics,set_uvalue={x:!x,y:!y,z:!z,p:!p}
-
     loadct,0,/silent
     linecolors
     gx_rgb_white2black
@@ -581,7 +577,7 @@ pro gxchmpview::UpdateDisplays
     widget_control,self.wmetrics_spectrum_extra,get_value=new_value,get_uvalue=old_value
     _extra=strcompress(new_value[0],/rem) eq ''?'':', '+new_value[0]
     wset,win
-    code=execute('data=(*self.summary).data.'+selected_metrics)
+    code=execute('data=(*self.summary).data.'+widget_info(self.wmetrics_select,/COMBOBOX_GETTEXT))
     code=execute("plot,(*self.summary).freq,data[index_a,index_b,*],xtitle='Frequency (GHz)',ytitle=selected_metrics"+_extra)
     if code eq 0 then begin
       value=exist(old_value)?old_value:""
@@ -607,7 +603,7 @@ pro gxchmpview::UpdateDisplays
           linestyle=self->combobox_index(widget_info(overplot_all[k],find_by_uname='overplot_styles'))
           psym=self->combobox_index(widget_info(overplot_all[k],find_by_uname='overplot_symbols'))
           if thick eq 0 then linestyle=!null else psym*=-1
-          code=execute('odata=(*self.summary).data.'+metrics[self->combobox_index(wSelect)])
+          code=execute('odata=(*self.summary).data.'+widget_info(self.wmetrics_select,/COMBOBOX_GETTEXT))
           oplot,(*self.summary).freq,odata[index_a,index_b,*],thick=thick,color=color,linestyle=linestyle,psym=psym
           overplot_legend=[overplot_legend,{items:metrics[self->combobox_index(wSelect)],line_thick:thick,textcolors:color,linestyle:exist(linestyle)?linestyle:0L,psym:psym}]
         end    
@@ -628,9 +624,9 @@ pro gxchmpview::UpdateDisplays
   obsI=(*self.Maps).OBSIMAGEARR->get(index_freq,/map)
   modI=(*self.Maps).MODIMAGEARR->get(index_freq,/map)
   cmodI=(*self.Maps).MODIMAGECONVARR->get(index_freq,/map)
-  has_sigma=tag_exist((*self.Maps),'OBSSIMAGEARR')
-  obsSigma=has_sigma?(*self.Maps).OBSSIMAGEARR->get(index_freq,/map):obsI
-  THRESHOLD=tag_exist((*self.Maps),'THRESHOLD')?(*self.Maps).THRESHOLD:float(strmid(file_basename(filename),11,5))
+  has_sigma=tag_exist((*self.Maps),'OBSIMAGESIGMAARR')
+  obsSigma=has_sigma?(*self.Maps).OBSIMAGESIGMAARR->get(index_freq,/map):obsI
+  THRESHOLD=tag_exist((*self.Maps),'THRESHOLD_IMG')?(*self.Maps).THRESHOLD_IMG:float(strmid(file_basename(filename),11,5))
   u=where((obsI.data lt max(obsI.data)*threshold) and (modI.data lt max(modI.data)*threshold), count)
   if legends[2] then $
     map_legend=string(a[index_a],b[index_b],freq[index_freq],format="('a=',g0,'; b=',g0,'; freq=',f0.2, 'GHz')") $
@@ -641,23 +637,29 @@ pro gxchmpview::UpdateDisplays
     'Convolved Model':map=cmodI
     'Eta':begin
            map=ModI
-           map.ID='Eta'
+           map.ID='Eta!U2!N'
            map.data=((modI.data-obsI.data)/mean(obsI.data))^2
            map.data[u]=0
-           map_legend=[map_legend,string((*self.summary).data.eta[index_a,index_b,index_freq],format="('Eta=',f0.2)")]
+           if tag_exist((*self.maps),'threshold_img') then $
+             map_legend=[map_legend,string((*self.maps).threshold_img*100,format="('Iobs or Imod >',g0,'%')")]
+           map_legend=[map_legend,string(map.id,(*self.summary).data.eta[index_a,index_b,index_freq],format="('<',a0,'>=',f0.2)")]
           end
      'Chi':begin
             map=ModI
-            map.ID='Chi'
+            map.ID='Chi!U2!N'
             map.data=((modI.data-obsI.data)/obsSigma.data)^2
             map.data[u]=0
+            if tag_exist((*self.maps),'threshold_img') then $
+              map_legend=[map_legend,string((*self.maps).threshold_img*100,format="('Iobs or Imod >',g0,'%')")]
             map_legend=[map_legend,string((*self.summary).data.chi[index_a,index_b,index_freq],format="('Chi=',f0.2)")]
           end    
       'Rho':begin
             map=ModI
-            map.ID='Rho'
+            map.ID='Rho!U2!N'
             map.data=(modI.data/obsI.data-1)^2
             map.data[u]=0
+            if tag_exist((*self.maps),'threshold_img') then $
+              map_legend=[map_legend,string((*self.maps).threshold_img*100,format="('Iobs or Imod >',g0,'%')")]
             map_legend=[map_legend,string((*self.summary).data.rho[index_a,index_b,index_freq],format="('Rho=',f0.2)")]
           end       
     else: begin
@@ -669,8 +671,9 @@ pro gxchmpview::UpdateDisplays
   wset,win
   log_map=(widget_info(widget_info(self.wBase,find_by_uname='log_map'),/COMBOBOX_GETTEXT) eq 'Log Scale') 
   plot_map,map,/cbar,log=log_map,top=254
-  if selected_map eq 'Data' and legends[3] then $
-     map_legend=[map_legend,string(map.SHIFTX,'"',map.SHIFTy,'"',format="('xshift= ',f0.2,a0,'; yshift= ',f0.2,a0)")]
+  if selected_map eq 'Data' and legends[3] and  ~(map.SHIFTX eq 0 and map.SHIFTY eq 0) then $
+     map_legend=[map_legend,string(map.SHIFTX,'"',map.SHIFTY,'"',format="('xshift= ',f0.2,a0,'; yshift= ',f0.2,a0)")]
+  
   if legends[5] then al_legend,string(map.data[index_x,index_y],format="(g0)"),back='grey',$
                 position=[(*self.summary).x[index_x],(*self.summary).y[index_y]],$
                           right=(*self.summary).x[index_x] gt mean((*self.summary).x),top=(*self.summary).y[index_y] gt mean((*self.summary).y)
@@ -714,7 +717,7 @@ pro gxchmpview::UpdateDisplays
       obs_spec=[obs_spec,((*self.maps).OBSIMAGEARR->get(k,/data))[index_x,index_y]]
       mod_spec=[mod_spec,((*self.maps).MODIMAGEARR->get(k,/data))[index_x,index_y]]
       cmod_spec=[cmod_spec,((*self.maps).MODIMAGECONVARR->get(k,/data))[index_x,index_y]]
-      sigma_spec=has_sigma?[sigma_spec,((*self.maps).OBSSIMAGECONVARR->get(k,/data))[index_x,index_y]]:obs_spec 
+      sigma_spec=has_sigma?[sigma_spec,((*self.maps).OBSIMAGESIGMAARR->get(k,/data))[index_x,index_y]]:obs_spec 
     endfor
     case strlowcase(selected_map) of
       'data':data=obs_spec
@@ -794,7 +797,8 @@ pro gxchmpview::UpdateDisplays
    best=min(allmetrics[*,index_freq],index_best)
    oplot,allq[[index_best,index_best]],gx_vline(),linesty=2
    alegend=string(a[index_a],b[index_b],freq[index_freq],format="('a=',g0,'; b=',g0,'; freq=',f0.2, 'GHz')")
-   alegend=[alegend,[string(allq[index_best],format="('Best Q=',g0)"),string( best, format="('Best Metrics=',g0)")]]
+   alegend=[alegend,[string(allq[index_best],format="('Best Q=',g0)"),$
+                      string(tag_exist((*self.maps),'metric')?(*self.maps).metric:'Eta', best, format="('Best <',a0,'!U2!N>=',g0)")]]
    al_legend,alegend,back='grey',/top,/left   
  end
 
