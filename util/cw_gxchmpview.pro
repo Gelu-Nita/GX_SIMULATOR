@@ -671,8 +671,11 @@ pro gxchmpview::UpdateDisplays
   wset,win
   log_map=(widget_info(widget_info(self.wBase,find_by_uname='log_map'),/COMBOBOX_GETTEXT) eq 'Log Scale') 
   plot_map,map,/cbar,log=log_map,top=254
-  if selected_map eq 'Data' and legends[3] and  ~(map.SHIFTX eq 0 and map.SHIFTY eq 0) then $
+  if selected_map eq 'Data' and legends[3] then begin
+    if tag_exist(map,'shiftx') and tag_exist(map,'shifty') then if ~(map.SHIFTX eq 0 and map.SHIFTY eq 0) then $
      map_legend=[map_legend,string(map.SHIFTX,'"',map.SHIFTY,'"',format="('xshift= ',f0.2,a0,'; yshift= ',f0.2,a0)")]
+  endif
+    
   
   if legends[5] then al_legend,string(map.data[index_x,index_y],format="(g0)"),back='grey',$
                 position=[(*self.summary).x[index_x],(*self.summary).y[index_y]],$
