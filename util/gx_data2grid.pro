@@ -64,9 +64,9 @@ PRO gx_data2grid, x, y, data, gridded_data=gridded_data, x_grid=x_grid, y_grid=y
   ; Step 5: Fill the gridded_data array with input data
    for i=0, nx-1 do begin
     for j=0, ny-1 do begin
-      ai=where(x_grid[i] eq x,ca)
-      bi=where(y_grid[j] eq y,cb)
-      if ca*cb ne 0 then gridded_data[i,j]=data[ai,bi]
+       xmatch=min(x_grid[i] - x,/abs,ai)
+       ymatch=min(y_grid[j]- y,/abs,bi)
+       gridded_data[i,j]=data[ai,bi]
     endfor
   endfor
 
