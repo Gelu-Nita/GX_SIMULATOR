@@ -28,7 +28,7 @@ end
 
 pro gxchmpview_lock_set, wid_id, lock
  widget_control,wid_id,pro_set_value=''
- widget_control,wid_id,set_value=lock?gx_bitmap(gx_findfile('lock.bmp')):gx_bitmap(gx_findfile('unlock.bmp')),/bitmap
+ widget_control,wid_id,set_value=lock?gx_bitmap(gx_findfile('lock.bmp')):gx_bitmap(gx_findfile('unlock.bmp')),/bitmap,set_button=lock
  widget_control,wid_id,pro_set_value='gxchmpview_lock_set'
 end
 
@@ -500,15 +500,7 @@ pro gxchmpview::UpdateDisplays
     strupcase(selected_metrics) eq 'CHI' or $
     strupcase(selected_metrics) eq 'RHO' then $
     selected_metrics='<'+selected_metrics+'!U2!N>'
-
- case widget_info(self.wmetrics_select,/COMBOBOX_GETTEXT) of
-  'bestQ':best=0
-  'CC':best=0
-  'SHIFTX':best=0
-  'SHIFTY':best=0
-  else: best=widget_info(widget_info(self.wBase,find_by_uname='metrics_best'),/button_set)
- endcase
- widget_control,widget_info(self.wBase,find_by_uname='metrics_best'),set_button=best
+ best=widget_info(widget_info(self.wBase,find_by_uname='metrics_best'),/button_set)
  selected_map=widget_info(self.wmap_select,/COMBOBOX_GETTEXT)
  index_freq=self.combobox_index(self.wfreq)
  a=(*self.summary).a
@@ -522,8 +514,10 @@ pro gxchmpview::UpdateDisplays
   dummy=execute('data=(*self.summary).data.'+widget_info(self.wmetrics_select,/COMBOBOX_GETTEXT))
   data=data[*,*,index_freq]
   if keyword_set(best) then begin
-   adata=data
-   zero_index=where(data le 0, zero_count)
+   minimized_metrics=tag_exist((*self.maps),'metric')?(*self.maps).metric:'Eta'
+   dummy=execute('adata=(*self.summary).data.'+minimized_metrics)
+   adata=adata[*,*,index_freq]
+   zero_index=where(adata le 0, zero_count)
    if zero_count gt 0 then adata[zero_index]=!values.f_nan
    best_metrics=min(adata,imin,/nan)
    index=array_indices(data,imin)
@@ -558,7 +552,7 @@ pro gxchmpview::UpdateDisplays
   if legends[1] then begin
     al_legend,metrics_legend,position=[a[index_a],b[index_b]],back='grey',right=a[index_a] gt mean(a),top=b[index_b] gt mean(b)
   endif
-   widget_control,widget_info(self.wBase,find_by_uname='metrics_contours'),get_value=metrics_contours
+  widget_control,widget_info(self.wBase,find_by_uname='metrics_contours'),get_value=metrics_contours
   widget_control,widget_info(self.wBase,find_by_uname='cc_contours'),get_value=cc_contours
   widget_control,widget_info(self.wBase,find_by_uname='metrics_levels'),get_value=value
   metrics_levels=self->list2flt(value)
@@ -883,6 +877,11 @@ IF TAG_NAMES(event, /STRUCTURE_NAME) EQ 'WIDGET_DRAW' THEN BEGIN
                         cursor,a,b,/nowait,/data
                         minda=min((*self.summary).a-a,index_a,/abs)
                         mindb=min((*self.summary).b-b,index_b,/abs)
+                        filename=(*self.summary).files[index_a,index_b]
+                        if filename eq '' then begin
+                          answ=dialog_message('No solution has been yet computed for this grid point',/info)
+                          goto,skip_plot
+                        endif
                         widget_control,self.wa,set_combobox_select=index_a
                         widget_control,self.wb,set_combobox_select=index_b
                         self->UpdateMaps
@@ -1025,11 +1024,15 @@ case widget_info(event.id,/uname) of
                        endif
                      widget_control,event.id,set_button=0
                    end  
-         'metrics_best':widget_control,event.id,set_value=event.select                            
+      'metrics_best':begin 
+                      help,event.select
+                      widget_control,event.id,set_value=event.select    
+                     end                         
       'help_about':answ=dialog_message('This application may be used to visualize the results created by the code located in the GX Simulator /external/chmp submodule contributed by Alexey Kuznetsov',/info)                    
      else:
  endcase
  self->UpdateDisplays
+ skip_plot:
  end      
 
 function cw_gxchmpview,Base,_extra=_extra
