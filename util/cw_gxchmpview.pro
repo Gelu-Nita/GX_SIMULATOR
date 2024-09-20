@@ -26,6 +26,11 @@ pro gxchmpview__define
                wa:0l,wb:0l,wfreq:0l,wx:0l,wy:0l,wmaps_spectrum_extra:0l,wmetrics_spectrum_extra:0l,wmetrics_solution_extra:0l}
 end
 
+pro gxchmpview_lock_set, wid_id, lock
+ widget_control,wid_id,pro_set_value=''
+ widget_control,wid_id,set_value=lock?gx_bitmap(gx_findfile('lock.bmp')):gx_bitmap(gx_findfile('unlock.bmp')),/bitmap
+ widget_control,wid_id,pro_set_value='gxchmpview_lock_set'
+end
 
 pro gxchmpview::CreatePanel,xsize=xsize,ysize=ysize
 
@@ -164,8 +169,8 @@ pro gxchmpview::CreatePanel,xsize=xsize,ysize=ysize
     value=gx_bitmap(filepath('export.bmp', subdirectory=subdirectory)), $
     /bitmap,tooltip='Export plot as PNG',uname='plot2png',uvalue=self.wmetrics)
   
-  wMetrics2Movie=widget_button(metrics_toolbar, $
-    value=gx_bitmap(filepath('eba_meth_ex_cm.bmp', subdirectory=subdirectory)), $
+  wMetrics2Movie=widget_button(widget_base(metrics_toolbar,/nonexclusive), $
+    value=gx_bitmap(filepath('eba_prop_ex_nocm.bmp', subdirectory=subdirectory)), $
     /bitmap,tooltip='Create movie over frequencies',uname='plot2movie',uvalue=self.wmetrics)
   
   
@@ -178,7 +183,7 @@ pro gxchmpview::CreatePanel,xsize=xsize,ysize=ysize
     /bitmap,tooltip='Export plot as PNG',uname='plot2png',uvalue=self.wmap)  
   
   wMap2Movie=widget_button(map_toolbar, $
-    value=gx_bitmap(filepath('eba_meth_ex_cm.bmp', subdirectory=subdirectory)), $
+    value=gx_bitmap(filepath('eba_prop_ex_nocm.bmp', subdirectory=subdirectory)), $
     /bitmap,tooltip='Create movie over frequencies',uname='plot2movie',uvalue=self.wmap)   
 
   wlabel=widget_label(map_toolbar,value='     x: ')
@@ -212,15 +217,17 @@ pro gxchmpview::CreatePanel,xsize=xsize,ysize=ysize
   self.wa=widget_combobox(selectors_base,value=['None'],/dynamic)
   wlabel=widget_label(selectors_base,value='b: ')
   self.wb=widget_combobox(selectors_base,value=['None'],/dynamic)
-  wBestMetrics=widget_button(widget_base(metrics_base_selectors,/nonexclusive), value='Lock To Best Metrics', $
-    tooltip='Lock [a,b] to the best metrics',uname='metrics_best');,value=gx_bitmap(filepath('find.bmp', subdirectory=subdirectory)),/bitmap
-  
+  wBestMetrics= widget_button(font=font, widget_base(metrics_base_selectors,/nonexclusive,/row), $
+    value=gx_bitmap(gx_findfile('unlock.bmp')), /bitmap,tooltip='Lock/Unlock Best Metrics',uname='metrics_best',pro_set_value='gxchmpview_lock_set')
+
   frequency_base=widget_base(settings_base,/frame,/row)
   wleft=widget_base(frequency_base,/row)
-  wmiddle=widget_base(frequency_base,/row)
+  wmiddle=widget_base(frequency_base,/row,/toolbar)
   wright=widget_base(frequency_base,/row)
   wlabel=widget_label(wmiddle,value='freq: ')
   self.wfreq=widget_combobox(wmiddle,value=['00.00 GHz'],/dynamic)
+  wFreqCycle=widget_button(font=font, widget_base(wmiddle,/nonexclusive,/row), $
+    value=gx_bitmap(gx_findfile('redo.bmp')), /bitmap,tooltip='Cycle through all frquencies',uname='freq_cycle')
   g1=widget_info(settings_base,/geometry)
   g2=widget_info(wmiddle,/geometry)
   dummy=widget_base(wleft,scr_xsize=(g1.scr_xsize-g2.scr_xsize)/2)
@@ -268,7 +275,7 @@ pro gxchmpview::CreatePanel,xsize=xsize,ysize=ysize
     /bitmap,tooltip='Export plot as PNG',uname='plot2png',uvalue=self.wmetrics_solution)
     
   wMetricsSolution2Movie=widget_button(metrics_solution_toolbar, $
-    value=gx_bitmap(filepath('eba_meth_ex_cm.bmp', subdirectory=subdirectory)), $
+    value=gx_bitmap(filepath('eba_prop_ex_nocm.bmp', subdirectory=subdirectory)), $
     /bitmap,tooltip='Create movie over frequencies',uname='plot2movie',uvalue=self.wmetrics_solution)   
     
   metrics_spectrum_extra_base=widget_base(metrics_spectrum_base_selectors,/frame,/row)
@@ -967,7 +974,7 @@ case widget_info(event.id,/uname) of
               widget_control,widget_info(self.wbase,find_by_uname='resultsdir_update'),sensitive=1
               self->UpdateSummary
               widget_control,event.top,tlb_set_title='CHMP Rresults Viewer [MODEL: '+file_basename((*self.summary).MODEL)+'; EBTEL Table: '+file_basename((*self.summary).ebtel)+']'
-              widget_control,widget_info(self.wBase,find_by_uname='metrics_best'),/set_button
+              widget_control,widget_info(self.wBase,find_by_uname='metrics_best'),set_value=1,/set_button
             endif else answ=dialog_message('No new files have been added to the CHMP results directory, no updates necessary!',/info)
           endif
          widget_control,widget_info(self.wBase,find_by_uname='resultsdir'),set_value=self.resultsdir
@@ -984,25 +991,41 @@ case widget_info(event.id,/uname) of
                  endif
                 end 
       'plot2movie':begin
-                    if float(!version.release) ge 8.1 then begin
-                      widget_control,event.id,get_uvalue=wdraw
-                      widget_control,wdraw,get_value=win
-                      wset,win
-                      crop=wdraw eq self.wmap_spectrum or wdraw eq self.wmetrics_spectrum
-                      movie_frame=crop?gx_remove_border(tvrd(/true),/exact):tvrd(/true)
-                      dimensions=(size(movie_frame,/dim))[1:*]
-                      oVid = gxVideo(dimensions,stream=stream)
-                      for k=0,n_elements((*self.summary).freq)-1 do begin
-                        widget_control,self.wfreq,set_combobox_select=k
-                        self->UpdateDisplays
+                    if ptr_valid(self.summary) then begin
+                      if float(!version.release) ge 8.1 then begin
+                        widget_control,event.id,get_uvalue=wdraw
+                        widget_control,wdraw,get_value=win
                         wset,win
                         crop=wdraw eq self.wmap_spectrum or wdraw eq self.wmetrics_spectrum
                         movie_frame=crop?gx_remove_border(tvrd(/true),/exact):tvrd(/true)
-                        result=oVid->Put(stream,movie_frame)
-                      end
-                      obj_destroy, oVid
-                    endif else answ=dialog_message('Sorry, this feature is supported only for IDL versions 8.1 or higher!',/info)
-                   end          
+                        dimensions=(size(movie_frame,/dim))[1:*]
+                        oVid = gxVideo(dimensions,stream=stream)
+                        for k=0,n_elements((*self.summary).freq)-1 do begin
+                          widget_control,self.wfreq,set_combobox_select=k
+                          self->UpdateDisplays
+                          wset,win
+                          crop=wdraw eq self.wmap_spectrum or wdraw eq self.wmetrics_spectrum
+                          movie_frame=crop?gx_remove_border(tvrd(/true),/exact):tvrd(/true)
+                          result=oVid->Put(stream,movie_frame)
+                        end
+                        obj_destroy, oVid
+                      endif else answ=dialog_message('Sorry, this feature is supported only for IDL versions 8.1 or higher!',/info)
+                    endif
+                    widget_control,event.id,set_button=0
+                   end  
+         'freq_cycle':begin
+                     if ptr_valid(self.summary) then begin
+                         index_freq=self.combobox_index(self.wfreq)
+                         freq_indexes=shift(lindgen(n_elements((*self.summary).freq)),-index_freq)
+                         for k=0,n_elements(freq_indexes) do begin
+                           widget_control,self.wfreq,set_combobox_select=freq_indexes[0]
+                           self->UpdateDisplays
+                           freq_indexes=shift(freq_indexes,-1)
+                         end
+                       endif
+                     widget_control,event.id,set_button=0
+                   end  
+         'metrics_best':widget_control,event.id,set_value=event.select                            
       'help_about':answ=dialog_message('This application may be used to visualize the results created by the code located in the GX Simulator /external/chmp submodule contributed by Alexey Kuznetsov',/info)                    
      else:
  endcase
