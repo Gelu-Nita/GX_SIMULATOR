@@ -164,13 +164,22 @@ pro gxchmpview::CreatePanel,xsize=xsize,ysize=ysize
     value=gx_bitmap(filepath('export.bmp', subdirectory=subdirectory)), $
     /bitmap,tooltip='Export plot as PNG',uname='plot2png',uvalue=self.wmetrics)
   
+  wMetrics2Movie=widget_button(metrics_toolbar, $
+    value=gx_bitmap(filepath('eba_meth_ex_cm.bmp', subdirectory=subdirectory)), $
+    /bitmap,tooltip='Create movie over frequencies',uname='plot2movie',uvalue=self.wmetrics)
+  
   
   wPalette = widget_button(map_toolbar, $
     value=gx_bitmap(filepath('palette.bmp', subdirectory=subdirectory)), $
     /bitmap,tooltip='Change Map Color Table',uname='map_lct',uvalue=rgb) 
+  
   wMap2PNG=widget_button(map_toolbar, $
     value=gx_bitmap(filepath('export.bmp', subdirectory=subdirectory)), $
     /bitmap,tooltip='Export plot as PNG',uname='plot2png',uvalue=self.wmap)  
+  
+  wMap2Movie=widget_button(map_toolbar, $
+    value=gx_bitmap(filepath('eba_meth_ex_cm.bmp', subdirectory=subdirectory)), $
+    /bitmap,tooltip='Create movie over frequencies',uname='plot2movie',uvalue=self.wmap)   
 
   wlabel=widget_label(map_toolbar,value='     x: ')
   self.wx=widget_combobox(map_toolbar,value=['None'],/dynamic)
@@ -199,7 +208,7 @@ pro gxchmpview::CreatePanel,xsize=xsize,ysize=ysize
           ['[a,b] Crosshair','Metrics @ [a,b]','Selected [a,b,freq.]','Data to Model Allignment Shift',$
            '{x,y} Crosshair','Map @ [x,y]'],/nonexclusive,set_value=[1,1,1,1,1,1],/row,uname='plot_legends')
   selectors_base=metrics_toolbar
-  wlabel=widget_label(selectors_base,value='     a: ')
+  wlabel=widget_label(selectors_base,value='a: ')
   self.wa=widget_combobox(selectors_base,value=['None'],/dynamic)
   wlabel=widget_label(selectors_base,value='b: ')
   self.wb=widget_combobox(selectors_base,value=['None'],/dynamic)
@@ -248,16 +257,19 @@ pro gxchmpview::CreatePanel,xsize=xsize,ysize=ysize
 
   wMapSpectrum2PNG=widget_button(maps_spectrum_toolbar, $
     value=gx_bitmap(filepath('export.bmp', subdirectory=subdirectory)), $
-    /bitmap,tooltip='Export plot as PNG',uname='plot2png',uvalue=self.wmap_spectrum)
-    
+    /bitmap,tooltip='Export plot as PNG',uname='plot2png',uvalue=self.wmap_spectrum) 
  
   wMetricsSpectrum2PNG=widget_button(metrics_spectrum_toolbar, $
     value=gx_bitmap(filepath('export.bmp', subdirectory=subdirectory)), $
-    /bitmap,tooltip='Export plot as PNG',uname='plot2png',uvalue=self.wmetrics_spectrum) 
+    /bitmap,tooltip='Export plot as PNG',uname='plot2png',uvalue=self.wmetrics_spectrum)  
   
   wMetricsSolution2PNG=widget_button(metrics_solution_toolbar, $
     value=gx_bitmap(filepath('export.bmp', subdirectory=subdirectory)), $
     /bitmap,tooltip='Export plot as PNG',uname='plot2png',uvalue=self.wmetrics_solution)
+    
+  wMetricsSolution2Movie=widget_button(metrics_solution_toolbar, $
+    value=gx_bitmap(filepath('eba_meth_ex_cm.bmp', subdirectory=subdirectory)), $
+    /bitmap,tooltip='Create movie over frequencies',uname='plot2movie',uvalue=self.wmetrics_solution)   
     
   metrics_spectrum_extra_base=widget_base(metrics_spectrum_base_selectors,/frame,/row)
   wlabel=widget_label(metrics_spectrum_extra_base,value='plot_extra: ')
@@ -535,10 +547,11 @@ pro gxchmpview::UpdateDisplays
     oplot,a[index_a[[1,1]]],!y.crange,color=0,thick=3,linesty=2
     oplot,!x.crange,b[index_b[[1,1]]],color=0,thick=3,linesty=2
   end  
-  metrics_legend=string(selected_metrics+': ',data[index_a,index_b],format="(a0,g0)")
-  if legends[1] then al_legend,metrics_legend,position=[a[index_a],b[index_b]],back='grey',right=a[index_a] gt mean(a),top=b[index_b] gt mean(b)
-  
-  widget_control,widget_info(self.wBase,find_by_uname='metrics_contours'),get_value=metrics_contours
+  metrics_legend=[string(selected_metrics+': ',data[index_a,index_b],format="(a0,g0)"),str2arr(string(a[index_a],b[index_b],freq[index_freq],format="('a=',g0,'; b=',g0,',freq=',f0.2, 'GHz')"))]
+  if legends[1] then begin
+    al_legend,metrics_legend,position=[a[index_a],b[index_b]],back='grey',right=a[index_a] gt mean(a),top=b[index_b] gt mean(b)
+  endif
+   widget_control,widget_info(self.wBase,find_by_uname='metrics_contours'),get_value=metrics_contours
   widget_control,widget_info(self.wBase,find_by_uname='cc_contours'),get_value=cc_contours
   widget_control,widget_info(self.wBase,find_by_uname='metrics_levels'),get_value=value
   metrics_levels=self->list2flt(value)
@@ -970,6 +983,26 @@ case widget_info(event.id,/uname) of
                    write_png,filename,crop?gx_remove_border(tvrd(/true),/exact):tvrd(/true)
                  endif
                 end 
+      'plot2movie':begin
+                    if float(!version.release) ge 8.1 then begin
+                      widget_control,event.id,get_uvalue=wdraw
+                      widget_control,wdraw,get_value=win
+                      wset,win
+                      crop=wdraw eq self.wmap_spectrum or wdraw eq self.wmetrics_spectrum
+                      movie_frame=crop?gx_remove_border(tvrd(/true),/exact):tvrd(/true)
+                      dimensions=(size(movie_frame,/dim))[1:*]
+                      oVid = gxVideo(dimensions,stream=stream)
+                      for k=0,n_elements((*self.summary).freq)-1 do begin
+                        widget_control,self.wfreq,set_combobox_select=k
+                        self->UpdateDisplays
+                        wset,win
+                        crop=wdraw eq self.wmap_spectrum or wdraw eq self.wmetrics_spectrum
+                        movie_frame=crop?gx_remove_border(tvrd(/true),/exact):tvrd(/true)
+                        result=oVid->Put(stream,movie_frame)
+                      end
+                      obj_destroy, oVid
+                    endif else answ=dialog_message('Sorry, this feature is supported only for IDL versions 8.1 or higher!',/info)
+                   end          
       'help_about':answ=dialog_message('This application may be used to visualize the results created by the code located in the GX Simulator /external/chmp submodule contributed by Alexey Kuznetsov',/info)                    
      else:
  endcase
