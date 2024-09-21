@@ -465,7 +465,8 @@ pro gxchmpview::UpdateSummary
  widget_control,self.wb,set_value=string((*self.summary).b,format="(g0)")  
  widget_control,self.wfreq,set_value=string((*self.summary).freq,format="(f5.2, ' GHz')")
  widget_control,self.wx,set_value=string((*self.summary).x,format="(g0)")+'"'
- widget_control,self.wy,set_value=string((*self.summary).y,format="(g0)")+'"'                            
+ widget_control,self.wy,set_value=string((*self.summary).y,format="(g0)")+'"'
+ self->UpdateMaps                            
 end
 
 function gxchmpview::combobox_index,w
@@ -617,7 +618,7 @@ pro gxchmpview::UpdateDisplays
           linestyle=self->combobox_index(widget_info(overplot_all[k],find_by_uname='overplot_styles'))
           psym=self->combobox_index(widget_info(overplot_all[k],find_by_uname='overplot_symbols'))
           if thick eq 0 then linestyle=!null else psym*=-1
-          code=execute('odata=(*self.summary).data.'+widget_info(self.wmetrics_select,/COMBOBOX_GETTEXT))
+          code=execute('odata=(*self.summary).data.'+widget_info(wSelect,/COMBOBOX_GETTEXT))
           oplot,(*self.summary).freq,odata[index_a,index_b,*],thick=thick,color=color,linestyle=linestyle,psym=psym
           overplot_legend=[overplot_legend,{items:metrics[self->combobox_index(wSelect)],line_thick:thick,textcolors:color,linestyle:exist(linestyle)?linestyle:0L,psym:psym}]
         end    
@@ -652,7 +653,7 @@ pro gxchmpview::UpdateDisplays
     'Eta':begin
            map=ModI
            map.ID='Eta!U2!N'
-           map.data=((modI.data-obsI.data)/mean(obsI.data))^2
+           map.data=((cmodI.data-obsI.data)/mean(obsI.data))^2
            map.data[u]=0
            if tag_exist((*self.maps),'threshold_img') then $
              map_legend=[map_legend,string((*self.maps).threshold_img*100,format="('Iobs or Imod >',g0,'%')")]
@@ -661,7 +662,7 @@ pro gxchmpview::UpdateDisplays
      'Chi':begin
             map=ModI
             map.ID='Chi!U2!N'
-            map.data=((modI.data-obsI.data)/obsSigma.data)^2
+            map.data=((cmodI.data-obsI.data)/obsSigma.data)^2
             map.data[u]=0
             if tag_exist((*self.maps),'threshold_img') then $
               map_legend=[map_legend,string((*self.maps).threshold_img*100,format="('Iobs or Imod >',g0,'%')")]
@@ -670,7 +671,7 @@ pro gxchmpview::UpdateDisplays
       'Rho':begin
             map=ModI
             map.ID='Rho!U2!N'
-            map.data=(modI.data/obsI.data-1)^2
+            map.data=(cmodI.data/obsI.data-1)^2
             map.data[u]=0
             if tag_exist((*self.maps),'threshold_img') then $
               map_legend=[map_legend,string((*self.maps).threshold_img*100,format="('Iobs or Imod >',g0,'%')")]
@@ -710,7 +711,7 @@ pro gxchmpview::UpdateDisplays
   
   linecolors
   if data_contours[0] eq 1 then plot_map,obsI,/over,levels=data_levels,percent=data_percent,color=data_color,thick=data_thick
-  if model_contours[0] eq 1 then plot_map,modI,/over,levels=model_levels,percent=data_percent[0],color=model_color,thick=model_thick
+  if model_contours[0] eq 1 then plot_map,cmodI,/over,levels=model_levels,percent=data_percent[0],color=model_color,thick=model_thick
   if legends[4] then begin
     cross_color=(strlowcase(selected_map) eq 'eta' or strlowcase(selected_map) eq 'chi' or strlowcase(selected_map) eq 'rho')?0:255
     oplot,(*self.summary).x[index_x[[1,1]]],!y.crange,color=cross_color,thick=3,linesty=2
@@ -740,9 +741,9 @@ pro gxchmpview::UpdateDisplays
       'data':data=obs_spec
       'model':data=mod_spec
       'convolved model':data=cmod_spec
-      'eta':data=((mod_spec-obs_spec)/mean(obs_spec))^2
-      'chi':data=((mod_spec-obs_spec)/mean(sigma_spec))^2
-      'rho':data=(mod_spec/obs_spec-1)^2
+      'eta':data=((cmod_spec-obs_spec)/mean(obs_spec))^2
+      'chi':data=((cmod_spec-obs_spec)/mean(sigma_spec))^2
+      'rho':data=(cmod_spec/obs_spec-1)^2
       else:
     endcase
     code=execute("plot,(*self.summary).freq,data,xtitle='Frequency (GHz)',ytitle=selected_map"+_extra)
@@ -775,9 +776,9 @@ pro gxchmpview::UpdateDisplays
               'data':odata=obs_spec
               'model':odata=mod_spec
               'convolved model':odata=cmod_spec
-              'eta':odata=((mod_spec-obs_spec)/mean(obs_spec))^2
-              'chi':odata=((mod_spec-obs_spec)/mean(sigma_spec))^2
-              'rho':odata=(mod_spec/obs_spec-1)^2
+              'eta':odata=((cmod_spec-obs_spec)/mean(obs_spec))^2
+              'chi':odata=((cmod_spec-obs_spec)/mean(sigma_spec))^2
+              'rho':odata=(cmod_spec/obs_spec-1)^2
               else:
           endcase
           oplot,(*self.summary).freq,odata,thick=thick,color=color,linestyle=linestyle,psym=psym
