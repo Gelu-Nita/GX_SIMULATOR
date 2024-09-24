@@ -816,8 +816,15 @@ pro gxchmpview::UpdateDisplays
    oplot,allq[[index_best,index_best]],gx_vline(),linesty=2
    alegend=string(a[index_a],b[index_b],freq[index_freq],format="('a=',g0,'; b=',g0,'; freq=',f0.2, 'GHz')")
    alegend=[alegend,[string(allq[index_best],format="('Best Q=',g0)"),$
-                      string(tag_exist((*self.maps),'metric')?(*self.maps).metric:'Eta', best, format="('Best <',a0,'!U2!N>=',g0)")]]
-   al_legend,alegend,back='grey',/top,/left   
+                      string(tag_exist((*self.maps),'metric')?(*self.maps).metric:'Eta', best, format="('Best <',a0,'!U2!N>=',g0)")]]  
+   flags=reform((*self.maps).modflagarr[index_freq,*])
+   alegend=[alegend,'',$
+   string(flags[0],format="('Coronal Voxels: ',i0)"),$
+   string(flags[2],(100d*flags[2])/flags[0],format="('L-B Voxels: ',i0,' (',i0,'%)' )"),$
+   ;string(flags[3],(100d*flags[3])/flags[0],format="('L-Q Voxels: ',i0,' (',i0,'%)' )"),$
+   string(flags[4],(100d*flags[4])/flags[0],format="('L Out Of Table Voxels: ',i0,' (',i0,'%)' )"),$
+   string(flags[5],(100d*flags[5])/flags[0],format="('Q Out Of Table Voxels: ',i0,' (',i0,'%)' )")]
+   al_legend,alegend,back='grey',/top,/left 
  end
 
  !p=thisp
