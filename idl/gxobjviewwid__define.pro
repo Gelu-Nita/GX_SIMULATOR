@@ -45,12 +45,12 @@ function gxObjViewWid::Init,wParent, oSubjects, toolbar_parent=toolbar_parent,_e
   wSeedButton=Widget_Button(self.wBaseMapContextMenu,Value='Seed field lines at this basemap location',uname='BASEMAP:CREATESEEDEDFIELDLINES')
   
   self.wBlineContextMenu= WIDGET_BASE(self.wBase, /CONTEXT_MENU, UNAME="BlineContextMenu")
-
+  
   wLockButton=Widget_Button(self.wBlineContextMenu,Value='Lock',uname='BLINE:LOCK')
   wSeedButton=Widget_Button(self.wBlineContextMenu,Value='Seed field lines at top of this line',uname='BLINE:CREATESEEDEDFIELDLINES')
   wCreateButton=Widget_Button(self.wBlineContextMenu,Value='Create flux tube',uname='BLINE:CREATEFLUXTUBE')
   wDeleteButton=Widget_Button(self.wBlineContextMenu,Value='Delete field line',uname='BLINE:DELETE')
-
+  wInfoButton=Widget_Button(self.wBlineContextMenu,Value='Display info about this field line',uname='BLINE:INFO')
 
   self.wFluxTubeContextMenu= WIDGET_BASE(self.wBase, /CONTEXT_MENU, UNAME="FluxTubeContextMenu")
   wDeleteButton=Widget_Button(self.wFluxTubeContextMenu,Value='Delete flux tube',uname='FLUXTUBE:DELETE')
@@ -195,6 +195,17 @@ case strupcase(widget_info(event.id,/uname)) of
                     oSelected->SetProperty,lock=lock
                     self->Draw
                 end
+                
+ 'BLINE:INFO':begin
+                  wait,0.2
+                  widget_control,self.wBlineContextMenu,get_uvalue=oSelected
+                  oSelected->GetProperty,color=color,thick=thick
+                  oSelected->SetProperty,color=[0,0,255],thick=3
+                  self->Draw
+                  oSelected->ShowInfo
+                  oSelected->SetProperty,color=color,thick=thick
+                  self->Draw
+                end               
 
  'BLINE:CREATEFLUXTUBE':begin
 		                    wait,0.2

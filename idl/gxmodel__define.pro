@@ -924,7 +924,7 @@ pro gxModel::RequestVolumeUpdate,_extra=_extra
 end
 
 
-function gxModel::Size,volume=volume,chromo_layers=chromo_layers, corona_base=corona_base
+function gxModel::Size,volume=volume,chromo_layers=chromo_layers, corona_base=corona_base,dim=dim
  sz=self.size
  chromo_layers=self->GetVertexData('chromo_layers')
  if ~isa(chromo_layers,/number) then begin
@@ -932,7 +932,7 @@ function gxModel::Size,volume=volume,chromo_layers=chromo_layers, corona_base=co
  endif else corona_base=self->GetVertexData('corona_base')
  if ~isa(corona_base,/number) then corona_base=chromo_layers
  if keyword_set(volume) and corona_base gt 0 then sz[3]=sz[3]-corona_base+chromo_layers
- return,sz
+ return,keyword_set(dim)?sz[1:*]:sz
 end
 
 function gxModel::IsCombo,bsize=bsize,csize=csize,_ref_extra=extra
@@ -1684,7 +1684,10 @@ linesB= [ interpolate(box.bx,coords[0,*],coords[1,*],coords[2,*]) $
    ls=coords[3,linesPos[i]:linesPos[i]+linesLength[i]-1]*box.dr[0]
    imin=where(ls eq 0)
    top=data[*,imin]
-   line=OBJ_NEW('gxBline',data[0,*],data[1,*],data[2,*],top=top,status=status[i],_extra=_extra,tr_height=tr_height)
+   line=OBJ_NEW('gxBline',data[0,*],data[1,*],data[2,*],top=top,status=status[i],$
+                          physLength = physLength[i], avField = avField[i], $
+                          startIdx = startIdx[i], endIdx = endIdx[i], $
+                          seedIdx = seedIdx[i],tr_height=tr_height,_extra=_extra)
    line->SetProperty,XCOORD_CONV=self.XCOORD_CONV,YCOORD_CONV=self.YCOORD_CONV,ZCOORD_CONV=self.ZCOORD_CONV
    line->SetVertexAttributeData,'B',lb
    line->SetVertexAttributeData,'s',ls
