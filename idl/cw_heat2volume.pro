@@ -213,6 +213,10 @@ function gxh2v::HandleEvent, event
                end   
      'GXVOLUME:QMASK':begin
                  widget_control, event.id,get_value=mask
+                 if event.x ne event.y then begin
+                   mask[event.y,event.x]=mask[event.x,event.y]
+                   widget_control, event.id,set_value=mask
+                 end
                  self.Volume->SetHeat2Volume,mask=mask
                  compute=1
                end  

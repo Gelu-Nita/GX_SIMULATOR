@@ -229,7 +229,8 @@ pro gxBline::ShowInfo
    7:c2='UMB'
    else:c2='OPEN'
  endcase
- items=[items,string(c1,info.s[0]/info.length,c2,info.s[n_elements(info.s)-1]/info.length,format="(a0,' (s1=',f0.2,'L) - ',a0,' (s2=',f0.2,'L)')")]
+ items=[items,string(c1,info.s[0]/info.length,c2,info.s[n_elements(info.s)-1]/info.length,$
+ format="(a0,' (s1=',f0.2,'L) - ',a0,' (s2=',f0.2,'L)')")]
  
  items=[items,string(info.length*gx_rsun(unit='cm'),format="('L= ',g0,' cm')")]
  items=[items,string(info.bmed,format="('Bmed= ',g0,' G')")]

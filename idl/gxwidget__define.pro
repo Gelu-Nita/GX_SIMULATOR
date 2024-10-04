@@ -170,12 +170,7 @@ pro gxWidget::CreatePanel,_extra=_extra
             UNITS='', $
             VALUE=subgridpts,Sensitive=1)
     end      
-;    if keyword_set(expert) and WinOS then begin
-;    wWinOS=cw_bgroup(font=font,wLocation,$
-;      ['use DLL (Win-OS only)'],$
-;      set_value=[winOS],$
-;      /nonexclusive,/return_index,uname=prefix+'WinOS')
-;    endif
+
     volume=self.subject->GetVolume()
     flags=volume->getflags()  
     

@@ -1533,6 +1533,7 @@ function gxVolume::GetHeat2VolumeFactor,idx=idx,compute=compute
   h2vfactor= self->GetVertexData('h2vfactor')
   if ~isa(h2vfactor)then compute=1
   if keyword_set(compute) then begin  
+   widget_control,/hourglass
    h2v=self->GetHeat2Volume()
    refmaps=self.parent->RefMaps()
    if ptr_valid(refmaps) then begin
