@@ -746,11 +746,39 @@ pro gxModel::ComputeTRmask,type=type,threshold=threshold,trmap=trmap,test=test
            good=where(asin(abs(bz)/b)/!dtor ge abs(threshold),count,comp=comp,ncomp=ncomp)
            unit='deg'
          end
+  'RESIDUALS':begin
+               wsettings=widget_info(self.wParent,find_by_uname='TR_MaskSettings')
+               wmaps=widget_info(self.wParent,find_by_uname='GXMODEL:TR_RESIDUAL_MAPS')
+               if widget_valid(wsettings) and widget_valid(wmaps) then begin
+                widget_control,wsettings,get_uvalue=maps
+                widget_control,wmaps,get_value=idx
+                selected=where(idx gt 0,count)
+                if count eq 0 then begin
+                  answ=dialog_message('At least one residula map must be selected1',/info)
+                  return
+                endif
+                maps=maps[selected]
+                mask=[]
+                for k=0,n_elements(maps)-1 do begin
+                   idx=where(maps[k].data gt threshold*max(maps[k].data)/100,comp=comp)
+                    maps[k].data[comp]=0
+                    maps[k].data[idx]=1
+                    mask=[[[mask]],[[maps[k].data]]]
+                 endfor
+                  combined_mask=mask[*,*,0]
+                  for k=1,n_elements(maps)-1 do combined_mask=combined_mask*mask[*,*,k]
+                  map=maps[0]
+                  map.data=combined_mask
+                  map.id=string(threshold,format="('TR Mask th=',g0)")
+                  good=where(abs(map.data) ge 1,count,comp=comp,ncomp=ncomp)
+                  unit='%'
+               endif else return
+              end       
   else:begin
-    map=(*self.refmaps)->Get(2,/map)
-    good=where(abs(map.data) ge abs(threshold),count,comp=comp,ncomp=ncomp)
-    unit='gauss'
-    end
+          map=(*self.refmaps)->Get(2,/map)
+          good=where(abs(map.data) ge abs(threshold),count,comp=comp,ncomp=ncomp)
+          unit='gauss'
+          end
  endcase
  map.data[*]=0
  if count gt 0 then map.data[good]=1
@@ -802,28 +830,81 @@ pro gxModel::ReplaceTRMask,event
   widget_control,wMenu,get_uvalue=xsize
   if widget_valid(wSettings) then widget_control,wSettings,/destroy
   if event.index eq 0 then return
-  wSettings=widget_base(base,/column,unam='TR_MaskSettings')
+  wSettings=widget_base(base,/column,uname='TR_MaskSettings',scr_xsize=xsize)
   wTRpreview=widget_draw(wSettings,scr_xsize=xsize,scr_ysize=xsize,uname='GXMODEL:TRpreview',uvalue=[1,1]*xsize)
  case event.index of 
   1: begin
          default_threshold=0
-         threshold=cw_objfield(wSettings,xtextsize=20,xlabelsize=16,value=default_threshold,min=0,unit=' gauss',label='abs(Bz)>',increment=10,/dynamic,uname='GXMODEL:TR_BZ_MASK_THRESHOLD')
-         button_base=widget_base(wSettings,/row)
+         threshold=cw_objfield(wSettings,xtextsize=10,xlabelsize=16,value=default_threshold,min=0,unit=' gauss',$
+                               label='abs(Bz)>',increment=10,/dynamic,uname='GXMODEL:TR_BZ_MASK_THRESHOLD')
          uname='GXMODEL:TR_BZ_MASK_OK'
-         self.ComputeTRmask,type='Bz',threshold=default_threshold,/test   
+         self->ComputeTRmask,type='Bz',threshold=default_threshold,/test   
         end
   2: begin
           default_threshold=0
-          threshold=cw_objfield(wSettings,xtextsize=20,xlabelsize=16,value=default_threshold,min=0,unit=' deg',label='asin(abs(Bz)/B)>',increment=1,/dynamic,uname='GXMODEL:TR_THETA_MASK_THRESHOLD')
-          button_base=widget_base(wSettings,/row)
-          uname='GXMODEL:TR_THETA_MASK_OK
-          self.ComputeTRmask,type='Bz/B',threshold=default_threshold,/test
-      end      
+          threshold=cw_objfield(wSettings,xtextsize=10,xlabelsize=16,value=default_threshold,min=0,unit=' deg',$
+                                label='asin(abs(Bz)/B)>',increment=1,/dynamic,uname='GXMODEL:TR_THETA_MASK_THRESHOLD')
+          uname='GXMODEL:TR_THETA_MASK_OK'
+          self->ComputeTRmask,type='Bz/B',threshold=default_threshold,/test
+      end 
+  3:  begin
+         default_threshold=25
+         threshold=cw_objfield(wSettings,xtextsize=10,xlabelsize=16,value=default_threshold,min=0,unit=' %',$
+          label='Residuals',increment=1,/dynamic,uname='GXMODEL:TR_RESIDUALS_MASK_THRESHOLD')
+         uname='GXMODEL:TR_RESIDUALS_MASK_OK'
+         maps=self->Files2Maps()
+         if n_elements(maps) gt 0 then begin
+          wmaps=cw_bgroup(wSettings,maps.id,/nonexclusive,set_value=replicate(1,n_elements(maps)),uname='GXMODEL:TR_RESIDUAL_MAPS')
+          widget_control,wSettings,set_uvalue=maps
+          self->ComputeTRmask,type='RESIDUALS',threshold=default_threshold,/test
+         end
+      end         
   else:
  endcase
  button_base=widget_base(wSettings,/row)
  wOK=widget_button(button_base,value='OK',font=!defaults.font,uname=uname,uvalue=threshold)
  wCancel=widget_button(button_base,value='Cancel',font=!defaults.font,uname='GXMODEL:TR_MASK_CANCEL')
+end
+
+function gxmodel::Files2Maps
+  files=dialog_pickfile(title='Please select one more more files containg maps saved as IDL map structure or IDL objects',filter=['*.sav','*.map'],/must_exist,/multiple)
+  maps=[]
+  FOR idx=0, n_elements(files)-1 DO BEGIN
+    file=files[idx]
+    if file ne '' then begin
+      catch, error_stat
+      if error_stat ne 0 then begin
+        catch, /cancel
+        goto, next_map
+      end
+      osav=obj_new('idl_savefile',file)
+      names=osav->names()
+      valid=0
+      for i=0,n_elements(names)-1 do begin
+        osav->restore,names[i]
+        e=execute('result=size('+names[i]+',/tname)')
+        if (result eq 'STRUCT') or (result eq 'OBJREF') then begin
+          e=execute('m=temporary('+names[i]+')')
+          if valid_map(m) then map=temporary(m)
+        endif
+      endfor
+      if ~(size(map,/tname) eq 'STRUCT' or size(map,/tname) eq 'OBJREF') then begin
+        answ=dialog_message('Unexpected file content!',/error)
+      endif else begin
+        if size(map,/tname) eq 'STRUCT' then begin
+          for i=0, n_elements(map)-1 do begin
+            maps=[maps,map]
+          end
+        endif else begin
+          for i=0, map->get(/count)-1 do begin
+            maps=[maps,map->get(i,/map)]
+          end
+        endelse
+      endelse
+     endif 
+     next_map:
+   ENDFOR  
+   return,maps 
 end
 
 pro gxModel::SetBaseMap,select,volume=volume,newmap=newmap,refmaps=refmaps,time=time,xc=xc,yc=yc,dx=dx,dy=dy
@@ -2308,6 +2389,20 @@ pro gxModel::AddGyroLayers,fghz,bmax=bmax,smax=smax,hide=hide
         self->Add,iso_all[k]
        endfor
      endif
+end
+
+function gxmodel::los2base,losmap
+  setenv, 'WCS_RSUN=6.96d8'
+  wcs1 = fitshead2wcs(((*(self->Refmaps()))->get(/map)).index)
+  map2wcs, losmap,wcs0
+  coord1 = wcs_get_coord(wcs1)
+  wcs_convert_from_coord, wcs1, coord1, 'hg', lon, lat,/carrington
+  wcs_convert_to_coord, wcs0, coord0, 'hg', lon, lat,/carrington
+  pixel = wcs_get_pixel( wcs0, coord0 )
+  data = reform( interpolate( losmap.data, pixel[0,*,*], pixel[1,*,*] ,missing=0))
+  wcs1.simple=1
+  wcs2map,data,wcs1,basemap,id='BASE '+losmap.id
+  return,basemap
 end
 
 pro gxModel__define
