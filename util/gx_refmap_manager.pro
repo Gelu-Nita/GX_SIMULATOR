@@ -51,7 +51,7 @@ pro gx_refmap_manager_event,event
                                 if ptr_valid(idx_ptr) then *idx_ptr=idx
                                 if !version.os_family eq 'Windows' then set_plot,'win' else set_plot,'x'
                                 wset,wid
-                                plot_map,map,grid=5
+                                plot_map, /cbar,map,grid=5
                               end
                            end                       
    else:
@@ -173,7 +173,7 @@ pro gx_refmap_manager_event,event
                     widget_control,widget_info(event.top,find_by_uname='DRAW'),get_value=wid
                     if !version.os_family eq 'Windows' then set_plot,'win' else set_plot,'x'
                     wset,wid
-                    plot_map,map,grid=5
+                    plot_map, /cbar,map,grid=5
                   end
                end   
       else: begin
@@ -248,7 +248,7 @@ PRO gx_refmap_manager,model,modal=modal,selection=selection
   widget_control,wDraw,get_value=wid
   if !version.os_family eq 'Windows' then set_plot,'win' else set_plot,'x'
   wset,wid
-  plot_map,map,grid=5
+  plot_map, /cbar,map,grid=5
 
   ; Call XMANAGER to manage the widgets.
   XMANAGER, 'gx_refmap_manager', base,no_block=~keyword_set(modal)
