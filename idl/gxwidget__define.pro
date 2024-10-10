@@ -375,7 +375,7 @@ pro gxWidget::CreatePanel,_extra=_extra
    label=widget_label(font=font,wThresholdDisplayBase,value='Threshold: ',scr_xsize=g3.scr_xsize)
    wTRThresholdDisplay=widget_text(font=font,wThresholdDisplayBase,value='',scr_xsize=g4.scr_xsize,uname=prefix+'TR_ThresholdDisplay')
    wTRMaskMenuBase=widget_base(wTRControllBase,/column,/frame)
-   wTRMaskMenu=WIDGET_DROPLIST(font=font,wTRMaskMenuBase,value=['Replace Existing Transition Region Mask','Create Bz Mask', 'Create Bz/B Mask','Ceeate Residuals Mask'],uname=prefix+'TRMaskMenu')
+   wTRMaskMenu=WIDGET_DROPLIST(font=font,wTRMaskMenuBase,value=['Replace Existing Transition Region Mask','Create Bz Mask', 'Create Bz/B Mask','Create Residuals Mask'],uname=prefix+'TRMaskMenu')
    g=widget_info(wTRMaskMenu,/geometry)
    widget_control,wTRMaskMenu,set_uvalue=g.scr_xsize
    self.subject->DisplayTRmask

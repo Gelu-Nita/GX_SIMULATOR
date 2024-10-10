@@ -852,7 +852,7 @@ pro gxModel::ReplaceTRMask,event
          threshold=cw_objfield(wSettings,xtextsize=10,xlabelsize=16,value=default_threshold,min=0,unit=' %',$
           label='Residuals',increment=1,/dynamic,uname='GXMODEL:TR_RESIDUALS_MASK_THRESHOLD')
          uname='GXMODEL:TR_RESIDUALS_MASK_OK'
-         maps=self->Files2Maps()
+         maps=self->Files2Maps(/los2base)
          if n_elements(maps) gt 0 then begin
           wmaps=cw_bgroup(wSettings,maps.id,/nonexclusive,set_value=replicate(1,n_elements(maps)),uname='GXMODEL:TR_RESIDUAL_MAPS')
           widget_control,wSettings,set_uvalue=maps
@@ -866,7 +866,7 @@ pro gxModel::ReplaceTRMask,event
  wCancel=widget_button(button_base,value='Cancel',font=!defaults.font,uname='GXMODEL:TR_MASK_CANCEL')
 end
 
-function gxmodel::Files2Maps
+function gxmodel::Files2Maps,los2base=los2base
   files=dialog_pickfile(title='Please select one more more files containg maps saved as IDL map structure or IDL objects',filter=['*.sav','*.map'],/must_exist,/multiple)
   maps=[]
   FOR idx=0, n_elements(files)-1 DO BEGIN
@@ -893,11 +893,11 @@ function gxmodel::Files2Maps
       endif else begin
         if size(map,/tname) eq 'STRUCT' then begin
           for i=0, n_elements(map)-1 do begin
-            maps=[maps,map]
+            maps=[maps,keyword_set(los2base)?self->los2base(map):map]
           end
         endif else begin
           for i=0, map->get(/count)-1 do begin
-            maps=[maps,map->get(i,/map)]
+            maps=[maps,keyword_set(los2base)?self->los2base(map->get(i,/map)):map->get(i,/map)]
           end
         endelse
       endelse
