@@ -1018,8 +1018,6 @@ end
                  WIDGET_CONTROL, event.id, SET_BUTTON=event.select
                  self.subject->SetProperty,FullROI=event.select
                  self.subject->SetRoi
-                 ;return,{GXSCANBOXEVENT,id: self.wIDBase, top: event.top, handler:0L,$
-                 ; auto:widget_info(widget_info(event.top,find_by_uname='Auto FOV'),/button_set)}
                END
      'GXMODEL:MODELVIEW':BEGIN
                      widget_control,widget_info(event.handler,find_by_uname='GXMODEL:REMOVE'),sensitive=1-event.select
@@ -1143,20 +1141,24 @@ end
                            ENDFOR  
                          End   
       'GXMODEL:BASEMAP':Begin
-                           files=dialog_pickfile(title='Please select one or more map fits files',filter=['*.f*s'],/must_exist,/multiple)
+                           files=dialog_pickfile(title='Please select one or more map files',filter=['*.sav', '*.map','*.f*s'],/must_exist,/multiple)
                            files=files[sort(files)]
                            FOR idx=0, n_elements(files)-1 DO BEGIN
                              file=files[idx]
                              if file ne '' then begin
-                                gx_los2base,self.subject->GetBaseIndex(),file,basemap,pixel=pixel
-                                if valid_map(basemap) then self.subject->AddMap,basemap,id=id
-                                 if n_elements(id) gt 0 then begin
-                                   wBaseSelect=widget_info(self.wBase,find_by_uname='GXMODEL:BaseMapSelect')
-                                   widget_control,wBaseSelect,Get_Value=items
-                                   nitems=n_elements(items)
-                                   for k=0, n_elements(id)-1 do widget_control,wBaseSelect,COMBOBOX_ADDITEM=id[k]
-                                   widget_control,wBaseSelect,SET_COMBOBOX_SELECT=nitems
-                                   self.subject->DisplayMap,nitems
+                                if gx_is_valid_idl_savefile(file) then begin
+                                  basemap=self.subject->Files2Maps(file,/los2base)
+                                endif else gx_los2base,self.subject->GetBaseIndex(),file,basemap,pixel=pixel
+                                for i=0,n_elements(basemap)-1 do begin
+                                  if valid_map(basemap[i]) then self.subject->AddMap,basemap[i],id=id
+                                   if n_elements(id) gt 0 then begin
+                                     wBaseSelect=widget_info(self.wBase,find_by_uname='GXMODEL:BaseMapSelect')
+                                     widget_control,wBaseSelect,Get_Value=items
+                                     nitems=n_elements(items)
+                                     for k=0, n_elements(id)-1 do widget_control,wBaseSelect,COMBOBOX_ADDITEM=id[k]
+                                     widget_control,wBaseSelect,SET_COMBOBOX_SELECT=nitems
+                                     self.subject->DisplayMap,nitems
+                                   end
                                  end
                              end
                              nitems=widget_info(widget_info(self.wBase,find_by_uname='GXMODEL:BaseMapSelect'),/COMBOBOX_NUMBER)

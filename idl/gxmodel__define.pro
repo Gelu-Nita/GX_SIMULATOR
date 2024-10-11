@@ -866,8 +866,8 @@ pro gxModel::ReplaceTRMask,event
  wCancel=widget_button(button_base,value='Cancel',font=!defaults.font,uname='GXMODEL:TR_MASK_CANCEL')
 end
 
-function gxmodel::Files2Maps,los2base=los2base
-  files=dialog_pickfile(title='Please select one more more files containg maps saved as IDL map structure or IDL objects',filter=['*.sav','*.map'],/must_exist,/multiple)
+function gxmodel::Files2Maps,files,los2base=los2base
+  if n_elements(files) eq 0 then files=dialog_pickfile(title='Please select one more more files containg maps saved as IDL map structure or IDL objects',filter=['*.sav','*.map'],/must_exist,/multiple)
   maps=[]
   FOR idx=0, n_elements(files)-1 DO BEGIN
     file=files[idx]

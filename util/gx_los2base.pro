@@ -20,7 +20,7 @@ pro gx_los2base,base_index,losfile,basemap,id=id,pixel=pixel
     wcs_convert_to_coord, wcs0, coord0, 'hg', lon, lat,/carrington
     pixel = wcs_get_pixel( wcs0, coord0 )
   end
-  data = reform( interpol( data0, pixel[0,*,*], pixel[1,*,*],missing=0 ))
+  data = reform(interpolate( data0, pixel[0,*,*], pixel[1,*,*],missing=0 ))
   wcs1.simple=1
   wcs2map,data,wcs1,basemap,id='BASE '+id
 end
