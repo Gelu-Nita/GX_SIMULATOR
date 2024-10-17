@@ -471,6 +471,7 @@ compile_opt hidden
    f2=axis^2
    fidx=idx[2]
    if size(xprofile,/n_dim) eq 2 then begin
+    spectrum=(size(spectrum))[0] eq 1?reform(spectrum,1,(size(spectrum))[1]):spectrum
     idx=idx[3]
     sz=size(*pData,/dim)
     case idx of
