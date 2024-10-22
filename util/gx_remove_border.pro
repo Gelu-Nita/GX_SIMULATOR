@@ -5,13 +5,14 @@
 ; PURPOSE:
 ;    This function removes white borders from an image and crops it down to the area containing non-white pixels.
 ;    It works with RGB images by first converting them to grayscale for detecting white borders. The user can
-;    optionally use a more exact method to detect purely white pixels by setting the `exact` keyword.
+;    optionally use a more exact method to detect purely white pixels by setting the `exact` keyword 
+;    and skip adjusting a certain dimmension to the maxsize by using the xskip or yskip keywords.
 ;
 ; CATEGORY:
 ;    Image Processing
 ;
 ; CALLING SEQUENCE:
-;    cropped_image = gx_remove_border(image, maxsize=maxsize, margin=margin, /exact)
+;    cropped_image = gx_remove_border(image, maxsize=maxsize, margin=margin, xskip=xskip, yskip=yskip, /exact)
 ;
 ; INPUTS:
 ;    image: A 3D byte array representing the RGB image to be processed.
@@ -35,9 +36,10 @@
 ;
 ; MODIFICATION HISTORY:
 ;    Written by Gelu M Nita, Sep-10-2024.
+;    Oct-22-2024, GN: added xskip and yskip keywords
 ;-
 
-FUNCTION gx_remove_border, image, maxsize=maxsize, margin=margin, exact=exact
+FUNCTION gx_remove_border, image, maxsize=maxsize, margin=margin, exact=exact,xskip=xskip,yskip=yskip
   ; Get the dimensions of the input image
   sz = SIZE(image, /DIMENSIONS)
   num_channels = sz[0]  ; Number of channels (should be 3 for RGB)
@@ -79,8 +81,8 @@ FUNCTION gx_remove_border, image, maxsize=maxsize, margin=margin, exact=exact
   ; Apply a maximum size constraint to the cropped area
   DEFAULT, maxsize, 690  ; Default max size is 690 pixels
   max_dim = MAX([x2 - x1 + 1, y2 - y1 + 1])
-  x2 += (maxsize - max_dim)  ; Adjust x2 to fit the maxsize
-  y2 += (maxsize - max_dim)  ; Adjust y2 to fit the maxsize
+  if ~keyword_set(xskip) then x2 += (maxsize - max_dim)  ; Adjust x2 to fit the maxsize
+  if ~keyword_set(yskip) then y2 += (maxsize - max_dim)  ; Adjust y2 to fit the maxsize
 
   ; Optionally add margins around the bounding box
   DEFAULT, margin, 5  ; Default margin is 5 pixels
