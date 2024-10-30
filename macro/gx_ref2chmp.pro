@@ -77,8 +77,8 @@ function gx_ref2chmp,refdata,freq=freq,chan=chan,$
                     corr_beam=n_elements(corr_beam) ne 0?corr_beam:tag_exist(ref,'corr_beam')?ref.corr_beam:1
                   endif
                   if tag_exist(ref,'BMAJ') and tag_exist(ref,'BMIN')then begin
-                    a_beam=n_elements(a_beam) ne 0?a_beam:gx_fwhm2sigma(ref.bmaj)
-                    b_beam=n_elements(a_beam) ne 0?b_beam:gx_fwhm2sigma(ref.bmin)
+                    a_beam=n_elements(a_beam) ne 0?a_beam:gx_fwhm2sigma(ref[0].bmaj)
+                    b_beam=n_elements(a_beam) ne 0?b_beam:gx_fwhm2sigma(ref[0].bmin)
                     phi_beam=n_elements(phi_beam) ne 0?phi_beam:tag_exist(ref,'BPA')?ref.bpa:0.0
                     corr_beam=n_elements(corr_beam) ne 0?corr_beam:tag_exist(ref,'corr_beam')?ref.corr_beam:1
                   endif
@@ -121,9 +121,9 @@ if n_elements(freq) eq 0 and n_elements(chan) eq 0 then begin
     endif
 endif
 if n_elements(a_beam) eq 0 then if tag_exist(data,'a_beam') then a_beam=data.a_beam
-if n_elements(a_beam) eq 0 and tag_exist(data,'BMAJ') then a_beam=gx_fwhm2sigma(ref.bmaj)
+if n_elements(a_beam) eq 0 and tag_exist(data,'BMAJ') then a_beam=gx_fwhm2sigma(ref[0].bmaj)
 if n_elements(b_beam) eq 0 then if tag_exist(data,'b_beam') then b_beam=data.b_beam
-if n_elements(b_beam) eq 0 and tag_exist(data,'BMIN') then b_beam=gx_fwhm2sigma(ref.bmin)
+if n_elements(b_beam) eq 0 and tag_exist(data,'BMIN') then b_beam=gx_fwhm2sigma(ref[0].bmin)
 if n_elements(phi_beam) eq 0 then if tag_exist(data,'phi_beam') then phi_beam=data.phi_beam
 if n_elements(phi_beam) eq 0 then if tag_exist(data,'BPA') then phi_beam=data.bpa else phi_beam=0.0
 if n_elements(corr_beam) eq 0 then if tag_exist(data,'corr_beam') then corr_beam=data.corr_beam else corr_beam=1
