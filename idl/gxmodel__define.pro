@@ -511,7 +511,7 @@ pro gxModel::ComputeDivB
 end
 
 pro gxModel::UpdateDef
-  ;Here we upgrade combo_bodel if necessary
+  ;Here we upgrade combo_model if necessary
   self->upgrade_combo_model
   
   ;Here we update the WinOS flag depending on the platform on which the model is restored 
@@ -2125,8 +2125,8 @@ pro gxModel::SetID, id
 end
 
 pro gxModel::upgrade_combo_model,verbose=verbose
-  ;this routine is called automatical by gxModel::Upgrade
-  ;for the purpose of converting ald format combo models (resolved chromosphere+corobal part)
+  ;this routine is called automatically by gxModel::Upgrade
+  ;for the purpose of converting old format combo models (resolved chromosphere+corobal part)
   ;to the updated format that display a true chromosphere height/ corona height scale and
   ;supports proper handling of fluxtubes added to such models.
   ;15-May-2020

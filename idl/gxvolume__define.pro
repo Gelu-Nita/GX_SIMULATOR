@@ -525,7 +525,7 @@ pro gxVolume::UpdateVoxelId,force=force
       match=-1
       for i=0, count-1 do if (refmaps->Get(i,/id) eq 'BASE TR_Mask') or (refmaps->Get(i,/id) eq 'CEA-TR Mask') then match=i
       if match ge 0 then begin
-        tr_mask=not refmaps->Get(match,/data)
+        tr_mask=1ul-ulong(refmaps->Get(match,/data))
         tr_idx=where((id and gx_voxelid(/tr,/euv)) ne 0, tr_count)
         if tr_count gt 0 then begin
            idx=array_indices(id,tr_idx)
