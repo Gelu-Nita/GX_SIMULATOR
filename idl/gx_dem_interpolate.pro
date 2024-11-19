@@ -1,4 +1,4 @@
-pro dem_interpolate,n,t,dem,ddm,path=path,logtdem=logtdem,dem_run=dem_run,ddm_run=ddm_run,qrun=qrun,lrun=lrun,qarr=qarr,$
+pro gx_dem_interpolate,n,t,dem,ddm,path=path,logtdem=logtdem,dem_run=dem_run,ddm_run=ddm_run,qrun=qrun,lrun=lrun,qarr=qarr,$
                     larr=larr,tr=tr,avgdem=avgdem,duration=duration,method=method,info=info,expert=expert,$
                     use_dem=use_dem,has_ddm=has_ddm,has_used_ddm=has_used_ddm
   if keyword_set(info) then goto,getinfo

@@ -79,13 +79,13 @@ pro aia2,parms,rowdata,nparms,rparms,path=path,logtdem=logtdem,dem_run=dem_run,q
         parmin=row_parms[*,point_in]
         norm=parmin[0,*]*norm_tr
        if useDEM eq 1 then begin
-         dem_interpolate,n,t,dem,path=path,logtdem=logtdem,dem_run=dem_run,qrun=qrun,lrun=lrun,qarr=parmin[3,*],larr=parmin[4,*],avgdem=avgdem
+         gx_dem_interpolate,n,t,dem,path=path,logtdem=logtdem,dem_run=dem_run,qrun=qrun,lrun=lrun,qarr=parmin[3,*],larr=parmin[4,*],avgdem=avgdem
          tr_factor=1
          if AddTRinput eq 1 then begin
            tr_idx=max(where((ulong(parmin[5,*]) and gx_voxelid(/euv)) ne 0))
            if tr_idx ge 0 then begin
            point_in=where((parmin[1,*] gt 0 and parmin[6,*] lt n_hi0))
-           dem_interpolate,n_tr,t_tr,dem_tr,path=path,logtdem=logtdem,dem_run=dem_tr_run,lrun=lrun,qrun=qrun,$
+           gx_dem_interpolate,n_tr,t_tr,dem_tr,path=path,logtdem=logtdem,dem_run=dem_tr_run,lrun=lrun,qrun=qrun,$
              larr=parmin[4,tr_idx],qarr=parmin[3,tr_idx],/tr,avgdem=avgdem
              tr_factor=ApplyTRfactor gt 0?parmin[7,tr_idx]:1
              addTR=(n_tr[0] gt 0 and t_tr[0] gt 0)

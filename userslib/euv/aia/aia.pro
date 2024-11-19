@@ -55,7 +55,7 @@ pro aia,parms,rowdata,nparms,rparms,path=path,logtdem=logtdem,dem_run=dem_run,qr
        MESSAGE, /INFO, !ERROR_STATE.MSG
        goto,skip_rgb
      end
-     restore,dirpath+'AIA_RGB.sav'
+     restore,dirpath+'aia_rgb.sav'
      skip_rgb:
      info={parms:parms,$
            nparms:nparms,$
@@ -95,13 +95,13 @@ pro aia,parms,rowdata,nparms,rparms,path=path,logtdem=logtdem,dem_run=dem_run,qr
         parmin=rowparms[*,point_in]
         norm=parmin[dr_idx,*]*norm_tr
        if useDEM eq 1 then begin
-         dem_interpolate,n,t,dem,path=path,logtdem=logtdem,dem_run=dem_run,qrun=qrun,lrun=lrun,qarr=parmin[q_idx,*],larr=parmin[l_idx,*],avgdem=avgdem
+         gx_dem_interpolate,n,t,dem,path=path,logtdem=logtdem,dem_run=dem_run,qrun=qrun,lrun=lrun,qarr=parmin[q_idx,*],larr=parmin[l_idx,*],avgdem=avgdem
          tr_factor=1
          if AddTR eq 1 then begin
            tr_idx=max(where((ulong(parmin[v_idx,*]) and gx_voxelid(/euv)) ne 0))
            if tr_idx ge 0 then begin
            point_in=where((parmin[t0_idx,*] gt 0 and parmin[nhi_idx,*] lt n_hi0))
-           dem_interpolate,n_tr,t_tr,dem_tr,path=path,logtdem=logtdem,dem_run=dem_tr_run,lrun=lrun,qrun=qrun,$
+           gx_dem_interpolate,n_tr,t_tr,dem_tr,path=path,logtdem=logtdem,dem_run=dem_tr_run,lrun=lrun,qrun=qrun,$
              larr=parmin[l_idx,tr_idx],qarr=parmin[q_idx,tr_idx],/tr,avgdem=avgdem
              tr_factor=ApplyTRfactor gt 0?parmin[trf_idx,tr_idx]:1
              tr_add=(n_tr[0] gt 0 and t_tr[0] gt 0)

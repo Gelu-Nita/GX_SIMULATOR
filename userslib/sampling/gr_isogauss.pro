@@ -138,8 +138,8 @@ dem_run=dem_run,ddm_run=ddm_run,qrun=qrun,lrun=lrun,use_dem=use_dem,has_ddm=has_
     for pix=0, Npix-1 do begin
       parmin[*,*]=transpose(parms[pix,*,*])
       if ~keyword_set(skip_DEMDDM) then begin
-        ;if both DEM_Key and DDM_Key are turned off then skip the dem_interpolate block
-      dem_interpolate,n,t,los_dem,los_ddm,logtdem=logtdem,dem_run=dem_run,ddm_run=ddm_run,qrun=qrun,lrun=lrun,$
+        ;if both DEM_Key and DDM_Key are turned off then skip the gx_dem_interpolate block
+      gx_dem_interpolate,n,t,los_dem,los_ddm,logtdem=logtdem,dem_run=dem_run,ddm_run=ddm_run,qrun=qrun,lrun=lrun,$
         qarr=parmin[parms_idx+1,*],larr=parmin[parms_idx+2,*],avgdem=avgdem,use_dem=use_dem,has_ddm=has_ddm
       
       DEMvox=where((n gt 0 and t gt 0),nDemvox,comp=noDEMvox,ncomp=nNoDEMvox)

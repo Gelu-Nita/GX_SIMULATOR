@@ -65,9 +65,9 @@ pro sxt_dem, parms, rowdata, path=path, logtdem=logtdem, dem_run=dem_run, qrun=q
         norm_tr=parmin[0,0]/((4.5e7)^2)
         tr_idx=max(where(rparms[7,*] eq 1))
        if parmin[6,0] eq 1 then begin
-         dem_interpolate,n,t,dem,path=path,logtdem=logtdem,dem_run=dem_run,qrun=qrun,lrun=lrun,qarr=parmin[4,*],larr=parmin[5,*]
+         gx_dem_interpolate,n,t,dem,path=path,logtdem=logtdem,dem_run=dem_run,qrun=qrun,lrun=lrun,qarr=parmin[4,*],larr=parmin[5,*]
          if tr_idx ge 0 then begin
-         dem_interpolate,n_tr,t_tr,dem_tr,path=path,logtdem=logtdem,dem_run=dem_tr_run,lrun=lrun,qrun=qrun,$
+         gx_dem_interpolate,n_tr,t_tr,dem_tr,path=path,logtdem=logtdem,dem_run=dem_tr_run,lrun=lrun,qrun=qrun,$
                           larr=parmin[5,tr_idx],qarr=parmin[4,tr_idx],/tr
          if n_tr gt 0 then if keyword_set(verbose) then print,n_tr
          endif

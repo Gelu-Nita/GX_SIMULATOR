@@ -107,12 +107,12 @@ pro gxh2v::CreatePanel,xsize=xsize,ysize=ysize
    
   if keyword_set(expert) then begin
     for avgdem=0, 6 do begin
-      dem_interpolate,avgdem=avgdem, method=method,/expert,/info
+      gx_dem_interpolate,avgdem=avgdem, method=method,/expert,/info
       buttons=n_elements(buttons) eq 0?method:[buttons,method]
     endfor
   endif else begin
     for avgdem=0, 3 do begin
-      dem_interpolate,avgdem=avgdem, method=method,/info
+      gx_dem_interpolate,avgdem=avgdem, method=method,/info
       buttons=n_elements(buttons) eq 0?method:[buttons,method]
     endfor
   endelse
