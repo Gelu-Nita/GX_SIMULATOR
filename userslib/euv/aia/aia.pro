@@ -1,7 +1,7 @@
 pro aia,parms,rowdata,nparms,rparms,path=path,logtdem=logtdem,dem_run=dem_run,qrun=qrun,lrun=lrun,logte=logte,response=response,dem_tr_run=dem_tr_run,q0=q0,l0=l0,info=info
      if n_elements(response_path) eq 0 then begin
       dirpath=file_dirname((ROUTINE_INFO('aia',/source)).path,/mark)
-      response_path=dirpath+'AIA_Response.sav'
+      response_path=dirpath+'aia_response.sav'
      end
      dr_idx=0
      t0_idx=1

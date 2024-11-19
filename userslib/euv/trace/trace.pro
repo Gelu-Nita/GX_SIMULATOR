@@ -4,12 +4,12 @@ pro trace, parms, rowdata, path=path, logtdem=logtdem, dem_run=dem_run, qrun=qru
 
      if n_elements(response_path) eq 0 then begin
       dirpath=file_dirname((ROUTINE_INFO('trace',/source)).path,/mark)
-      response_path=dirpath+'TRACE_Response.sav'
+      response_path=dirpath+'trace_response.sav'
      end
 
  if arg_present(info) then begin
      if n_elements(info) eq 0 then begin
-        Parms=Replicate({Name:'unused',Value:0d,Unit:'',Hint:''},12)
+        Parms=Replicate({Name:'unused',Value:0d,Unit:'',Hint:''},11)
        Parms[0].Name='dS'          & Parms[0].Value=0.180E+19     & Parms[0].Unit='cm^2'     & Parms[0].Hint='Source/pixel Area
        Parms[1].Name='dR'          & Parms[1].Value=0.600E+09     & Parms[1].Unit='cm'       & Parms[1].Hint='Source/voxel Depth
        Parms[2].Name='T_0'         & Parms[2].Value=0.200E+08     & Parms[2].Unit='K'        & Parms[2].Hint='Plasma Temperature
@@ -21,8 +21,7 @@ pro trace, parms, rowdata, path=path, logtdem=logtdem, dem_run=dem_run, qrun=qru
        Parms[8].Name='AddTR'       & Parms[8].Value=0            & Parms[8].Unit='0/1'        & Parms[8].Hint='Add Transition Region Contribution'
        Parms[9].Name='n_hi'       & Parms[9].Value=0            & Parms[9].Unit='cm^{-3}'        & Parms[9].Hint='Neutral Hydrogen density'
        Parms[10].Name='n_hi0'    & Parms[10].Value=1          & Parms[10].Unit='cm^{-3}'        & Parms[10].Hint='Neutral Hydrogen density coronal cutoff'
-       Parms[11].Name='SS'       & Parms[11].Value=0            & Parms[11].Unit=''        & Parms[11].Hint='Use steady state DEM table'
-    endif else parms=info.parms
+     endif else parms=info.parms
      restore,response_path
      nchan=n_elements(response.channels)
      w=fltarr(nchan)
@@ -34,7 +33,7 @@ pro trace, parms, rowdata, path=path, logtdem=logtdem, dem_run=dem_run, qrun=qru
        MESSAGE, /INFO, !ERROR_STATE.MSG
        goto,skip_rgb
      end
-     restore,dirpath+'TRACE_RGB.sav'
+     restore,dirpath+'trace_rgb.sav'
 
 		; Note: No change has been made for TRACE.
 
@@ -59,7 +58,7 @@ pro trace, parms, rowdata, path=path, logtdem=logtdem, dem_run=dem_run, qrun=qru
      rparms=transpose(parms[pix,*,*])
      n_hi0=rparms[10,0]
      cutoff=max(where(rparms[9,*] ge n_hi0))
-    if cutoff ge 0 then rparms[9,0:cutoff]=n_hi0
+     if cutoff ge 0 then rparms[9,0:cutoff]=n_hi0
      tr_idx=max(where(rparms[7,*] eq 1))
      rparms=rparms[*,(tr_idx>0):*]
      point_in=where((rparms[2,*] gt 0 and rparms[7,*] gt 0 and rparms[9,*] lt n_hi0), Nvox)
@@ -69,10 +68,10 @@ pro trace, parms, rowdata, path=path, logtdem=logtdem, dem_run=dem_run, qrun=qru
         norm_tr=parmin[0,0]/((4.5e7)^2)
         tr_idx=max(where(rparms[7,*] eq 1))
        if parmin[6,0] eq 1 then begin
-         dem_interpolate,n,t,dem,path=path,logtdem=logtdem,dem_run=dem_run,qrun=qrun,lrun=lrun,qarr=parmin[4,*],larr=parmin[5,*],ss=parmin[11,0]
+         dem_interpolate,n,t,dem,path=path,logtdem=logtdem,dem_run=dem_run,qrun=qrun,lrun=lrun,qarr=parmin[4,*],larr=parmin[5,*]
          if tr_idx ge 0 then begin
          dem_interpolate,n_tr,t_tr,dem_tr,path=path,logtdem=logtdem,dem_run=dem_tr_run,lrun=lrun,qrun=qrun,$
-                          larr=parmin[5,tr_idx],qarr=parmin[4,tr_idx],/tr,ss=parmin[11,0]
+                          larr=parmin[5,tr_idx],qarr=parmin[4,tr_idx],/tr
          if n_tr gt 0 then if keyword_set(verbose) then print,n_tr
          endif
          dlogt = logtdem(1) - logtdem(0)
