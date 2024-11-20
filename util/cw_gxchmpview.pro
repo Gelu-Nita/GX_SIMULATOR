@@ -374,7 +374,7 @@ function gxchmpview::valid_repository,path
   files = FILE_SEARCH(path + path_sep() + 'fit*.sav')
   error='is not a valid CHMP results repository!'
   if n_elements(files) gt 0 then begin
-    restore,files[0]
+    restore,files[0],/relaxed
     if n_elements(BESTQARR) eq 0 then dummy=invalid_repository
   endif else dummy=invalid_repository
   return,files
@@ -391,7 +391,7 @@ pro gxchmpview::UpdateSummary
  b_arr=[]
  n_ab=n_elements(files)
  for k=0,n_ab-1 do begin
-  o=obj_new('IDL_Savefile', files[k])
+  o=obj_new('IDL_Savefile', /relaxed, files[k])
   if k eq 0 then begin
     o->restore,'freqlist'
     o->restore, 'EBTELFILENAME'
@@ -424,7 +424,7 @@ pro gxchmpview::UpdateSummary
  shifty=dblarr(N_a, N_b, N_freq)
  filenames=strarr(N_a,N_b)
  for k=0,n_ab-1 do begin
-   o=obj_new('IDL_Savefile', files[k])
+   o=obj_new('IDL_Savefile', /relaxed, files[k])
    index_a=WHERE(a EQ a_arr[k])
    index_b=WHERE(b EQ b_arr[k])
    filenames[index_a,index_b]=files[k]
@@ -448,11 +448,13 @@ pro gxchmpview::UpdateSummary
    o->restore, 'CCarr
    CC[index_a,index_b,*]=CCArr
    o->restore, 'obsImageArr'
-   for index_freq=0, obsimagearr->get(/count)-1 do begin
-     m=obsimagearr->get(index_freq,/map)
-     if tag_exist(m, 'shiftX') then shiftX[index_a,index_b,index_freq]=m.shiftX
-     if tag_exist(m, 'shiftY') then shiftY[index_a, index_b, index_freq]=m.shiftY
-   endfor
+   if obj_isa(obsImageArr,'map') then begin
+     for index_freq=0, obsimagearr->get(/count)-1 do begin
+       m=obsimagearr->get(index_freq,/map)
+       if tag_exist(m, 'shiftX') then shiftX[index_a,index_b,index_freq]=m.shiftX
+       if tag_exist(m, 'shiftY') then shiftY[index_a, index_b, index_freq]=m.shiftY
+     endfor
+   end
    obj_destroy,o
  endfor
  
@@ -636,7 +638,7 @@ pro gxchmpview::UpdateDisplays
   index_x=self.combobox_index(self.wx)
   index_y=self.combobox_index(self.wy)
   filename=(*self.summary).files[index_a,index_b]
-  obsI=(*self.Maps).OBSIMAGEARR->get(index_freq,/map)
+  obsI=->get(index_freq,/map)
   modI=(*self.Maps).MODIMAGEARR->get(index_freq,/map)
   cmodI=(*self.Maps).MODIMAGECONVARR->get(index_freq,/map)
   has_sigma=tag_exist((*self.Maps),'OBSIMAGESIGMAARR')
@@ -793,7 +795,7 @@ pro gxchmpview::UpdateDisplays
     endelse
     widget_control,self.wmaps_spectrum_extra,set_value=value,set_uvalue=value
     
- o=obj_new('IDL_Savefile', filename)   
+ o=obj_new('IDL_Savefile', /relaxed, filename)   
  o->Restore,'ALLMETRICS'
  o->Restore,'ALLQ'
  obj_destroy,o

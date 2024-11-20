@@ -29,7 +29,7 @@
 ;-
 FUNCTION gx_filevars2struct, fname, pointer=pointer
   ; Create an object for the IDL_Savefile associated with the file
-  o = OBJ_NEW('IDL_Savefile', fname)
+  o = OBJ_NEW('IDL_Savefile', /relaxed,fname)
 
   ; Get the list of variable names in the save file
   names = o->NAMES()

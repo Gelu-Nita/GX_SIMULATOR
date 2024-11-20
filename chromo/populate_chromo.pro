@@ -1,8 +1,7 @@
 pro populate_chromo, model_mask,chromo
 s=size(model_mask)
 which,'gx_simulator',outfile=outfile,/quiet
-path=file_dirname(file_dirname(outfile,/mark),/mark)+'userslib'+path_sep()+'chromo'+path_sep()
-
+path=file_dirname(file_dirname(outfile,/mark),/mark)+'chromo'+path_sep()
 
 restore, path+'eduard_v3.sav'
 temp_e=temp

@@ -118,7 +118,7 @@ field=cw_objArray(fov_base,label='YRANGE',value=[-1000.0,1000.0],unit='"',inc=1,
                  /bitmap,tooltip='Reset Template',uname='TEMPLATERESET')
  wTemplate=widget_text(font=font,wTemplateBase,xsize=100,uname='TEMPLATE',/editable)
 
- file=gx_findfile('gx_bz2lff.pro',folder='userslib'+path_sep()+'extrapolation'+path_sep()+'lff')
+ file=gx_findfile('gx_bz2lff.pro')
  wControlPanel=widget_base(self.wControlBase,/row)
  wFOVBase=widget_base(wControlPanel,/column,/frame)
  wFOV1=widget_base(wFOVBase,/column,/frame)
