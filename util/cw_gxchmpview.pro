@@ -477,12 +477,43 @@ function gxchmpview::combobox_index,w
   return,(where(value eq selected_value))[0]
 end
 
+function gxchmpview::List2Map,maps
+ names=tag_names(maps)
+ modI=maps.MODIMAGEARR
+ xp=reform((modI->get(/xp))[*,0])
+ yp=reform((modI->get(/yp))[0,*])
+ xc=modI->get(/xc)
+ yc=modI->get(/yc)
+ tags2remove=[]
+ for k=0, n_elements(names)-1 do begin
+  if size(maps.(k),/tname) eq 'OBJREF' and names[k] ne 'MODIMAGEARR' then begin
+    if obj_isa(maps.(k),'list') then begin
+      obj_map=obj_clone(modI)
+      obj_list=maps.(k)
+      if n_elements(obj_list(0)) ne 0 then begin
+        for kk=0,obj_map->get(/count)-1 do begin
+          amap=obj_map->get(kk,/map)
+          amap.xc=mean(obj_list(kk).x)
+          amap.data=array_replicate(obj_list(kk).flux,n_elements(xp))
+          add_prop,amap,scan=1
+          if tag_exist(obj_list(kk),'shiftx') then add_prop,amap,shiftx=obj_list(kk).shiftx
+          obj_map->setmap,kk,amap
+        endfor
+        maps=rep_tag_value(maps,obj_map,names[k])
+      endif else tags2remove=[tags2remove,names[k]]
+     endif 
+  endif
+ endfor
+ if n_elements(tags2remove) ne 0 then maps=rem_tag(maps,tags2remove)
+ return,maps
+end
+
 pro gxchmpview::UpdateMaps
   if ~ptr_valid(self.summary) then return
   index_a=self.combobox_index(self.wa)
   index_b=self.combobox_index(self.wb)
   filename=(*self.summary).files[index_a,index_b]
-  maps=gx_filevars2struct(filename)
+  maps=self->List2Map(gx_filevars2struct(filename))
   ptr_free,self.maps
   self.maps=ptr_new(maps)
 end
@@ -638,7 +669,7 @@ pro gxchmpview::UpdateDisplays
   index_x=self.combobox_index(self.wx)
   index_y=self.combobox_index(self.wy)
   filename=(*self.summary).files[index_a,index_b]
-  obsI=->get(index_freq,/map)
+  obsI=(*self.Maps).OBSIMAGEARR->get(index_freq,/map)
   modI=(*self.Maps).MODIMAGEARR->get(index_freq,/map)
   cmodI=(*self.Maps).MODIMAGECONVARR->get(index_freq,/map)
   has_sigma=tag_exist((*self.Maps),'OBSIMAGESIGMAARR')
@@ -687,7 +718,12 @@ pro gxchmpview::UpdateDisplays
   widget_control,self.wmap,get_value=win
   wset,win
   log_map=(widget_info(widget_info(self.wBase,find_by_uname='log_map'),/COMBOBOX_GETTEXT) eq 'Log Scale') 
-  plot_map,map,/cbar,log=log_map,top=254
+  if tag_exist(map,'scan') then begin
+    get_map_coord,map,xp,yp
+    x=reform(xp[*,0])
+    y=map.data[*,0]
+    plot,x,y
+  endif else plot_map,map,/cbar,log=log_map,top=254
   if selected_map eq 'Data' and legends[3] then begin
     if tag_exist(map,'shiftx') and tag_exist(map,'shifty') then if ~(map.SHIFTX eq 0 and map.SHIFTY eq 0) then $
      map_legend=[map_legend,string(map.SHIFTX,'"',map.SHIFTY,'"',format="('xshift= ',f0.2,a0,'; yshift= ',f0.2,a0)")]
@@ -712,8 +748,22 @@ pro gxchmpview::UpdateDisplays
   widget_control,widget_info(self.wBase,find_by_uname='model_thick'),get_value=model_thick
   
   linecolors
-  if data_contours[0] eq 1 then plot_map,obsI,/over,levels=data_levels,percent=data_percent,color=data_color,thick=data_thick
-  if model_contours[0] eq 1 then plot_map,cmodI,/over,levels=model_levels,percent=data_percent[0],color=model_color,thick=model_thick
+  if data_contours[0] eq 1 then begin
+    if tag_exist(obsI,'scan') then begin
+      get_map_coord,obsI,xp,yp
+      x=reform(xp[*,0])
+      y=obsI.data[*,0]
+      oplot,x,y,color=data_color,thick=data_thick
+    endif else plot_map,obsI,/over,levels=data_levels,percent=data_percent,color=data_color,thick=data_thick
+  endif
+  if model_contours[0] eq 1 then begin
+    if tag_exist(cmodI,'scan') then begin
+      get_map_coord,cmodI,xp,yp
+      x=reform(xp[*,0])
+      y=cmodI.data[*,0]
+      oplot,x,y,color=model_color,thick=model_thick
+    endif else plot_map,cmodI,/over,levels=model_levels,percent=data_percent[0],color=model_color,thick=model_thick
+  endif
   if legends[4] then begin
     cross_color=(strlowcase(selected_map) eq 'eta' or strlowcase(selected_map) eq 'chi' or strlowcase(selected_map) eq 'rho')?0:255
     oplot,(*self.summary).x[index_x[[1,1]]],!y.crange,color=cross_color,thick=3,linesty=2
