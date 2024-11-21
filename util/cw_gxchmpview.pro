@@ -393,6 +393,7 @@ pro gxchmpview::UpdateSummary
  for k=0,n_ab-1 do begin
   o=obj_new('IDL_Savefile', /relaxed, files[k])
   if k eq 0 then begin
+    o->restore,'INSTRUMENT'
     o->restore,'freqlist'
     o->restore, 'EBTELFILENAME'
     o->restore, 'MODELFILENAME'
@@ -448,18 +449,16 @@ pro gxchmpview::UpdateSummary
    o->restore, 'CCarr
    CC[index_a,index_b,*]=CCArr
    o->restore, 'obsImageArr'
-   if obj_isa(obsImageArr,'map') then begin
-     for index_freq=0, obsimagearr->get(/count)-1 do begin
-       m=obsimagearr->get(index_freq,/map)
+     for index_freq=0, n_elements(freq)-1 do begin
+       m=obj_isa(obsImageArr,'map')?obsimagearr->get(index_freq,/map):obsimagearr(index_freq)
        if tag_exist(m, 'shiftX') then shiftX[index_a,index_b,index_freq]=m.shiftX
        if tag_exist(m, 'shiftY') then shiftY[index_a, index_b, index_freq]=m.shiftY
      endfor
-   end
    obj_destroy,o
  endfor
  
  ptr_free,self.summary
- self.summary=ptr_new({ebtel:EBTELFILENAME,model:MODELFILENAME,$
+ self.summary=ptr_new({instrument:instrument,ebtel:EBTELFILENAME,model:MODELFILENAME,$
                       a:a,b:b,freq:freq,x:reform(xp[*,0]),y:reform(yp[0,*]),files:filenames,$
                       data:{eta:eta,chi:chi,rho:rho,$
                       bestQ:bestQ,CC:CC,shiftx:shiftx,shifty:shifty}})  
@@ -684,7 +683,7 @@ pro gxchmpview::UpdateDisplays
     'Model':map=modI
     'Convolved Model':map=cmodI
     'Eta':begin
-           map=ModI
+           map=cModI
            map.ID='Eta!U2!N'
            map.data=((cmodI.data-obsI.data)/mean(obsI.data))^2
            map.data[u]=0
@@ -693,7 +692,7 @@ pro gxchmpview::UpdateDisplays
            map_legend=[map_legend,string(map.id,(*self.summary).data.eta[index_a,index_b,index_freq],format="('<',a0,'>=',f0.2)")]
           end
      'Chi':begin
-            map=ModI
+            map=cModI
             map.ID='Chi!U2!N'
             map.data=((cmodI.data-obsI.data)/obsSigma.data)^2
             map.data[u]=0
@@ -702,7 +701,7 @@ pro gxchmpview::UpdateDisplays
             map_legend=[map_legend,string((*self.summary).data.chi[index_a,index_b,index_freq],format="('Chi=',f0.2)")]
           end    
       'Rho':begin
-            map=ModI
+            map=cModI
             map.ID='Rho!U2!N'
             map.data=(cmodI.data/obsI.data-1)^2
             map.data[u]=0
@@ -722,7 +721,7 @@ pro gxchmpview::UpdateDisplays
     get_map_coord,map,xp,yp
     x=reform(xp[*,0])
     y=map.data[*,0]
-    plot,x,y
+    plot,x,y,ylog=log_map,ytitle=map.id,xtitle='X (arcsec)',xmargin=[12,6]
   endif else plot_map,map,/cbar,log=log_map,top=254
   if selected_map eq 'Data' and legends[3] then begin
     if tag_exist(map,'shiftx') and tag_exist(map,'shifty') then if ~(map.SHIFTX eq 0 and map.SHIFTY eq 0) then $
