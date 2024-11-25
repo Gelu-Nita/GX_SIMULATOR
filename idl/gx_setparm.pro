@@ -40,7 +40,7 @@ pro gx_setparm,info, name,value,found=found
         if count eq 1 then begin
           rparms=info.rparms
           rparms[idx].value=value
-          if name eq 'AIA_response_date' then rparms[idx].hint=atime(value)
+          if name eq 'response_date' then rparms[idx].hint=atime(value)
           info.rparms=rparms
           found=1
         endif
