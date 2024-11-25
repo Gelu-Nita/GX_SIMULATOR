@@ -1912,7 +1912,7 @@ function GXModel::UpdateEUVinfo,info
   gx_setparm,info, 'UseDEM',(volume->getflags()).NTDEM
   gx_setparm,info, 'AddTR',(volume->getflags()).TRADD
   gx_setparm,info, 'ApplyTRfactor',(volume->getflags()).TRFACTOR
-  gx_setparm,info, 'AIA_response_date',self->GetTime(/sec)
+  gx_setparm,info, 'response_date',self->GetTime(/sec)
   return,info
 end  
 

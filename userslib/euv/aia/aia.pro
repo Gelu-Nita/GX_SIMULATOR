@@ -1,7 +1,6 @@
 pro aia,parms,rowdata,nparms,rparms,path=path,logtdem=logtdem,dem_run=dem_run,qrun=qrun,lrun=lrun,logte=logte,response=response,dem_tr_run=dem_tr_run,q0=q0,l0=l0,info=info
      if n_elements(response_path) eq 0 then begin
-      dirpath=file_dirname((ROUTINE_INFO('aia',/source)).path,/mark)
-      response_path=dirpath+'aia_response.sav'
+      response_path=gx_findfile('aia_response.sav')
      end
      dr_idx=0
      t0_idx=1
@@ -30,39 +29,38 @@ pro aia,parms,rowdata,nparms,rparms,path=path,logtdem=logtdem,dem_run=dem_run,qr
                {name:'ApplyTRfactor',value:1l,unit:'(int)',user:0,hint:'Apply TR Factor'},$
                {name:'DEMavg',value:0l,unit:'(int)',user:0,hint:'DEM Interpolation Method'},$
                {name:'EVEnorm',value:1l,unit:'(int)',user:1,hint:'Perform EVE normalization'},$
-               {name:'CHIANTIfix',value:0l,unit:'(int)',user:1,hint:'Apply CHIANTI correction'}]
+               {name:'CHIANTIfix',value:1l,unit:'(int)',user:1,hint:'Apply CHIANTI correction'}]
        restore,response_path
        rparms=[{name:'dS',value:0d,unit:'(cm^2)',user:0,hint:'Source pixel/area'},$
-               {name:'AIA_response_date',value:gx_utcstr2time(response.date,/seconds),unit:'(UTsec)',user:0,hint:gx_utcstr2time(response.date)},$
+               {name:'response_date',value:gx_utcstr2time(response.date,/seconds),unit:'(UTsec)',user:0,hint:gx_utcstr2time(response.date)},$
                {name:'n_hi0',value:1d,unit:'cm^{-3}',user:1,Hint:'Neutral H density coronal cutoff'},$
-               {name:'relative_abundance',value:1d,unit:'',user:1,Hint:'Relative to coronal abundance for Chianti'},$
-               {name:'rsun',value:960d,unit:'arcseconds',user:1,Hint:"Observer's solar radius"}]
+               {name:'relative_abundance',value:1d,unit:'',user:1,Hint:'Relative to coronal abundance for Chianti'}]
 
     endif else begin
       parms=info.parms
       nparms=info.nparms
       rparms=info.rparms
     endelse
-     update_response=(n_elements(response) eq 0)?1:(gx_utcstr2time(response.date,/seconds) ne rparms[1].value)
+     update_response=(n_elements(response) eq 0)?1:(gx_utcstr2time(response.date,/seconds) ne double(floor(rparms[1].value)))
      if update_response ne 0 then response=aia_get_response(/temp,/dn,/evenorm,timedepend_date=atime(rparms[1].value),/silent)
      nchan=n_elements(response.channels)
      w=fltarr(nchan)
      for i=0,nchan-1 do w[i]=fix(strmid(response.channels[i],1))
-     rgb=ptr_new()
-     catch, error_stat
-     if error_stat ne 0 then begin
-       catch, /cancel
-       MESSAGE, /INFO, !ERROR_STATE.MSG
-       goto,skip_rgb
-     end
-     restore,dirpath+'aia_rgb.sav'
-     skip_rgb:
      info={parms:parms,$
            nparms:nparms,$
            rparms:rparms,$
            pixdim:[nchan],$
            spectrum:{x:{axis:w,label:'Wavelength',unit:'A'},$
-                     y:{label:'I',unit:'counts/s/pix'}},rgb:rgb} 
+                     y:{label:'I',unit:'counts/s/pix'}}} 
+     catch, error_stat
+     if error_stat ne 0 then begin
+       catch, /cancel
+       MESSAGE, /INFO, !ERROR_STATE.MSG
+       goto,skip_rgb
+     end  
+     restore,gx_findfile('aia_rgb.sav')
+     skip_rgb:       
+     if n_elements(rgb) ne 0 then info=create_struct(info, 'rgb',rgb)      
      return
  end
    useDEM=nparms[3]
@@ -73,12 +71,11 @@ pro aia,parms,rowdata,nparms,rparms,path=path,logtdem=logtdem,dem_run=dem_run,qr
    chiantifix=nparms[8]
    norm_tr=rparms[3]*rparms[0]/((4.5e7)^2)
    n_hi0=rparms[2]
-   r_sun=rparms[4]
    sz=size(rowdata,/dim)
    Npix=sz[0]
    Nchan=sz[1]
    rowdata[*]=0
-   update_response=(n_elements(response) eq 0)?1:(gx_utcstr2time(response.date,/seconds) ne rparms[1])
+   update_response=(n_elements(response) eq 0)?1:(gx_utcstr2time(response.date,/seconds) ne double(floor(rparms[1])))
    if (n_elements(logte) eq 0) or (update_response eq 1) then begin
     response=aia_get_response(/temp,/dn,timedepend_date=atime(rparms[1]),evenorm=evenorm,chiantifix=chiantifix)
     logte=response.logte
@@ -131,5 +128,4 @@ pro aia,parms,rowdata,nparms,rparms,path=path,logtdem=logtdem,dem_run=dem_run,qr
        end
      end
    endfor 
-   rowdata*=(R_sun/960.)^2 
 end

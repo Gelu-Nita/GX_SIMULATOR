@@ -33,7 +33,7 @@ function gx_render,model,renderer,logfile=logfile,_extra=_extra
   dr=model->GetFovPixSize(unit='cm')
   gx_setparm,info,'dS',dr[0]*dr[1]
   gx_setparm,info,'distance',model->GetAu()
-  info=gx_rendererinfo(renderer,info=info)
+  info=model->UpdateEUVinfo(info)
   fovmap=model->GetFovMap()
   sz=size(fovmap->get(/data))
   nx=sz[1]

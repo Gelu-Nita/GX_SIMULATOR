@@ -11,11 +11,6 @@ function gx_euvrender_ebtel,model,renderer,info=info,ebtel_path=ebtel_path,q_par
     endif
   endelse
   default,renderer,'aia.pro'
-  info=gx_rendererinfo(renderer)
-  if ~isa(info) then begin
-    message,'Invalid renderer routine! Operation aborted!',/info
-    goto,skip
-  endif
   path=gx_ebtel_path(path)
   if isa(ebtel_path,/string) then begin
     if gx_ebtel_valid_path(ebtel_path) then if path ne ebtel_path then ebtel_path=gx_ebtel_path(ebtel_path)
