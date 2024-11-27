@@ -10,6 +10,7 @@ function gx_ebtel_path,path,default=default,has_ddm=has_ddm,quiet=quiet
   path=gx_findfile('ebtel.sav')
   if ~gx_ebtel_valid_path(path,has_ddm=has_ddm,quiet=quiet) then begin
     message,'No valid ebtel path provided, no action taken! '+path,/info
+    goto,exit_point
   endif
   set_env:
   setenv,'ebtel='+path
