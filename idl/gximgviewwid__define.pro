@@ -270,7 +270,7 @@ pro gxImgViewWid::NewSpectrumSize
  value=((*self.info).spectrum).x.axis[0]
  self.oLabel->SetProperty,strings=string(value,((*self.info).spectrum).x.unit,format="(g0,' ',a)")
  if widget_valid(self.wChannels[2])  then widget_control,self.wChannels[2],/destroy
- if nmaps gt 1 then begin
+ if nmaps gt 0 then begin
  self.wChannels[2]=cw_objfield(self.wChannbase,label=((*self.info).spectrum).x.label,unit=((*self.info).spectrum).x.unit,$
                     value=((*self.info).spectrum).x.axis[0],/indicator,xtextsize=12)
  end
@@ -927,7 +927,6 @@ pro gxImgViewWid::SaveTbMaps,tlb
     if n_elements(idx) ge 5 then begin
       idx[4]=0
       sz=size(*self.pdata)
-      sz=size(*self.pdata)
       map=self.fovmap->get(/map)
       add_prop, map, freq = 0.0
       add_prop, map, frequnit = 'GHz'
@@ -978,9 +977,8 @@ end
      self.oImage->GetProperty,data=data
      omap=obj_new('map')
      sz=size(*self.pdata)
-     omap=obj_new('map')
-     sz=size(*self.pdata)
-     for k=0,sz[3]-1 do begin
+     nimg=sz[0] gt 2?sz[3]:1
+     for k=0,nimg-1 do begin
       map=self.fovmap->get(/map)
       map.data=self->GetImg(k)
       if n_elements(idx) ge 4 then begin
@@ -1034,7 +1032,8 @@ compile_opt hidden
      self.oImage->GetProperty,data=data
      omap=obj_new('map')
      sz=size(*self.pdata)
-     for k=0,sz[3]-1 do begin
+     nimg=sz[0] gt 2?sz[3]:1
+     for k=0,nimg-1 do begin
       map=self.fovmap->get(/map)
       map.data=self->GetImg(k)
       id=string(((*self.info).spectrum).x.axis[k],((*self.info).spectrum).x.unit,format="(g0,' ',a)")

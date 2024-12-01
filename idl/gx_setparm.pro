@@ -13,7 +13,7 @@ pro gx_setparm,info, name,value,found=found
   
   if ~((size(info,/tname) eq 'STRUCT') $
    and (size(name,/tname) eq 'STRING') $ 
-   and isa(value,/number)) then begin
+   and isa(value)) then begin
     message,'No valid input parameters provided, no action performed!',/info
     return
   endif
@@ -39,11 +39,20 @@ pro gx_setparm,info, name,value,found=found
         idx=where(strcompress(strupcase((info.rparms).name),/rem) eq strcompress(strupcase(name),/rem),count)
         if count eq 1 then begin
           rparms=info.rparms
-          rparms[idx].value=value
+          rparms[idx].value=anytim(value)
           if name eq 'response_date' then rparms[idx].hint=atime(value)
           info.rparms=rparms
           found=1
         endif
+    end
+    if tag_exist(info,'sparms') then begin
+      idx=where(strcompress(strupcase((info.sparms).name),/rem) eq strcompress(strupcase(name),/rem),count)
+      if count eq 1 then begin
+        sparms=info.sparms
+        sparms[idx].value=value
+        info.sparms=sparms
+        found=1
+      endif
     end
   end
 end

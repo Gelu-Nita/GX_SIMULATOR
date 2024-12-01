@@ -1912,7 +1912,8 @@ function GXModel::UpdateEUVinfo,info
   gx_setparm,info, 'UseDEM',(volume->getflags()).NTDEM
   gx_setparm,info, 'AddTR',(volume->getflags()).TRADD
   gx_setparm,info, 'ApplyTRfactor',(volume->getflags()).TRFACTOR
-  gx_setparm,info, 'response_date',self->GetTime(/sec)
+  gx_setparm,info, 'response_date',AIA_BP_UTC2DATE_STRING(ANYTIM2UTC(self->GetTime(), /ccsds))
+  gx_setparm,info, 'ebtel',file_basename(gx_ebtel_path())
   return,info
 end  
 

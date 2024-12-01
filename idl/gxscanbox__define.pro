@@ -89,12 +89,7 @@ xrange=xrange,yrange=yrange,zrange=zrange,Nx=Nx,Ny=Ny,Nz=Nz,nthreads=nthreads,_e
 main_base=get_tlb(wExecBase) 
 scan_base=widget_info(main_base,find_by_uname='SCANBASE')
 geometry3=widget_info(scan_base,/geometry)
-;wEBTELToolbarBase = widget_base(scan_base, /row, /frame,/TOOLBAR,map=1)
-;self.wSelectEBTEL= widget_button( wEBTELToolbarBase, $
-;  value=gx_bitmap(filepath('open.bmp', subdirectory=['resource', 'bitmaps'])), $
-;  /bitmap,tooltip='Select EBTEL Table',uname='EBTEL')
-;self.wEBTELTable=widget_text(font=!defaults.font,wEBTELToolbarBase,value=gx_ebtel_path(),SCR_XSIZE=geometry1.SCR_XSIZE-geometry3.SCR_XSIZE,/wrap);-3*geometry2.SCR_XSIZE
-  
+ 
  self->CreateArrayInputControls
  self.wScan=widget_info(main_base,find_by_uname='SCAN_START')
  self.wDebug=widget_info(main_base,find_by_uname='SCAN_DEBUG')
@@ -122,26 +117,40 @@ pro gxScanBox::CreateArrayInputControls
   if obj_valid(moi) then begin
     *self.info=moi->UpdateEUVinfo(*self.info)
   endif
+  
+  if tag_exist((*self.info),'sparms') then begin
+    if ~widget_valid(self.wArrayParmBase) then self.wArrayParmBase=widget_base(self.wParmBase,/column,map=map)
+    if ~widget_valid(wRbase) then wRbase=widget_base(self.wArrayParmBase,/column)
+    wSbase=widget_base(wRbase,/column,/frame)
+    labels=strcompress((*self.info).sparms.name+'; '+(*self.info).sparms.unit+'; '+(*self.info).sparms.hint)
+    editable=(*self.info).sparms.user
+    self.wSparms=cw_strarr(wSbase,value=(*self.info).sparms.value,labels=labels,editable=editable,font=!defaults.font,/frame,xtextsize=strlen('ebtel_scale=0.2_alpha=-2.5.sav'))
+    widget_control,self.wSparms,set_uvalue=(*self.info).sparms.name,set_uname='renderer:sparms'
+  endif
+  
   if tag_exist((*self.info),'nparms') then begin
-    if ~widget_valid(self.wArrayParmBase) then self.wArrayParmBase=widget_base(self.wParmBase,/row,map=map)
+    if ~widget_valid(self.wArrayParmBase) then self.wArrayParmBase=widget_base(self.wParmBase,/column,map=map)
     wNbase=widget_base(self.wArrayParmBase,/column)
-    self.wNparms=cw_objarray(wNbase,value=(*self.info).nparms.value,items=strcompress((*self.info).nparms.name,/rem),names=strcompress((*self.info).nparms.name+'; '+$
-    (*self.info).nparms.unit+'; '+(*self.info).nparms.hint),/frame,inc=1,/static,$
-    sensitive=(*self.info).nparms.user,/vert,/right,xtextsize=10,font=!defaults.font,type=1l)
+    names=strcompress((*self.info).nparms.name+'; '+$
+    (*self.info).nparms.unit+'; '+(*self.info).nparms.hint)
+    self.wNparms=cw_objarray(wNbase,value=(*self.info).nparms.value,items=strcompress((*self.info).nparms.name,/rem),$
+                             names=names,font=!defaults.font,type=1l,/frame,inc=1, $
+                             sensitive=(*self.info).nparms.user,/vert,/right,xtextsize=10,/static,xlabelsizes=strlen(names))
     widget_control,self.wNparms,set_value=(*self.info).nparms.value,set_uvalue=(*self.info).nparms.name,set_uname='renderer:nparms'
   endif
   
   if tag_exist((*self.info),'rparms') then begin
-    if ~widget_valid(self.wArrayParmBase) then self.wArrayParmBase=widget_base(self.wParmBase,/row,map=map)
+    if ~widget_valid(self.wArrayParmBase) then self.wArrayParmBase=widget_base(self.wParmBase,/column,map=map)
     wRbase=widget_base(self.wArrayParmBase,/column)
     self.wRparms=cw_objarray(wRbase,value=(*self.info).rparms.value,items=strcompress((*self.info).rparms.name,/rem),names=strcompress((*self.info).rparms.name+'; '+$
     (*self.info).rparms.unit+'; '+(*self.info).rparms.hint),/frame,inc=1,/static,$
-    sensitive=(*self.info).rparms.user,/vert,/right,xtextsize=10,font=!defaults.font,type=0d)
+    sensitive=(*self.info).rparms.user,/vert,/right,xtextsize=12,font=!defaults.font,type=0d)
     widget_control,self.wRparms,set_uvalue=(*self.info).rparms.name,set_uname='renderer:rparms'
   endif
+
   
   if self->AcceptFreqList() then begin
-    if ~widget_valid(self.wArrayParmBase) then self.wArrayParmBase=widget_base(self.wParmBase,/row,map=map)
+    if ~widget_valid(self.wArrayParmBase) then self.wArrayParmBase=widget_base(self.wParmBase,/column,map=map)
     
     if ~widget_valid(wRbase) then wRbase=widget_base(self.wArrayParmBase,/column)
     
@@ -219,7 +228,8 @@ function gxScanBox::RendererInfo,info
  end
  if execute(filename+',INFO=INFO') then begin
   if size(info,/tname) ne 'STRUCT' then goto,invalid_renderer
-  return,CREATE_STRUCT('execute',template,info)
+  if ~tag_exist(info,'execute') then info=CREATE_STRUCT('execute',template,info)
+  return,info
  end 
  invalid_renderer:
  cd,cdir
@@ -256,6 +266,15 @@ pro gxScanBox::ReplaceParmValue,name,value
         widget_control,widget_info(self.wRparms,find_by_uname=name),set_value=value
       endif
     end
+    if tag_exist(*self.info,'rparms') and widget_valid(self.wRparms) then begin
+      idx=where(strcompress(strupcase(((*self.info).sparms).name),/rem) eq strcompress(strupcase(name),/rem),count)
+      if count eq 1 then begin
+        sparms=(*self.info).sparms
+        sparms[idx].value=value
+        (*self.info).sparms=sparms
+        widget_control,widget_info(self.wSparms,find_by_uname=name),set_value=value
+      endif
+    end
  end
 end
 
@@ -287,6 +306,16 @@ function gxScanBox::GetParmValue,name,gui=gui
           widget_control,self.wRparms,get_value=rparms
         endif else rparms=((*self.info).rparms).value
         return,rparms[idx]
+      endif
+    end
+    
+    if tag_exist(*self.info,'sparms') and widget_valid(self.wSparms) then begin
+      idx=where(strcompress(strupcase(((*self.info).sparms).name),/rem) eq strcompress(strupcase(name),/rem),count)
+      if count eq 1 then begin
+        if keyword_set(gui) then begin
+          widget_control,self.wSparms,get_value=sparms
+        endif else sparms=((*self.info).sparms).value
+        return,sparms[idx]
       endif
     end
   end
@@ -352,7 +381,6 @@ if size(info,/tname) eq 'STRUCT' then begin
  self.pData=(self.ImgViewWid)->NewView(self.info,renderer=self.renderer,nx=nx,ny=ny,xrange=xrange,yrange=yrange,data=data,fovmap=fovmap)
  self->CreateArrayInputControls
  self->UpdateAllParms
-; self.ImgViewWid->Draw
  self->ComputeFOV,/compute_grid
  self->MakeGrid
  self->Slice
@@ -824,10 +852,17 @@ pro gxScanbox::UpdateAparms
   endif
 end
 
+pro gxScanbox::UpdateEUVinfo
+  self.ImgViewWid->GetProperty,model=MOI
+  if isa(MOI) then *self.info=MOI->UpdateEUVinfo(*self.info)
+end
+
+
 pro gxScanbox::UpdateAllParms
  self->CheckFreqList
  self->UpdateAparms
  widget_control,self.wParmsTable,get_value=Parms
+ (*self.info).parms=Parms
  if widget_valid(self.wNparms) then begin
    widget_control,self.wNparms,get_value=nparms
    (*self.info).nparms.value=nparms
@@ -836,7 +871,11 @@ pro gxScanbox::UpdateAllParms
    widget_control,self.wRparms,get_value=rparms
    (*self.info).rparms.value=rparms
  endif
- (*self.info).parms=Parms
+ if widget_valid(self.wSparms) then begin
+   widget_control,self.wSparms,get_value=sparms
+   (*self.info).sparms.value=sparms
+ endif
+ self->UpdateEUVinfo; order matters!!!
  info=self->RendererInfo(*self.info)
  ptr_free,self.info
  self.info=ptr_new(info)
@@ -1407,6 +1446,7 @@ pro gxScanBox::OnStartScan,event,debug=debug
           bridges[i]->SetVar,'parms',(*self.grid).parms
           if tag_exist(*self.info,'nparms') then bridges[i]->SetVar,'nparms',(*self.info).nparms.value
           if tag_exist(*self.info,'rparms') then bridges[i]->SetVar,'rparms',(*self.info).rparms.value
+          if tag_exist(*self.info,'sparms') then bridges[i]->SetVar,'sparms',(*self.info).rparms.value
           if tag_exist(*self.info,'aparms') then begin
             bridges[i]->SetVar,'E_arr',(*self.info).aparms.E_arr
             bridges[i]->SetVar,'mu_arr',(*self.info).aparms.mu_arr
@@ -1494,6 +1534,7 @@ pro gxScanBox::OnCallback,Status, Error,bridge
           bridge->SetVar,'parms',(*self.grid).parms
           if tag_exist(*self.info,'nparms') then bridge->SetVar,'nparms',(*self.info).nparms.value
           if tag_exist(*self.info,'rparms') then bridge->SetVar,'rparms',(*self.info).rparms.value
+          if tag_exist(*self.info,'sparms') then bridge->SetVar,'sparms',(*self.info).sparms.value
           if tag_exist(*self.info,'aparms') then begin
             bridge->SetVar,'E_arr',(*self.info).aparms.E_arr
             bridge->SetVar,'mu_arr',(*self.info).aparms.mu_arr
@@ -1920,6 +1961,7 @@ pro gxScanbox::UpdateFields
   endif
   (*self.info).parms=parms
   widget_control,self.wParmsTable,set_value=table
+  if tag_exist(*self.info,'sparms') and widget_valid(self.wSparms) then widget_control,self.wSparms,set_value=(*self.info).sparms.value
 end
 
 
@@ -1955,7 +1997,7 @@ ROI:obj_new(),slicer:obj_new(),wParmsTable:0l,wScan:0L,wPause:0L,wAbort:0L,wDebu
 renderer:'',wRenderer:0l,wSelectRenderer:0l,pData:ptr_new(),grid:ptr_new(),info:ptr_new(),bridges:obj_new(),$
 pause:0b,active:0b,new_view:0b,log:0l,t_start:0d,wPlotLOSOptions:0L,wLOS:0L,wPlotLOS:0L,wModelInfo:0l,profiler:obj_new(),$
 Grid2Update:0L,wGrid2Update:0L,wMinVolume:0l,wMaxVolume:0l,wPowerIndexVolume:0l,wResetVolumeScale:0l,$
-wSelectEbtel:0l,wEbtelTable:0l,wParmBase:0l,wArrayParmBase:0l,wNparms:0l,wRparms:0l,$
+wSelectEbtel:0l,wEbtelTable:0l,wParmBase:0l,wArrayParmBase:0l,wNparms:0l,wRparms:0l,wSparms:0l,$
 wUploadFreqList:0l,wFreqList:0l,wUseFreqList:0l,wDelFreqList:0l,wUndoFreqList:0l,$
 wResetFreqList:0l,wSaveFreqList:0l,wEditedFreqList:0l,Rsun:(pb0r())[2]*60,wObserver:0L,wTopView:0L,wL0:0l,wB0:0l,wR:0L}
 end
