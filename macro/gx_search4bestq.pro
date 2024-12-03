@@ -72,7 +72,7 @@ function gx_search4bestq, gxmpath=gxmpath,a_arr=a_arr,b_arr=b_arr,q_start=q_star
           if ~file_exist(modfile) or keyword_set(redo)then begin
             if ~isa(model,'gxmodel') then begin
               model=gx_read(gxmpath)
-              fovdata=model->SetFOV(xc=xc,yc=yc,xfov=xfov, yfov=yfov,nx=nx,ny=ny,/compute_grid)
+              fovdata=model->SetFOV(xc=xc,yc=yc,xfov=xfov, yfov=yfov,nx=nx,ny=ny,/compute_grid,_extra=_extra)
               end
             q0_formula='q[0]'
             q_formula=string(a,b,format="('q0*(B/q[1])^(',g0,')/(L/q[2])^(',g0,')')")

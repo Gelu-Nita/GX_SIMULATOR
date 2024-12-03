@@ -383,7 +383,8 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
   res2_best_metrics:res2_best_metrics,chi2_best_metrics:chi2_best_metrics,mask:levels[0],$
   refdatapath:tag_exist(_extra,'refdatapath',/quiet)?_extra.refdatapath:'',$
   gxmpath:tag_exist(_extra,'gxmpath',/quiet)?_extra.gxmpath:'',$
-  q_start:tag_exist(_extra,'q_start',/quiet)?_extra.q_start:[0.0001,0.001],counter:counter}]
+  q_start:tag_exist(_extra,'q_start',/quiet)?_extra.q_start:[0.0001,0.001],counter:counter,$
+  allmetrics:ptr_new({q:q[sort_idx],res2:res2[sort_idx],chi2:chi2[sort_idx]})}]
 
  obj_destroy,obj_metrics_arr
  if ncomp gt 1 then begin

@@ -446,6 +446,7 @@ function gxModel::Rsun
 end
 
 function gxModel::SetFOV,xc=xc,yc=yc,xfov=xfov, yfov=yfov,_extra=_extra
+ self->SetLos,_extra=_extra
  self->ResetPosition
  rsun=self->Rsun()
  fovmap=self->GetFovMap()
@@ -2267,27 +2268,25 @@ if keyword_set(l0) then return,self.l0
 return,{p:self.p,b0:self.b0,r:self.r,l0:self.l0}
 end
 
-pro gxModel::SetLos,p=p,b0=b0,r=r,l0=l0,struct=pb0rl,EarthView=EarthView
+pro gxModel::SetLos,p=p,b0=b0,rsun=r,l0=l0,struct=pb0rl,EarthView=EarthView
+angles=pb0r(self->GetTime())
 if keyword_set(EarthView) then begin
-  angles=pb0r(self->GetTime())
   self.p=angles[0]
   self.b0=angles[1]
   self.r=angles[2]
   self.l0=0
-  self.SpaceView=0
-  return
 endif
 if n_elements(l0) ne 0 then self.l0=l0
 if n_elements(p) ne 0 then self.p=p
 if n_elements(b0) ne 0 then self.b0=b0
-if n_elements(r) ne 0 then self.r=r
+if n_elements(r) ne 0 then self.r=r/60d
 if n_elements(pb0rl) ne 0 then begin
   self.p=pb0rl.p
   self.b0=pb0rl.b0
   self.r=pb0rl.r
   self.l0=pb0rl.l0
 endif
-self.SpaceView=1
+self.SpaceView= (self.p ne angles[0]) or (self.b0 ne angles[1]) or (self.r ne angles[2]) or (self.l0 ne 0)
 end
 
 function gxModel::SpaceView
