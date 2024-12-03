@@ -2268,7 +2268,7 @@ if keyword_set(l0) then return,self.l0
 return,{p:self.p,b0:self.b0,r:self.r,l0:self.l0}
 end
 
-pro gxModel::SetLos,p=p,b0=b0,rsun=r,l0=l0,struct=pb0rl,EarthView=EarthView
+pro gxModel::SetLos,pangle=p,b0=b0,rsun=r,l0=l0,pb0r=pb0r,struct=struct,EarthView=EarthView
 angles=pb0r(self->GetTime())
 if keyword_set(EarthView) then begin
   self.p=angles[0]
@@ -2276,15 +2276,18 @@ if keyword_set(EarthView) then begin
   self.r=angles[2]
   self.l0=0
 endif
+if keyword_set(struct) then begin
+  l0=struct.l0
+  pb0r={p:struct.p,b0:struct.b0,r:struct.r}
+endif
 if n_elements(l0) ne 0 then self.l0=l0
 if n_elements(p) ne 0 then self.p=p
 if n_elements(b0) ne 0 then self.b0=b0
 if n_elements(r) ne 0 then self.r=r/60d
-if n_elements(pb0rl) ne 0 then begin
-  self.p=pb0rl.p
-  self.b0=pb0rl.b0
-  self.r=pb0rl.r
-  self.l0=pb0rl.l0
+if n_elements(pb0r) ne 0 then begin
+  self.p=pb0r.p
+  self.b0=pb0r.b0
+  self.r=pb0r.r
 endif
 self.SpaceView= (self.p ne angles[0]) or (self.b0 ne angles[1]) or (self.r ne angles[2]) or (self.l0 ne 0)
 end

@@ -1830,7 +1830,7 @@ self.wPlotLOSOptions=cw_objPlotOptions(wPlotLOSBase,uname='LOS Profile Plot Opti
   endelse
  endif
  pbrl_list=replicate({p:0d,b0:0d,r:0d,l0:0d},2)
- pbrl_list[SpaceView].b0=L0
+ pbrl_list[SpaceView].L0=L0
  pbrl_list[SpaceView].b0=B0
  pbrl_list[SpaceView].R=R/60
 
