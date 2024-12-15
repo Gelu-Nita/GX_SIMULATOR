@@ -50,38 +50,35 @@ if n_elements(info) eq 0 then begin
   case strupcase(instrument) of
     'TRACE':begin
       rgb_path='trace_rgb.sav'
-      restore,gx_findfile('trace_response.sav')
-      response=rep_tag_value(response,timenow,'date')
+      response=gx_get_trace_response()
     end
     'SXT':begin
       rgb_path='sxt_rgb.sav'
-      restore,gx_findfile('sxt_response.sav')
-      response=rep_tag_value(response,timenow,'date')
-      response.channels= str_replace(strupcase(response.channels),'GAL','A')
+      response=gx_get_sxt_response()
     end
     'SOLO-FSI':begin
            rgb_path='eui_rgb.sav'
-           response=rep_tag_value(gx_get_eui_response(timenow,/fsi),timenow,'date')
+           response=gx_get_eui_response(/fsi)
           end
     'SOLO-HRI':begin
             rgb_path='eui_rgb.sav'
-            response=rep_tag_value(gx_get_eui_response(RELTIME(/now),/hri),timenow,'date')
+            response=gx_get_eui_response(/hri)
           end 
     'STEREO-A':begin
             rgb_path='euvi_rgb.sav'
-            response=rep_tag_value(gx_get_euvi_response(RELTIME(/now),/a),timenow,'date')
+            response=gx_get_euvi_response(/a)
           end
     'STEREO-B':begin
             rgb_path='euvi_rgb.sav'
-            response=rep_tag_value(gx_get_euvi_response(RELTIME(/now),/b),timenow,'date')
+            response=gx_get_euvi_response(/b)
           end     
     'AIA2':begin
       rgb_path='aia_rgb.sav'
-      response=rep_tag_value(gx_get_aia_response(RELTIME(/now)),timenow,'date')
+      response=gx_get_aia_response()
      end          
     else: begin
       rgb_path='aia_rgb.sav'
-      restore,gx_findfile('aia_response.sav')
+      response=gx_get_aia_response(/tresp)
     end
   endcase
 

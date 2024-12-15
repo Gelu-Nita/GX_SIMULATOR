@@ -20,6 +20,7 @@ function gx_render,model,renderer,logfile=logfile,_extra=_extra
     message,'Invalid renderer routine! Operation aborted!',/info
     return,!null
   endif
+  info=model->UpdateEUVinfo(info)
   if isa(_extra) then begin
     names=tag_names(_extra)
     for k=0,n_elements(names)-1 do begin
@@ -33,7 +34,6 @@ function gx_render,model,renderer,logfile=logfile,_extra=_extra
   dr=model->GetFovPixSize(unit='cm')
   gx_setparm,info,'dS',dr[0]*dr[1]
   gx_setparm,info,'distance',model->GetAu()
-  info=model->UpdateEUVinfo(info)
   fovmap=model->GetFovMap()
   sz=size(fovmap->get(/data))
   nx=sz[1]

@@ -25,6 +25,7 @@ function gx_euvrender_ebtel,model,renderer,info=info,ebtel_path=ebtel_path,q_par
   default, q_formula, 'q[0]*(B/q[1])^q[3]*(L/q[2])^q[4]'
   q_formula=volume->SetQ(q_formula,/quiet)
   message,'EBTEL heating rate formula in use: '+q_formula,/info
+  if volume->NewNT(NTkey) then volume->SetVertexAttributeData,'NTkey',NTkey
   gxcube=gx_render(model,renderer,_extra=_extra)
   fovmap=(model->GetFovMap())->get(/map)
   add_prop,fovmap,gx_key=string(model->GetVertexData('NTkey')),/replace
