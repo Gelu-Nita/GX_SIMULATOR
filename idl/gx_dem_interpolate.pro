@@ -1,4 +1,4 @@
-pro gx_dem_interpolate,n,t,dem,ddm,path=path,logtdem=logtdem,dem_run=dem_run,ddm_run=ddm_run,qrun=qrun,lrun=lrun,qarr=qarr,$
+pro gx_dem_interpolate,n,t,dem,ddm,path=path,libpath=libpath,logtdem=logtdem,dem_run=dem_run,ddm_run=ddm_run,qrun=qrun,lrun=lrun,qarr=qarr,$
                     larr=larr,tr=tr,avgdem=avgdem,duration=duration,method=method,info=info,expert=expert,$
                     use_dem=use_dem,has_ddm=has_ddm,has_used_ddm=has_used_ddm
   if keyword_set(info) then goto,getinfo
@@ -29,12 +29,58 @@ pro gx_dem_interpolate,n,t,dem,ddm,path=path,logtdem=logtdem,dem_run=dem_run,ddm
   n=fltarr(n_elements(larr))
   T=fltarr(n_elements(larr))
   use_ddm=(has_used_ddm=keyword_set(has_ddm) and ~keyword_set(use_dem))
-  if arg_present(dem) then dem=fltarr(n_elements(logtdem), n_elements(larr)) 
-  if arg_present(ddm) and keyword_set(use_ddm)then ddm=fltarr(n_elements(logtdem), n_elements(larr)) 
+  if arg_present(dem) then dem=dblarr(n_elements(logtdem), n_elements(larr)) 
+  if arg_present(ddm) and keyword_set(use_ddm)then ddm=dblarr(n_elements(logtdem), n_elements(larr)) 
   getinfo:
   default,avgdem,0
   case avgdem of
     1:begin
+      method='Bilinear (shared library)'
+      if keyword_set(info) then return
+      default,libpath,gx_libpath('rendergrff')
+      if n_elements(dem) eq 0 then dem=dblarr(n_elements(logtdem), n_elements(larr))
+      if n_elements(ddm) eq 0 then ddm=dblarr(n_elements(logtdem), n_elements(larr))
+      DEM_on=exist(DEM_run)
+      DDM_on=exist(DDM_run)
+
+      s=size(dem_run, /dimensions)
+
+      NT=s[0]
+      NQ=s[1]
+      NL=s[2]
+      NP=n_elements(Qarr)
+
+      Lparms=long([NP, NQ, NL, NT, DEM_on, DDM_on])
+
+      flag=bytarr(NP)
+      res=call_external(libpath, $
+        'InterpolateEBTEL', $
+        Lparms, $
+        Qrun, $
+        Lrun, $
+        DEM_on ? DEM_run : 0, $
+        DDM_on ? DDM_run : 0, $
+        Qarr, $
+        Larr, $
+        DEM_on ? DEM: 0, $
+        DDM_on ? DDM: 0, $
+        flag)
+      if use_ddm and DDM_on then begin
+        narr=(ddm##tdem)
+        N=alog(10.)*dlogt*narr
+        T=ddm##sqrtdem/narr
+      endif else begin
+        n2arr=(dem##tdem)
+        N=sqrt(alog(10.)*dlogt*n2arr)
+        T=dem##sqrtdem/n2arr
+      endelse
+      bad=where(flag eq 0,count)
+      if count gt 0 then begin
+        n[bad]=0
+        t[bad]=0
+      endif
+    end
+    2:begin
       method='Nearest Neighbor'+(keyword_set(expert)?' (loop)':'')
       if keyword_set(info) then return
       xmm=[-1,n_elements(x)-1]
@@ -91,7 +137,7 @@ pro gx_dem_interpolate,n,t,dem,ddm,path=path,logtdem=logtdem,dem_run=dem_run,ddm
         skip1:
       endfor
     end 
-    2:begin
+    3:begin
       method='4-Neighbors Mean'+(keyword_set(expert)?' (loop)':'')
       if keyword_set(info) then return
       xmm=[-1,n_elements(x)-1]
@@ -126,7 +172,7 @@ pro gx_dem_interpolate,n,t,dem,ddm,path=path,logtdem=logtdem,dem_run=dem_run,ddm
         skip2:
       endfor
     end
-    3:begin
+    4:begin
       method='4-Neighbors Weighted Mean'+(keyword_set(expert)?' (vect.)':'')
       if keyword_set(info) then return
       xhist=histogram([xloc],loc=iloc,r=r)
@@ -198,7 +244,7 @@ pro gx_dem_interpolate,n,t,dem,ddm,path=path,logtdem=logtdem,dem_run=dem_run,ddm
       endfor
     end
     
-    4:begin
+    5:begin
       method='Nearest Index Neighbor'+(keyword_set(expert)?' (loop)':'')
       if keyword_set(info) then return
       xmm=[-1,n_elements(x)-1]
@@ -225,7 +271,7 @@ pro gx_dem_interpolate,n,t,dem,ddm,path=path,logtdem=logtdem,dem_run=dem_run,ddm
       endfor
     end
              
-    5:begin
+    6:begin
         method='4-Neighbors Mean'+(keyword_set(expert)?' (vect.)':'')
         if keyword_set(info) then return
         xhist=histogram([xloc],loc=iloc,r=r)
@@ -272,7 +318,7 @@ pro gx_dem_interpolate,n,t,dem,ddm,path=path,logtdem=logtdem,dem_run=dem_run,ddm
          endfor   
       end
     
-      6:begin
+      7:begin
         ;this was the method used before 26 March 2020,
         method='4-Neighbors Weighted Mean'+(keyword_set(expert)?' (loop)':'')
         if keyword_set(info) then return
@@ -342,10 +388,10 @@ pro gx_dem_interpolate,n,t,dem,ddm,path=path,logtdem=logtdem,dem_run=dem_run,ddm
               jloc=jloc[good]
               dem_i=dem_run[*,jloc,iloc[k]]
               if use_ddm then ddm_i=ddm_run[*,jloc,iloc[k]]
-              if count eq 1 then begin 
+              if count eq 1 then begin
                 dem_i=reform(dem_i,ntdem,count)
                 if use_ddm then ddm_i=reform(ddm_i,ntdem,count)
-              end 
+              end
               if use_ddm then begin
                 narr=(ddm_i##tdem)
                 N[i]=alog(10.)*dlogt*narr

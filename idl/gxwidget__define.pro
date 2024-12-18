@@ -1285,7 +1285,7 @@ end
      
      'GXMODEL:UPDATE': Begin
                         volume=(self.subject->GetVolume())
-                        volume->Update,/force
+                        volume->Update,/nt
                        End                                                                                     
      'GXMODEL:ADDTR': BEGIN
                          addtr=widget_info(event.id,/button_set)
