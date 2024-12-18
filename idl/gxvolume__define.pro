@@ -588,7 +588,7 @@ end
 
 pro gxVolume::Update,select,data=data,plot_model_attributes=plot_model_attributes,getdata=getdata,$
               force=force,update=update,chromo_view=chromo_view,range=range,pwr_idx=pwr_idx,$
-              nt_update=nt_update,use_dem=use_dem,has_used_ddm=has_used_ddm,quiet=quiet
+              nt_update=nt_update,use_dem=use_dem,avgdem=avgdem,has_used_ddm=has_used_ddm,quiet=quiet
   compile_opt hidden
   catch, error_stat
  if error_stat ne 0 then begin
@@ -598,7 +598,7 @@ pro gxVolume::Update,select,data=data,plot_model_attributes=plot_model_attribute
  end
   if ~obj_valid(self.parent) then return
   if keyword_set(nt_update) then  begin
-    self->ComputeNT,/force,use_dem=use_dem,has_used_ddm=has_used_ddm
+    self->ComputeNT,/force,use_dem=use_dem,avgdem=avgdem,has_used_ddm=has_used_ddm
     self->UpdateVoxelId
     return
   endif
@@ -905,7 +905,7 @@ function gxVolume::NewNT,newkey,oldkey
   return,flags.newNT
 end
 
-pro gxVolume::ComputeNT,question=question,quiet=quiet,force=force,NTDEM=NTDEM,NTSS=NTSS,use_dem=use_dem,has_used_ddm=has_used_ddm
+pro gxVolume::ComputeNT,question=question,quiet=quiet,force=force,NTDEM=NTDEM,NTSS=NTSS,use_dem=use_dem,has_used_ddm=has_used_ddm,avgdem=avgdem
   if keyword_set(force) then goto, compute
   if ~self.flags.newNT and keyword_set(question) then begin
     if ~keyword_set(quiet) then answ=dialog_message('The N-T pairs have been already computed using current settings. Do you want to recompute them  anyway?',/question)
