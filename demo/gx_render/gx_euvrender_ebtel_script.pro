@@ -31,6 +31,6 @@ q_parms=[q, 100.0, 1.0000000d+009, 0.0, 0.0]
 ;+++++++++++++++++++++++++++++++++++++
 default,renderer,'aia.pro'
 ;+++++++++++++++++++++++++++++++++
-return,gx_euvrender_ebtel(model,renderer,ebtel_path=ebtel_path,q_parms=q_parms,q_formula=q_formula,q0_formula=q0_formula,gxcube=gxcube)
+return,gx_euvrender_ebtel(model,renderer,ebtel_path=ebtel_path, libpath=libpath,q_parms=q_parms,q_formula=q_formula,q0_formula=q0_formula,gxcube=gxcube)
 
 end

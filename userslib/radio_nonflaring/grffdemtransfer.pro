@@ -1,5 +1,5 @@
-pro grffdemtransfer,parms,rowdata,nparms,rparms,path,parmin,datain,freqlist,logtdem=logtdem,$
-dem_run=dem_run,ddm_run=ddm_run,qrun=qrun,lrun=lrun,use_dem=use_dem,has_ddm=has_ddm,info=info
+pro grffdemtransfer,parms,rowdata,nparms,rparms,path,parmin,datain,freqlist,ebtel_path=ebtel_path,libpath=libpath,$
+logtdem=logtdem,dem_run=dem_run,ddm_run=ddm_run,qrun=qrun,lrun=lrun,use_dem=use_dem,has_ddm=has_ddm,info=info
 if n_elements(path) eq 0 then path=gx_libpath('grffdem')
  if arg_present(info) then begin
     if n_elements(parms) gt 0 then dummy=temporary(parms)
@@ -129,7 +129,7 @@ if n_elements(path) eq 0 then path=gx_libpath('grffdem')
    if n_elements(parmin) eq 0 then parmin=dblarr(N_parms,Nvox)
   for pix=0, Npix-1 do begin
     parmin[*,*]=transpose(parms[pix,*,*])
-    gx_dem_interpolate,n,t,los_dem,los_ddm,logtdem=logtdem,dem_run=dem_run,ddm_run=ddm_run,qrun=qrun,lrun=lrun,$
+    gx_dem_interpolate,n,t,los_dem,los_ddm,ebtel_path=ebtel_path,libpath=libpath,logtdem=logtdem,dem_run=dem_run,ddm_run=ddm_run,qrun=qrun,lrun=lrun,$
       qarr=parmin[parms_idx+1,*],larr=parmin[parms_idx+2,*],avgdem=nparms[5],use_dem=use_dem,has_ddm=has_ddm
     DEMvox=where((n gt 0 and t gt 0),nDemvox,comp=noDEMvox,ncomp=nNoDEMvox)
     if ~keyword_set(has_ddm) then los_ddm=los_dem*0

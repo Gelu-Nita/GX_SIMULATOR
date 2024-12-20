@@ -1,10 +1,10 @@
-pro gx_dem_interpolate,n,t,dem,ddm,path=path,libpath=libpath,logtdem=logtdem,dem_run=dem_run,ddm_run=ddm_run,qrun=qrun,lrun=lrun,qarr=qarr,$
+pro gx_dem_interpolate,n,t,dem,ddm,ebtel_path=ebtel_path,libpath=libpath,logtdem=logtdem,dem_run=dem_run,ddm_run=ddm_run,qrun=qrun,lrun=lrun,qarr=qarr,$
                     larr=larr,tr=tr,avgdem=avgdem,duration=duration,method=method,info=info,expert=expert,$
                     use_dem=use_dem,has_ddm=has_ddm,has_used_ddm=has_used_ddm
   if keyword_set(info) then goto,getinfo
   if n_elements(logtdem) eq 0 or n_elements(dem_run) eq 0 or n_elements(qrun) eq 0 or n_elements(lrun) eq 0 then begin
-    if n_elements(path) eq 0 then path=gx_ebtel_path()
-    restore,path
+    if ~file_exist(ebtel_path) then ebtel_path=gx_ebtel_path()
+    restore,ebtel_path
     has_ddm=(n_elements(ddm_cor_run) eq n_elements(dem_cor_run)) and (n_elements(ddm_cor_run) eq n_elements(dem_cor_run))
     use_ddm=keyword_set(has_ddm) and ~keyword_set(use_dem)
     if keyword_set(tr) then begin
@@ -37,7 +37,7 @@ pro gx_dem_interpolate,n,t,dem,ddm,path=path,libpath=libpath,logtdem=logtdem,dem
     1:begin
       method='Bilinear (shared library)'
       if keyword_set(info) then return
-      default,libpath,gx_libpath('rendergrff')
+      if ~file_exist(libpath) then libpath=gx_libpath('rendergrff')
       if n_elements(dem) eq 0 then dem=dblarr(n_elements(logtdem), n_elements(larr))
       if n_elements(ddm) eq 0 then ddm=dblarr(n_elements(logtdem), n_elements(larr))
       DEM_on=exist(DEM_run)

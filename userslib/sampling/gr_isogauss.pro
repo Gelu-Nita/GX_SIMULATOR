@@ -1,10 +1,11 @@
-pro gr_isogauss,parms,rowdata,nparms,rparms,path,parmin,datain,freqlist,grparms=grparms,logtdem=logtdem,$
+pro gr_isogauss,parms,rowdata,nparms,rparms,path,parmin,datain,freqlist,ebtel_path=ebtel_path,libpath=libpath,grparms=grparms,logtdem=logtdem,$
 dem_run=dem_run,ddm_run=ddm_run,qrun=qrun,lrun=lrun,use_dem=use_dem,has_ddm=has_ddm,info=info
  if n_elements(path) eq 0 then path=gx_libpath('grffdem')
  if arg_present(info) then begin
     if n_elements(parms) gt 0 then dummy=temporary(parms)
     ;update EBTEL Fields
-    restore,gx_ebtel_path()
+    if ~file_exist(ebtel_path) then ebtel_path=gx_ebtel_path()
+    restore,ebtel_path
     if n_elements(info) eq 0 then begin
       result=call_external(path,'GET_PARMS1_SLICE',/F_VALUE,/unload )
       openr,lun,'Parms_input.txt',/get,error=error
@@ -139,7 +140,7 @@ dem_run=dem_run,ddm_run=ddm_run,qrun=qrun,lrun=lrun,use_dem=use_dem,has_ddm=has_
       parmin[*,*]=transpose(parms[pix,*,*])
       if ~keyword_set(skip_DEMDDM) then begin
         ;if both DEM_Key and DDM_Key are turned off then skip the gx_dem_interpolate block
-      gx_dem_interpolate,n,t,los_dem,los_ddm,logtdem=logtdem,dem_run=dem_run,ddm_run=ddm_run,qrun=qrun,lrun=lrun,$
+      gx_dem_interpolate,n,t,los_dem,los_ddm,ebtel_path=ebtel_path,libpath=libpath,logtdem=logtdem,dem_run=dem_run,ddm_run=ddm_run,qrun=qrun,lrun=lrun,$
         qarr=parmin[parms_idx+1,*],larr=parmin[parms_idx+2,*],avgdem=avgdem,use_dem=use_dem,has_ddm=has_ddm
       
       DEMvox=where((n gt 0 and t gt 0),nDemvox,comp=noDEMvox,ncomp=nNoDEMvox)
