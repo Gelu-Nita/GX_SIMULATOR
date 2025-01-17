@@ -28,16 +28,16 @@ function gxObjViewWid::Init,wParent, oSubjects, toolbar_parent=toolbar_parent,_e
               value='ZY',tooltip='Show ZY view',font=!defaults.font,uname='zyview' $
               )
    self.wMovie=widget_button( ViewBase, $
-              value=gx_bitmap(filepath('eba_meth_ex_cm.bmp', subdirectory=*self.pBitmapPath)), $
+              value=gx_bitmap(filepath('eba_meth_ex_cm.bmp', subdirectory=['resource', 'bitmaps'])), $
               /bitmap,tooltip='Generate Rotating Model Video')        
    self.wFieldline=widget_button(widget_info(self.wRotate,/parent),$
-              value=gx_bitmap(filepath('roi.bmp', subdirectory=*self.pBitmapPath)), $
+              value=gx_bitmap(filepath('roi.bmp', subdirectory=['resource', 'bitmaps'])), $
               /bitmap,tooltip='Create Field Line',sensitive=0)
    self.wRemove= widget_button( widget_info(self.wRotate,/parent), $
-              value=gx_bitmap(filepath('roi_active.bmp', subdirectory=*self.pBitmapPath)), $
+              value=gx_bitmap(filepath('roi_active.bmp', subdirectory=['resource', 'bitmaps'])), $
               /bitmap,tooltip='Remove Field Line')
    self.wFluxtube=widget_button(widget_info(self.wRotate,/parent),$
-              value=gx_bitmap(filepath('polar.bmp', subdirectory=*self.pBitmapPath)), $
+              value=gx_bitmap(filepath('polar.bmp', subdirectory=['resource', 'bitmaps'])), $
               /bitmap,tooltip='Create Flux Tube')
 
   self.wBaseMapContextMenu= WIDGET_BASE(self.wDraw, /CONTEXT_MENU, UNAME="BaseMapContextMenu")
