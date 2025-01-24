@@ -28,6 +28,7 @@ pro gx_dem_interpolate,n,t,dem,ddm,ebtel_path=ebtel_path,libpath=libpath,logtdem
   ones=replicate(1,ntdem)
   n=fltarr(n_elements(larr))
   T=fltarr(n_elements(larr))
+  has_ddm=n_elements(ddm_run) ne 0
   use_ddm=(has_used_ddm=keyword_set(has_ddm) and ~keyword_set(use_dem))
   if arg_present(dem) then dem=dblarr(n_elements(logtdem), n_elements(larr)) 
   if arg_present(ddm) and keyword_set(use_ddm)then ddm=dblarr(n_elements(logtdem), n_elements(larr)) 
@@ -39,7 +40,7 @@ pro gx_dem_interpolate,n,t,dem,ddm,ebtel_path=ebtel_path,libpath=libpath,logtdem
       if keyword_set(info) then return
       if ~file_exist(libpath) then libpath=gx_libpath('rendergrff')
       if n_elements(dem) eq 0 then dem=dblarr(n_elements(logtdem), n_elements(larr))
-      if n_elements(ddm) eq 0 then ddm=dblarr(n_elements(logtdem), n_elements(larr))
+      if n_elements(ddm) eq 0 and keyword_set(use_ddm) then ddm=dblarr(n_elements(logtdem), n_elements(larr))
       DEM_on=exist(DEM_run)
       DDM_on=exist(DDM_run)
       if DEM_on then s=size(DEM_run, /dimensions) $

@@ -41,14 +41,15 @@ pro gx_euv,parms,rowdata,nparms,rparms,sparms,ebtel_path, libpath, $
         parmin=rowparms[*,point_in]
         norm=parmin[idx.parms.dr,*]*norm_pix
        if useDEM eq 1 then begin
-         gx_dem_interpolate,n,t,dem,ebtel_path=ebtel_path,libpath=libpath,logtdem=logtdem,dem_run=dem_run,qrun=qrun,lrun=lrun,qarr=parmin[idx.parms.q,*],larr=parmin[idx.parms.l,*],avgdem=avgdem
+         gx_dem_interpolate,n,t,dem,ebtel_path=ebtel_path,libpath=libpath,logtdem=logtdem,dem_run=dem_run,qrun=qrun,$
+                            lrun=lrun,qarr=parmin[idx.parms.q,*],larr=parmin[idx.parms.l,*],avgdem=avgdem,/use_dem
          tr_factor=1
          if AddTR eq 1 then begin
            tr_idx=max(where((ulong(parmin[idx.parms.voxid,*]) and gx_voxelid(/euv)) ne 0))
            if tr_idx ge 0 then begin
            point_in=where((parmin[idx.parms.t0,*] gt 0 and parmin[idx.parms.nhi,*] lt n_hi0))
-           gx_dem_interpolate,n_tr,t_tr,dem_tr,ebtel_path=ebtel_path, libpath=libpath,logtdem=logtdem,dem_run=dem_tr_run,lrun=lrun,qrun=qrun,$
-             larr=parmin[idx.parms.l,tr_idx],qarr=parmin[idx.parms.q,tr_idx],/tr,avgdem=avgdem
+           gx_dem_interpolate,n_tr,t_tr,dem_tr,ebtel_path=ebtel_path, libpath=libpath,logtdem=logtdem,dem_run=dem_tr_run,$
+             lrun=lrun,qrun=qrun,larr=parmin[idx.parms.l,tr_idx],qarr=parmin[idx.parms.q,tr_idx],/tr,avgdem=avgdem,use_dem
              tr_factor=ApplyTRfactor gt 0?parmin[idx.parms.trf,tr_idx]:1
              tr_add=(n_tr[0] gt 0 and t_tr[0] gt 0)
            endif else tr_add=0
