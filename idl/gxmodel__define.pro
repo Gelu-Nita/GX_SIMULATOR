@@ -798,7 +798,10 @@ pro gxModel::ComputeTRmask,type=type,threshold=threshold,trmap=trmap,test=test
   match=(*self.refmaps)->Get(/count)-1
  endif else (*self.refmaps)->set,match, map=map
  self->DisplayMap,match
- widget_control,widget_info(self.wparent,find_by_uname='GXMODEL:BaseMapSelect'),SET_COMBOBOX_SELECT=match
+ if widget_valid(self.wparent) then begin
+  wid=widget_info(self.wparent,find_by_uname='GXMODEL:BaseMapSelect')
+  if widget_valid(wid) then widget_control,wid,SET_COMBOBOX_SELECT=match
+ endif
 end
 
 pro gxModel::DisplayTRmask,trmap=trmap
