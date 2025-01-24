@@ -42,37 +42,54 @@ pro gx_dem_interpolate,n,t,dem,ddm,ebtel_path=ebtel_path,libpath=libpath,logtdem
       if n_elements(ddm) eq 0 then ddm=dblarr(n_elements(logtdem), n_elements(larr))
       DEM_on=exist(DEM_run)
       DDM_on=exist(DDM_run)
-
-      s=size(dem_run, /dimensions)
-
+      if DEM_on then s=size(DEM_run, /dimensions) $
+      else if DDM_on then s=size(DDM_run, /dimensions) $
+      else begin
+        message, 'Either DEM_run or DDM_run must be specified!'
+      endelse
+      
       NT=s[0]
       NQ=s[1]
       NL=s[2]
       NP=n_elements(Qarr)
-
+      
       Lparms=long([NP, NQ, NL, NT, DEM_on, DDM_on])
-
+      
       flag=bytarr(NP)
+      
+      if DEM_on then begin
+        n_DEM=dblarr(NP)
+        T_DEM=dblarr(NP)
+      endif
+      if DDM_on then begin
+        n_DDM=dblarr(NP)
+        T_DDM=dblarr(NP)
+      endif
+      
       res=call_external(libpath, $
         'InterpolateEBTEL', $
         Lparms, $
         Qrun, $
         Lrun, $
+        logtdem, $
         DEM_on ? DEM_run : 0, $
         DDM_on ? DDM_run : 0, $
         Qarr, $
         Larr, $
-        DEM_on ? DEM: 0, $
-        DDM_on ? DDM: 0, $
-        flag)
+        DEM_on ? DEM : 0, $
+        DDM_on ? DDM : 0, $
+        DEM_on ? n_DEM : 0, $
+        DEM_on ? T_DEM : 0, $
+        DDM_on ? n_DDM : 0, $
+        DDM_on ? T_DDM : 0, $
+        flag)  
+        
       if use_ddm and DDM_on then begin
-        narr=(ddm##tdem)
-        N=alog(10.)*dlogt*narr
-        T=ddm##sqrtdem/narr
+         n[*]=n_DDM
+         t[*]=t_DDM
       endif else begin
-        n2arr=(dem##tdem)
-        N=sqrt(alog(10.)*dlogt*n2arr)
-        T=dem##sqrtdem/n2arr
+         n[*]=n_DEM
+         t[*]=t_DEM
       endelse
       bad=where(flag eq 0,count)
       if count gt 0 then begin
