@@ -26,3 +26,6 @@
 [submodule "external/nlfff"]
 	path = external/nlfff
 	url = https://github.com/Alexey-Stupishin/idlAMaFiL
+[submodule "external/rendereuv"]
+	path = external/rendereuv
+	url = https://github.com/kuznetsov-radio/EUVtransfer
