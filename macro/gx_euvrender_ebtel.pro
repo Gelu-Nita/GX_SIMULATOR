@@ -30,7 +30,7 @@ function gx_euvrender_ebtel,model,renderer,info=info,ebtel_path=ebtel_path, q_pa
   fovmap=(model->GetFovMap())->get(/map)
   add_prop,fovmap,gx_key=string(model->GetVertexData('NTkey')),/replace
   (model->GetFovMap())->setmap,0,fovmap
-  return,gx_gxcube2maps(gxcube)
+  return,gx_gxcube2maps(gxcube,n=1)
   skip:
   return,isa(map)?map:!null
 end

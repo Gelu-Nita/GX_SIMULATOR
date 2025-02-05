@@ -1,4 +1,4 @@
-function gx_gxcube2maps,gxcube,map,idx=idx
+function gx_gxcube2maps,gxcube,map,idx=idx,npol=npol
   ;map input should be provided to add the gxcube maps to an existing map object
   default,map,obj_new('map')
   if ~obj_valid(map) then begin
@@ -44,8 +44,8 @@ function gx_gxcube2maps,gxcube,map,idx=idx
  i=map->get(/count) 
  sz=size(gxcube.data)
  if sz[0] gt 3 then begin
-  pol=gxcube.info.spectrum.y.label[0:1]
-  npol=2
+  default,npol,2
+  pol=gxcube.info.spectrum.y.label[0:npol-1]
  endif else begin
   pol=''
   npol=1
