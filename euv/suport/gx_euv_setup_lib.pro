@@ -86,9 +86,9 @@ if n_elements(info) eq 0 then begin
     nparms:nparms,$
     rparms:rparms,$
     sparms:sparms,$
-    pixdim:[nchan],$
+    pixdim:[nchan,5],$
     spectrum:{x:{axis:w,label:'Wavelength',unit:'A'},$
-    y:{label:'I',unit:'counts/s/pix'}}}
+    y:{label:['I','Corona','TR','Full TR','TR Mask'],unit:[replicate('counts/s/pix',4),'ON/OFF']}}}
   catch, error_stat
   if error_stat ne 0 then begin
     catch, /cancel

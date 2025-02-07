@@ -43,18 +43,12 @@ pro gx_euv_lib,parms,rowdata,nparms,rparms,sparms,ebtel_path, libpath, $
    
    Lparms_M=[Npix, Nvox, Nchan, NT_rsp, NQ, NL, NT_DEM]
    Rparms_M=array_replicate([dS_arcsec2, dS_rsp],Npix)
-;   voxID=reform(ulong(parms[*,*,idx.parms.voxid]))
-;   cor_idx=where((voxID and gx_voxelid(/corona)) ne 0,ncor)
-;   tr_idx=where((voxID and gx_voxelid(/tr)) ne 0,ntr)
-;   voxID[*]=0
-;   if ncor gt 0 then voxId[cor_idx]=voxId[cor_idx]+1
-;   if ntr gt 0 then voxId[tr_idx]=voxId[tr_idx]+2
-;   parms[*,*,idx.parms.voxid]=voxID
    Parms_m=transpose(parms,[2,1,0])
    flux_M=dblarr(2, Nchan, Npix)
    res=call_external(libpath, 'GET_GX_EUV_SLICE', $
      Lparms_M, Rparms_M, Parms_M, logTe_rsp, r, $
      Qrun, Lrun, logtDEM, DEM_cor_run, DEM_tr_run, flux_M, /unload) 
-     rowdata[*,*,1]=transpose(flux_m[1,*,*])
-     rowdata[*,*,3]=transpose(flux_m[0,*,*])   
+     rowdata[*,*,1]=transpose(flux_m[0,*,*])
+     rowdata[*,*,3]=transpose(flux_m[1,*,*])   
+     rowdata[*,*,0]=rowdata[*,*,1]+rowdata[*,*,3]
 end
