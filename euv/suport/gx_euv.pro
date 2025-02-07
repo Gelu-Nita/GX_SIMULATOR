@@ -57,21 +57,21 @@ pro gx_euv,parms,rowdata,nparms,rparms,sparms,ebtel_path, libpath, $
            noDEMvox=where((n eq 0 or t eq 0),nnoDemvox, comp=DEMvox,ncomp=nDemvox)
            if nnoDEMvox gt 0 then begin
              g = dspline(response.logte, response.all[*,chan], alog10(reform(parmin[idx.parms.t0,noDEMvox]))<maxLogT>minLogT)
-             rowdata[pix,chan,1]=total(norm*reform(parmin[idx.parms.n0,noDEMvox])^2*g,/double)
+             rowdata[pix,chan,1]=rowdata[pix,chan,1]+total(norm*reform(parmin[idx.parms.n0,noDEMvox])^2*g,/double)
            end
            DEMvox=where((n gt 0 and t gt 0),nDemvox)
            if nDEMvox gt 0 then begin
              g = dspline(response.logte, response.all[*,chan], logtdem<maxLogT>minLogT)
-             rowdata[pix,chan,1]= alog(10.)*dlogt*total(norm*((g*(10.^logtdem))#dem))
+             rowdata[pix,chan,1]= rowdata[pix,chan,1]+alog(10.)*dlogt*total(norm*((g*(10.^logtdem))#dem))
              if tr_add eq 1 then begin
-               rowdata[pix,chan,3]=norm_pix*tr_factor*alog(10.)*dlogt*total((g*(10.^logtdem))*dem_tr)
+               rowdata[pix,chan,3]=rowdata[pix,chan,3]+norm_pix*tr_factor*alog(10.)*dlogt*total((g*(10.^logtdem))*dem_tr)
              end 
            end
          end
        endif else begin
         for chan=0, nchan-1 do begin
             g = dspline(response.logte, response.all[*,chan], alog10(reform(parmin[idx.parms.t0,*]))<maxLogT>minLogT)
-            rowdata[pix,chan,1] = total(norm*reform(parmin[idx.parms.n0,*])^2*g,/double)
+            rowdata[pix,chan,1] = rowdata[pix,chan,1]+total(norm*reform(parmin[idx.parms.n0,*])^2*g,/double)
         end
        end
      end
