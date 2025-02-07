@@ -55,7 +55,7 @@ pro gx_euv_lib,parms,rowdata,nparms,rparms,sparms,ebtel_path, libpath, $
    res=call_external(libpath, 'GET_GX_EUV_SLICE', $
      Lparms_M, Rparms_M, Parms_M, logTe_rsp, r, $
      Qrun, Lrun, logtDEM, DEM_cor_run, DEM_tr_run, flux_M, /unload)
-   rowdata[*,*,1]=transpose(flux_m[0,*,*])  
-   rowdata[*,*,2]=transpose(flux_m[1,*,*])  
-   rowdata[*,*,0]=rowdata[*,*,1]+rowdata[*,*,2] 
+   rowdata[*,*,3]=transpose(flux_m[0,*,*])  
+   rowdata[*,*,1]=transpose(flux_m[1,*,*])  
+   rowdata[*,*,0]=rowdata[*,*,1]+rowdata[*,*,3] 
 end
