@@ -1,6 +1,6 @@
 pro gx_euv_setup_lib, instrument=instrument, idx=idx, info=info
 
-default, idx, { parms:  {dr:0,t0:1,n0:2,q:3,l:4,voxid:5,trf:6,reserved1:7,reserved2:8,reserved3:9},$
+default, idx, { parms:  {dr:0,t0:1,n0:2,voxid:3,q:4,l:5,trf:6,reserved1:7,reserved2:8,reserved3:9},$
                 nparms: {npix:0,nvox:1,nchan:2,addtr:3,applytrf:4,evenorm:5,chiantifix:6},$
                 rparms: {ds:0,relabund:1}, $
                 sparms: {instr:0,responsedate:1,ebtel:2 }}
