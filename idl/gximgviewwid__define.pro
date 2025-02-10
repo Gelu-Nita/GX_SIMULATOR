@@ -1085,6 +1085,8 @@ pro gxImgViewWid::ImgCubeFile2Renderer,tlb
       widget_control,widget_info(tlb,/child),get_uvalue=state
       if n_elements(state) ne 0 then begin
         state.Scanbox->ReplaceRenderer,gxcube
+        obj_destroy,self.fovmap
+        self.fovmap=gxcube.fovmap
       endif else begin
         if n_elements(gxcube) ne 0 then begin
           if ~tag_exist(gxcube,'renderer') or ~tag_exist(gxcube,'data') $

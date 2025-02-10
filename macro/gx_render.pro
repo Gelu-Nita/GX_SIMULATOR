@@ -1,5 +1,5 @@
 ;this is general purpose macro that may be used to compute radiation transfer images programatically
-function gx_render,model,renderer,logfile=logfile,_extra=_extra,quiet=quiet
+function gx_render,model,renderer,all_at_once=all_at_once,logfile=logfile,quiet=quiet,_extra=_extra
   t0=systime(/s)
   if ~isa(model) then begin
     message,'None or invalid model provided! Operation aborted!',/info
@@ -38,9 +38,6 @@ function gx_render,model,renderer,logfile=logfile,_extra=_extra,quiet=quiet
   sz=size(fovmap->get(/data))
   nx=sz[1]
   ny=sz[2]
-  rowdata=make_array([nx,info.pixdim],/float)
-  dim=[nx,ny,info.pixdim]
-  data=make_array(dim,/float)
   chanlist=info.spectrum.x.axis
   nchan=n_elements(chanlist)
   if tag_exist(info,'nparms') then begin
@@ -65,29 +62,45 @@ function gx_render,model,renderer,logfile=logfile,_extra=_extra,quiet=quiet
     f_arr=info.aparms.f_arr
   endif
   
-  t0=systime(/s)
-  for row=0, ny-1 do begin
-    if ~keyword_set(quiet) then print,strcompress(string(row+1,ny,format="('computing image row ', i5,' out of', i5,'...')"))
-    rowdata[*]=0
-    if ptr_valid(scanner) then for k=1,n_tags(*scanner)-1 do (*scanner).(k)[*]=0
-    model->Slice,info.parms,row,scanner=scanner
+  if keyword_set(all_at_once) then begin
+    if size(logfile,/tname) eq 'STRING' then message,'The option to create a parameter log file is not available if the /all_at_once computation mode !',/info
+    grid=model->GetGrid()
+    sz=size(*grid)
+    nparms[0]=sz[2]*sz[3]
+    nparms[1]=sz[4]
+    grid=reform(*grid,4,sz[2]*sz[3],1,sz[4])
+    Model->Slice,info.parms,row,grid,scanner=scanner
     parms=(*scanner).parms
-    timenow=systime(1)
+    rowdata=make_array([sz[2]*sz[3],(info).pixdim],/float)
     result=execute(info.execute)
-    if ~keyword_set(quiet) then print,strcompress(string(systime(1)-timenow,format="(' computed in ',g0, ' s')"))
-    data[*,row,*,*,*]=rowdata
-    if size(logfile,/tname) eq 'STRING' then begin
-      if row eq 0 then begin
-       MULTI_SAVE,/new,log,{row:-1L,parms:parms,$
-        data:rowdata,grid:transpose(reform((*(*scanner).grid)[*,*,0,*]),[1,2,0])},file=logfile, $
-        header={renderer:renderer,info:info,fovmap:fovmap,nx:nx,ny:ny,xrange:fovmap->get(/xrange),yrange:fovmap->get(/yrange),ebtel:gx_ebtel_path()}
+    data=reform(temporary(rowdata),[nx,ny,info.pixdim])
+  endif else begin
+    rowdata=make_array([nx,info.pixdim],/float)
+    dim=[nx,ny,info.pixdim]
+    data=make_array(dim,/float)
+    for row=0, ny-1 do begin
+      if ~keyword_set(quiet) then print,strcompress(string(row+1,ny,format="('computing image row ', i5,' out of', i5,'...')"))
+      rowdata[*]=0
+      if ptr_valid(scanner) then for k=1,n_tags(*scanner)-1 do (*scanner).(k)[*]=0
+      model->Slice,info.parms,row,scanner=scanner
+      parms=(*scanner).parms
+      timenow=systime(1)
+      result=execute(info.execute)
+      if ~keyword_set(quiet) then print,strcompress(string(systime(1)-timenow,format="(' computed in ',g0, ' s')"))
+      data[*,row,*,*,*]=rowdata
+      if size(logfile,/tname) eq 'STRING' then begin
+        if row eq 0 then begin
+         MULTI_SAVE,/new,log,{row:-1L,parms:parms,$
+          data:rowdata,grid:transpose(reform((*(*scanner).grid)[*,*,0,*]),[1,2,0])},file=logfile, $
+          header={renderer:renderer,info:info,fovmap:fovmap,nx:nx,ny:ny,xrange:fovmap->get(/xrange),yrange:fovmap->get(/yrange),ebtel:gx_ebtel_path()}
+        endif
+        MULTI_SAVE,log,{row:long(row),parms:parms,data:rowdata,grid:transpose(reform((*(*scanner).grid)[*,*,row,*]),[1,2,0])},file=logfile, header=info
       endif
-      MULTI_SAVE,log,{row:long(row),parms:parms,data:rowdata,grid:transpose(reform((*(*scanner).grid)[*,*,row,*]),[1,2,0])},file=logfile, header=info
+    endfor
+    if size(logfile,/tname) eq 'STRING' then begin
+      free_lun,log,/force
     endif
-  endfor
-  if size(logfile,/tname) eq 'STRING' then begin
-    free_lun,log,/force
-  endif
+  endelse
   model->getproperty,xcoord_conv=dx,ycoord_conv=dy
   dx=dx[1]
   dy=dy[1]
@@ -97,8 +110,7 @@ function gx_render,model,renderer,logfile=logfile,_extra=_extra,quiet=quiet
     model->getproperty,zcoord_conv=dz
     dz=dz[1]
   endif
-  
   gxcube={info:info,data:data,renderer:renderer,fovmap:fovmap,model:{dx:dx,dy:dy,dz:dz,dim:dim[1:3]}}
-  print,strcompress(string(systime(/s)-t0,format="('Computation done in ',f10.3,' seconds')"))
+  message,strcompress(string(systime(/s)-t0,format="('Computation done in ',f10.3,' seconds')")),/info
   return,gxcube
 end
