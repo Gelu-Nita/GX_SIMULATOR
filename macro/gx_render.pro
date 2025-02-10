@@ -1,5 +1,5 @@
 ;this is general purpose macro that may be used to compute radiation transfer images programatically
-function gx_render,model,renderer,logfile=logfile,_extra=_extra
+function gx_render,model,renderer,logfile=logfile,_extra=_extra,quiet=quiet
   t0=systime(/s)
   if ~isa(model) then begin
     message,'None or invalid model provided! Operation aborted!',/info
@@ -67,14 +67,14 @@ function gx_render,model,renderer,logfile=logfile,_extra=_extra
   
   t0=systime(/s)
   for row=0, ny-1 do begin
-    print,strcompress(string(row+1,ny,format="('computing image row ', i5,' out of', i5,'...')"))
+    if ~keyword_set(quiet) then print,strcompress(string(row+1,ny,format="('computing image row ', i5,' out of', i5,'...')"))
     rowdata[*]=0
     if ptr_valid(scanner) then for k=1,n_tags(*scanner)-1 do (*scanner).(k)[*]=0
     model->Slice,info.parms,row,scanner=scanner
     parms=(*scanner).parms
     timenow=systime(1)
     result=execute(info.execute)
-    print,strcompress(string(systime(1)-timenow,format="(' computed in ',g0, ' s')"))
+    if ~keyword_set(quiet) then print,strcompress(string(systime(1)-timenow,format="(' computed in ',g0, ' s')"))
     data[*,row,*,*,*]=rowdata
     if size(logfile,/tname) eq 'STRING' then begin
       if row eq 0 then begin
