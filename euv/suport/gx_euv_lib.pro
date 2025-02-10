@@ -44,11 +44,13 @@ pro gx_euv_lib,parms,rowdata,nparms,rparms,sparms,ebtel_path, libpath, $
    Lparms_M=[Npix, Nvox, Nchan, NT_rsp, NQ, NL, NT_DEM]
    Rparms_M=array_replicate([dS_arcsec2, dS_rsp],Npix)
    Parms_m=transpose(parms,[2,1,0])
-   flux_M=dblarr(2, Nchan, Npix)
+   flux_M=dblarr(3, Nchan, Npix)
    res=call_external(libpath, 'GET_GX_EUV_SLICE', $
      Lparms_M, Rparms_M, Parms_M, logTe_rsp, r, $
-     Qrun, Lrun, logtDEM, DEM_cor_run, DEM_tr_run, flux_M, /unload) 
-     rowdata[*,*,1]=transpose(flux_m[0,*,*])
-     rowdata[*,*,3]=transpose(flux_m[1,*,*])   
-     rowdata[*,*,0]=rowdata[*,*,1]+rowdata[*,*,3]
+     Qrun, Lrun, logtDEM, DEM_cor_run, DEM_tr_run, flux_M) 
+     rowdata[*,*,1]=transpose(flux_m[0,*,*]); TR, no TR Mask
+     rowdata[*,*,3]=transpose(flux_m[1,*,*]); Corona 
+     rowdata[*,*,4]=transpose(flux_m[2,*,*]); TR Mask
+     rowdata[*,*,2]=rowdata[*,*,3]*rowdata[*,*,4]; Masked TR 
+     rowdata[*,*,0]=rowdata[*,*,1]+AddTR*rowdata[*,*,2]
 end
