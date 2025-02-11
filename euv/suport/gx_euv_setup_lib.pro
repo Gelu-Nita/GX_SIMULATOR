@@ -30,7 +30,6 @@ if n_elements(info) eq 0 then begin
   nparms[idx.nparms.applytrf]    ={name:'ApplyTRfactor', value:1l, unit:'(int)', user:0, hint:'Apply TR Factor'}
   nparms[idx.nparms.evenorm]     ={name:'EVEnorm',       value:1l, unit:'(int)', user:1, hint:'Perform EVE normalization'}
   nparms[idx.nparms.chiantifix]  ={name:'CHIANTIfix',    value:1l, unit:'(int)', user:1, hint:'Apply CHIANTI correction'}
-  if strupcase(instrument) ne 'AIA' then nparms=nparms[0:idx.nparms.demavg]
   
   rparms=replicate({name:'unused',value:0d,unit:'',user:0,hint:''},n_tags(idx.rparms))
    

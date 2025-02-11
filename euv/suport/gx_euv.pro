@@ -1,5 +1,5 @@
 pro gx_euv,parms,rowdata,nparms,rparms,sparms,ebtel_path, libpath, $
-          logtdem=logtdem,dem_run=dem_run,qrun=qrun,lrun=lrun,$
+          logtdem=logtdem,dem_cor_run=dem_cor_run,qrun=qrun,lrun=lrun,$
           response=response,dem_tr_run=dem_tr_run,q0=q0,l0=l0,info=info,instrument=instrument
  default,instrument,'aia'
  if arg_present(info) then begin
@@ -42,7 +42,7 @@ pro gx_euv,parms,rowdata,nparms,rparms,sparms,ebtel_path, libpath, $
         parmin=rowparms[*,point_in]
         norm=parmin[idx.parms.dr,*]*norm_pix
        if useDEM eq 1 then begin
-         gx_dem_interpolate,n,t,dem,ebtel_path=ebtel_path,libpath=libpath,logtdem=logtdem,dem_run=dem_run,qrun=qrun,$
+         gx_dem_interpolate,n,t,dem,ebtel_path=ebtel_path,libpath=libpath,logtdem=logtdem,dem_run=dem_cor_run,qrun=qrun,$
                             lrun=lrun,qarr=parmin[idx.parms.q,*],larr=parmin[idx.parms.l,*],avgdem=avgdem,/use_dem
          tr_idx=max(where((ulong(parmin[idx.parms.voxid,*]) and gx_voxelid(/tr)) ne 0))
            if tr_idx ge 0 then begin

@@ -445,7 +445,7 @@ function gxModel::Rsun
    return,self.r*60
 end
 
-function gxModel::SetFOV,xc=xc,yc=yc,xfov=xfov, yfov=yfov,_extra=_extra
+function gxModel::SetFOV,xc=xc,yc=yc,xfov=xfov,nx=nx,ny=ny, yfov=yfov,_extra=_extra
  self->SetLos,_extra=_extra
  self->ResetPosition
  rsun=self->Rsun()
@@ -462,7 +462,7 @@ function gxModel::SetFOV,xc=xc,yc=yc,xfov=xfov, yfov=yfov,_extra=_extra
  zrange=minmax(data[2,*])
  boxdata=gx_getboxedges(xrange=xrange,yrange=yrange,zrange=zrange)
  sdata=gx_transform(boxdata,stm)
- return,self->ReplaceScanboxData(sdata,_extra=_extra)
+ return,self->ReplaceScanboxData(sdata,nx=nx,ny=ny,_extra=_extra)
 end
 
 function gxModel::GetScanboxData,stm=stm

@@ -72,7 +72,8 @@ function gx_search4bestq, gxmpath=gxmpath,a_arr=a_arr,b_arr=b_arr,q_start=q_star
           if ~file_exist(modfile) or keyword_set(redo)then begin
             if ~isa(model,'gxmodel') then begin
               model=gx_read(gxmpath)
-              fovdata=model->SetFOV(xc=xc,yc=yc,xfov=xfov, yfov=yfov,nx=nx,ny=ny,/compute_grid,_extra=_extra)
+              fovdata=model->SetFOV(b0=ref->get(/b0),l0=ref->get(/l0),rsun=ref->get(/rsun),$
+                                    xc=xc,yc=yc,xfov=xfov, yfov=yfov,nx=nx,ny=ny,/compute_grid,_extra=_extra)
               end
             q0_formula='q[0]'
             q_formula=string(a,b,format="('q0*(B/q[1])^(',g0,')/(L/q[2])^(',g0,')')")
@@ -84,7 +85,7 @@ function gx_search4bestq, gxmpath=gxmpath,a_arr=a_arr,b_arr=b_arr,q_start=q_star
             endif else begin
               map=gx_euvrender_ebtel(model,renderer,info=info,ebtel_path=ebtel_path,$
                 q_parms=q_parms,q_formula=q_formula,q0_formula=q0_formula,$
-                gxcube=gxcube,_extra=_extra)
+                gxcube=gxcube,/all,_extra=_extra)
             endelse
             if obj_valid(map) then begin
                 save,map,file=modfile

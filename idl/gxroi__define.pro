@@ -97,8 +97,8 @@ function gxROI::ReplaceData,data,nx=nx,ny=ny,compute_grid=compute_grid
   old_nx=self.nx
   old_ny=self.ny
   self.scanbox->GetProperty,data=old_data
-  if n_elements(nx) eq 1 then self.nx=nx
-  if n_elements(ny) eq 1 then self.ny=ny
+  if n_elements(nx) eq 1 then self.nx=nx else nx=self.nx
+  if n_elements(ny) eq 1 then self.ny=ny else ny=self.ny
     if n_elements(data) ne 0 then begin
       self.scanbox->ReplaceData,data
       self->ReplaceFovMap
