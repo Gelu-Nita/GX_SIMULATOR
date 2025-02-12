@@ -35,7 +35,7 @@ pro gx_dem_interpolate,n,t,dem,ddm,ebtel_path=ebtel_path,libpath=libpath,logtdem
   getinfo:
   default,avgdem,0
   case avgdem of
-    1:begin
+    0:begin
       method='Bilinear (shared library)'
       if keyword_set(info) then return
       if ~file_exist(libpath) then libpath=gx_libpath('rendergrff')

@@ -16,7 +16,7 @@ endif
 model->ResetPosition
 fovdata=model->SetFOV(xc=xc,yc=yc,xfov=xfov, yfov=yfov,nx=nx,ny=ny,_extra=_extra,/compute_grid)
 ;++++++++++++++++++++++++++++++
-default,a,2
+default,a,1
 default,b,1
 default,q,0.001
 default,q0_formula,'q[0]'
@@ -25,6 +25,6 @@ q_parms=[q, 100.0, 1.0000000d+009, 0.0, 0.0]
 ;+++++++++++++++++++++++++++++++++++++
 default,renderer,'aia_lib.pro'
 ;+++++++++++++++++++++++++++++++++
-return,gx_euvrender_ebtel(model,renderer,ebtel_path=ebtel_path, libpath=libpath,q_parms=q_parms,q_formula=q_formula,q0_formula=q0_formula,gxcube=gxcube,/all)
+return,gx_euvrender_ebtel(model,renderer,ebtel_path=ebtel_path, libpath=libpath,q_parms=q_parms,q_formula=q_formula,q0_formula=q0_formula,gxcube=gxcube,/all,_extra=_extra)
 
 end
