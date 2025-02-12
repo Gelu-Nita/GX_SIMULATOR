@@ -47,7 +47,6 @@ pro gx_euv_lib,parms,rowdata,nparms,rparms,sparms,ebtel_path, libpath, $
    res=call_external(libpath, 'GET_GX_EUV_SLICE', $
      Lparms_M, Rparms_M, transpose(parms,[2,1,0]), logTe_rsp, r, $
      Qrun, Lrun, logtDEM, DEM_cor_run, DEM_tr_run, flux_M) 
-     for k=0,2 do for l=0,Nchan-1 do flux_M[k,l,*]=flux_M[k,l,*]<max(flux_M[k,l,*],/nan);removes Nans, if any
      rowdata[*,*,1]=transpose(flux_m[0,*,*]); TR, no TR Mask
      rowdata[*,*,3]=transpose(flux_m[1,*,*]); Corona 
      rowdata[*,*,4]=transpose(flux_m[2,*,*]); TR Mask
