@@ -25,6 +25,7 @@ xrange=xrange,yrange=yrange,zrange=zrange,Nx=Nx,Ny=Ny,Nz=Nz,nthreads=nthreads,_e
  self.dx=delta(self.xrange)/self.nx
  self.dy=delta(self.yrange)/self.ny
  self.dz=delta(self.zrange)/self.nz
+ self.mode=1
  
  p=dblarr(3,8)
  for i=0,7 do p[*,i] = [self.xrange[(i AND 1)], self.yrange[((i/2) AND 1)], self.zrange[((i/4) AND 1)]]
@@ -266,7 +267,7 @@ pro gxScanBox::ReplaceParmValue,name,value
         widget_control,widget_info(self.wRparms,find_by_uname=name),set_value=value
       endif
     end
-    if tag_exist(*self.info,'rparms') and widget_valid(self.wRparms) then begin
+    if tag_exist(*self.info,'sparms') and widget_valid(self.wSparms) then begin
       idx=where(strcompress(strupcase(((*self.info).sparms).name),/rem) eq strcompress(strupcase(name),/rem),count)
       if count eq 1 then begin
         sparms=(*self.info).sparms
@@ -1394,6 +1395,10 @@ pro gxScanBox::OnStartScan,event,debug=debug
        end
      end
      self->UpdateAllParms
+     if self.mode eq 0 then begin
+      self->ComputeAllatOnce
+      return
+     endif
      widget_control,self.wBridges,sensitive=0
      if ~keyword_set(Debug) then begin
       if widget_valid(self.wDebug) then widget_control,self.wDebug,sensitive=0
@@ -1978,6 +1983,26 @@ function gxScanbox::GetSliceSelector,item=item
  return,keyword_set(item)?widget_info(self.wSliceSelect,/COMBOBOX_GETTEXT):self.wSliceSelect
 end
 
+pro gxScanbox::SetComputeMode,mode
+ default,mode,1
+ self.mode=mode
+end
+
+pro gxScanbox::ComputeAllatOnce
+ widget_control,/hourglass
+ self.t_start=systime(/s)
+ prog_id=gx_progmeter(/init,label='Synthetic map computation progress')
+ self.ImgViewWid->GetProperty,model=model
+ gxcube=gx_render(model,self.renderer,info=*self.info, freqlist=(((*self.info).spectrum).x.axis),/all)
+ (*self.pData)=gxcube.data
+ prog_status=gx_progmeter(prog_id,100)
+ self.completed=self.ny
+ status_message=strcompress(string(self.completed, systime(/s)-self.t_start,format="('All ',i0,' FOV rows computed in ',f10.3,' seconds')"))
+ widget_control,self.wStatusBar,set_value=status_message
+ self->OnEndScan
+ self.ImgViewWid->SelectImg
+end
+
 pro gxScanBox::Cleanup
   compile_opt hidden
   self->OnAbortScan
@@ -1999,5 +2024,5 @@ pause:0b,active:0b,new_view:0b,log:0l,t_start:0d,wPlotLOSOptions:0L,wLOS:0L,wPlo
 Grid2Update:0L,wGrid2Update:0L,wMinVolume:0l,wMaxVolume:0l,wPowerIndexVolume:0l,wResetVolumeScale:0l,$
 wSelectEbtel:0l,wEbtelTable:0l,wParmBase:0l,wArrayParmBase:0l,wNparms:0l,wRparms:0l,wSparms:0l,$
 wUploadFreqList:0l,wFreqList:0l,wUseFreqList:0l,wDelFreqList:0l,wUndoFreqList:0l,$
-wResetFreqList:0l,wSaveFreqList:0l,wEditedFreqList:0l,Rsun:(pb0r())[2]*60,wObserver:0L,wTopView:0L,wL0:0l,wB0:0l,wR:0L}
+wResetFreqList:0l,wSaveFreqList:0l,wEditedFreqList:0l,Rsun:(pb0r())[2]*60,wObserver:0L,wTopView:0L,wL0:0l,wB0:0l,wR:0L,mode:0b}
 end

@@ -353,7 +353,7 @@ pro gx_simulator_event,event
                    if obj_isa(model,'gxmodel') then goto, UploadModel else obj_destroy,model
                   end
                 end
-                
+ state.wComputeMode:if event.select then state.scanbox->SetComputeMode,event.value               
  state.wScan:state.scanbox->OnStartScan,event
  state.wDebug:state.scanbox->OnStartScan,event,/debug              
  else: void=state.scanbox.handleevent(event)
@@ -381,7 +381,7 @@ subdirectory=['resource', 'bitmaps']
 state={oObjviewWid:obj_new(),sun:obj_new(),$
 wModelsTab:0l,wUploadModelIcon:0l,wUploadModel:0l,wImportModelIcon:0l,$
 wImportModel:0l,wFOV:0l,wModelFOV:0l,wImportFOV:0l,wGrid:0l,wHelp:0l,wAbout:0l,ModelCount:0l,view:obj_new(),$
-Scanbox:obj_new(),wScan:0l,wPause:0l,wDebug:0l,wAbort:0l,MapView:obj_new(),expert:keyword_set(expert)}
+Scanbox:obj_new(),wScan:0l,wPause:0l,wDebug:0l,wAbort:0l,MapView:obj_new(),expert:keyword_set(expert),wComputeMode:0L}
 
 state.view=OBJ_NEW('IDlexObjview')
 state.sun=OBJ_NEW('gxSUN',grid=10)
@@ -477,6 +477,7 @@ state.oObjviewWid = obj_new('gxObjviewWid', $
   wRadioButtons=widget_base(wScanBase,/exclusive,/row,/toolbar)
   state.wScan=widget_button(wRadioButtons,value=gx_bitmap(gx_findfile('play.bmp')),tooltip='Compute Radiation Maps (Parallel threads)',/bitmap,uname='SCAN_START')
   if state.expert then state.wDebug=widget_button(wRadioButtons,value=gx_bitmap(gx_findfile('debug.bmp')),tooltip='Debug Map Computation (IDL thread)',/bitmap,uname='SCAN_DEBUG')
+  state.wComputeMode=cw_bgroup(wScanBase,['All-at-Once Image Computation','Row-by-Row Image Computation'],/exclusive,/row,set_value=1,uname='CumputeMode')
 
   ;create SCAN object
   wScanner=Widget_Base(wControlTab,Title='SCANNER')

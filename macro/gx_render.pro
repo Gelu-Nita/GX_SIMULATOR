@@ -1,5 +1,5 @@
 ;this is general purpose macro that may be used to compute radiation transfer images programatically
-function gx_render,model,renderer,all_at_once=all_at_once,logfile=logfile,quiet=quiet,_extra=_extra
+function gx_render,model,renderer,info=info,all_at_once=all_at_once,logfile=logfile,quiet=quiet,_extra=_extra
   t0=systime(/s)
   if ~isa(model) then begin
     message,'None or invalid model provided! Operation aborted!',/info
@@ -15,12 +15,14 @@ function gx_render,model,renderer,all_at_once=all_at_once,logfile=logfile,quiet=
       end  
     endelse
   endelse
-  info=gx_rendererinfo(renderer)
-  if ~isa(info) then begin
-    message,'Invalid renderer routine! Operation aborted!',/info
-    return,!null
-  endif
-  info=model->UpdateEUVinfo(info)
+  if size(info,/tname) ne 'STRUCT' then begin
+    info=gx_rendererinfo(renderer)
+    if ~isa(info) then begin
+      message,'Invalid renderer routine! Operation aborted!',/info
+      return,!null
+    endif
+    info=model->UpdateEUVinfo(info)
+  end
   if isa(_extra) then begin
     names=tag_names(_extra)
     for k=0,n_elements(names)-1 do begin
@@ -66,8 +68,8 @@ function gx_render,model,renderer,all_at_once=all_at_once,logfile=logfile,quiet=
     if size(logfile,/tname) eq 'STRING' then message,'The option to create a parameter log file is not available if the /all_at_once computation mode !',/info
     grid=model->GetGrid()
     sz=size(*grid)
-    nparms[0]=sz[2]*sz[3]
-    nparms[1]=sz[4]
+    if n_elements(nparms) gt 0 then nparms[0]=sz[2]*sz[3]
+    if n_elements(nparms) gt 1 then nparms[1]=sz[4]
     grid=reform(*grid,4,sz[2]*sz[3],1,sz[4])
     Model->Slice,info.parms,row,grid,scanner=scanner
     parms=(*scanner).parms
