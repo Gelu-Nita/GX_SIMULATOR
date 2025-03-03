@@ -1376,6 +1376,16 @@ pro gxModel::Slice,parms,row,any_grid,scanner=scanner
       assigned[idx]=1
     end
   end
+  
+  idx=gx_name2idx(parms,'l');try alias
+  if (size(idx))[0] ne 0 then begin
+    vol=self->Box2Volume('length',/corona)
+    if isa(vol)then begin
+      vol=gx_rsun()*vol/2
+      (*scanner).parms[*,*,idx]=interpolate(vol,round(vol_ind[*,0]),round(vol_ind[*,1]),round(vol_ind[*,2]),missing=missing)
+      assigned[idx]=1
+    end
+  end
 
   idx=gx_name2idx(parms,'Q')
   if (size(idx))[0] ne 0 then begin
