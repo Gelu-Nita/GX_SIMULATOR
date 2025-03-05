@@ -55,7 +55,8 @@ if n_elements(path) eq 0 then path=gx_libpath('grffdem')
       ENDWHILE
       free_lun,lun
       file_delete,'Real_input.txt',/q
-
+      ;update EBTEL Fields
+      restore,gx_ebtel_path()
       idx=gx_name2idx(nparms,'N_temp')
       if idx ge 0 then nparms[idx].value=n_elements(logtdem)
       idx=gx_name2idx(nparms,'DDM_key')
@@ -116,7 +117,7 @@ if n_elements(path) eq 0 then path=gx_libpath('grffdem')
    rdat=rparms#replicate(1,Npix)
    if n_elements(datain) eq 0 then datain=dblarr(7,Nfreq,Npix)
    if n_elements(parmin) eq 0 then parmin=dblarr(N_parms,Nvox,Npix)
-   parmin[*]=transpose(parms,[2,0,1])
+   parmin[*]=transpose(parms,[2,1,0])
    if n_elements(dem_run) eq 0 then begin
      ;update EBTEL Fields
      restore,gx_ebtel_path()
