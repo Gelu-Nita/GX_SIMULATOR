@@ -6,7 +6,7 @@ end
 
 ;------------------------------------------------------------------------------------------------
 function gxImgViewWid::Init, wParent,info=info,renderer=renderer,nx=nx,ny=ny,wToolbarbase=wToolbarbase,draw_xsize=draw_xsize,draw_ysize=draw_ysize,$
-                       xpad=xpad,ypad=ypad,frame=frame,wPlotBase=wPlotBase,$
+                       frame=frame,wPlotBase=wPlotBase,$
                        xrange=xrange,yrange=yrange,uploadbttn=uploadbttn,savebttn=savebttn,fovmap=fovmap
 
 if n_elements(renderer) eq 0 then return,0
@@ -21,7 +21,6 @@ if obj_valid(fovmap) then self.fovmap=fovmap
 default,xrange,[-1.5,1.5]
 default,yrange,[-1.5,1.5]
 
-
 default,nx,64
 default,ny,64
 default,xtitle,'X(Mm)'
@@ -31,13 +30,10 @@ device, get_screen_size=scr
 if not exist(draw_xsize) then draw_xsize = fix (scr[0] * .35)
 if not exist(draw_ysize) then draw_ysize = draw_xsize * 1.1
 
-default,xpad,draw_xsize*0.22
-default,ypad,draw_ysize*0.13
+self.draw_xsize=draw_xsize
+self.draw_ysize=draw_ysize
 
-self.xpad=xpad
-self.ypad=ypad
-self.xsize=draw_xsize-1.5*self.xpad
-self.ysize=self.xsize
+self->SetAspectRatio,float(delta(xrange))/float(delta(yrange))
 
 result=self->IDLexWidget::Init(wParent,frame=frame)
 if result eq 0 then return,0
@@ -59,6 +55,7 @@ self.wPSF[1]=cw_objfield(wPSFBase,value=7.0,xtextsize=3,label='b=',unit='"')
 self.wPSF[2]=cw_objfield(wPSFBase,value=0.0,xtextsize=3,label='phi=',unit=STRING(176b))
 self.wPSF[4]=cw_objfield(wPSFBase,value=0.0,xtextsize=3,label='min=',unit=STRING('"'))
 self.wPSF[3]=cw_bgroup(wPSFBase,['Convolve'],set_value=0,/nonexclusive)
+self.wLogScale=cw_bgroup(wPSFBase,['Log Scale'],set_value=0,/nonexclusive)
 ExecBase=widget_base(self.wToolBarBase,/toolbar,/row)
 subdirectory=['resource', 'bitmaps']
 self.LockPalette=0
@@ -186,7 +183,7 @@ self.oPalette -> SetProperty, RED_VALUES = rgb[*,0], GREEN_VALUES = rgb[*,1], BL
 self.oColorbar = OBJ_NEW( 'IDLgrColorbar',Palette = self.oPalette,SHOW_AXIS=1, /SHOW_OUTLINE,TICKFORMAT='gxImgColorbarTICKFORMAT',Major=3,dimensions=[self.xsize,self.xpad/5])
 self.oColorbar->GetProperty, TICKTEXT=xticktext
 xticktext->SetProperty,font=myfont
-self.oColorbar->Translate,xpad,ypad/2,0
+self.oColorbar->Translate,self.xpad,self.ypad/2,0
 self.oModel->Add,self.oColorbar
 self.oLabel = OBJ_NEW( 'IDLgrText','',locations=[self.xsize/2+self.xpad,self.ysize+2.5*self.ypad],alignment=0.5,font=myfont)
 self.oModel->Add,self.oLabel
@@ -196,6 +193,32 @@ return,1
 end
 
 ;-----------------------------------------------------------------------------------------
+
+pro gxImgViewWid::SetAspectRatio, aspect_ratio
+ if n_elements(aspect_ratio) ne 0 then self.aspect_ratio=aspect_ratio
+ self.xpad=self.draw_xsize*0.22
+ self.ypad=self.draw_ysize*0.13
+ self.xsize=self.draw_xsize-1.5*self.xpad
+ self.ysize=self.xsize
+ if obj_valid(self.oColorBar) then begin
+   self.oColorBar->GetProperty,dimensions=dimensions
+   dy=1.5*self.ypad
+ end
+ if self.aspect_ratio gt 1 then begin
+  self.ysize=self.ysize/self.aspect_ratio
+  self.ypad+=(self.xsize-self.ysize)/2
+ end
+ if self.aspect_ratio lt 1 then begin
+  self.xsize=self.ysize*self.aspect_ratio
+  self.xpad+=(self.ysize-self.xsize)/2
+ end
+ if obj_valid(self.oColorBar) then begin
+   self.oColorBar->SetProperty,dimensions=[self.xsize,dimensions[1]]
+   self.oColorbar->Reset
+   self.oColorbar->Translate,self.xpad,2*self.ypad-dy,0
+ end  
+end
+
 function gxImgViewWid::NewView,info,renderer=renderer,nx=nx,ny=ny,xrange=xrange,yrange=yrange,data=data,fovmap=fovmap
  case size(info,/tname) of
   'POINTER':self.info=info
@@ -224,6 +247,8 @@ function gxImgViewWid::NewView,info,renderer=renderer,nx=nx,ny=ny,xrange=xrange,
  yrange=yrange*R
  deltax=max(xrange,min=min)-min
  deltay=max(yrange,min=min)-min
+ 
+ self->SetAspectRatio,deltax/deltay
 
  self.oModel->Remove,self.oImage
  self.oModel->Remove,self.xAxis
@@ -892,9 +917,6 @@ function gxImgViewWid::GetImg,k,idx,raw=raw,psf=psf
              end
     endcase
   end
-  widget_control,self.wContrast,get_value=contrast
-  minmax=widget_info(self.wContrast,/SLIDER_MIN_MAX)
-  img=img<max(img,/nan)*contrast/minmax[1]
   return,img
 end
 
@@ -902,6 +924,11 @@ pro gxImgViewWid::SelectImg
     if ptr_valid(self.pData) then begin
      self->Convolve
      img=self->GetImg()
+     widget_control,self.wContrast,get_value=contrast
+     minmax=widget_info(self.wContrast,/SLIDER_MIN_MAX)
+     img=img<max(img,/nan)*contrast/minmax[1]
+     widget_control,self.wLogScale,get_value=logscale
+     if logscale[0] eq 1 then img=alog10(img)
      self.oImage->SetProperty,data=bytscl(img,/NAN)
      self.oColorbar->SetProperty,TICKFRMTDATA=img
      self->SelectChannel
@@ -1346,9 +1373,8 @@ case event.id of
      widget_control,self.wPSF[3],set_value=0
      self.NewPSF=1
    end             
-  self.wPSF[3]:begin
-                  self->SelectImg
-               end                                                 
+  self.wPSF[3]:self->SelectImg
+  self.wLogScale:self->SelectImg                                                            
   self.wMovie:self->OnMovie                       
   self.wLockPalette:self->OnLockPalette                                      
   self.wPalette:self->OnPalette
@@ -1458,6 +1484,7 @@ pro gxImgViewWid__define
     wXProfilePlotOptions:0L,$
     wYProfilePlotOptions:0L,$
     wPSF:lonarr(5),$
+    wLogScale:0L,$
     PSF: ptr_new(),$
     oWindow: obj_new(), $
     oViewgroup:obj_new(), $
@@ -1474,6 +1501,9 @@ pro gxImgViewWid__define
     LockPalette:0b,$
     nx:0L,$
     ny:0L,$
+    aspect_ratio:1.0,$
+    draw_xsize:0.0,$
+    draw_ysize:0.0,$
     xsize:0.0,$
     ysize:0.0,$
     xpad:0.0,$
