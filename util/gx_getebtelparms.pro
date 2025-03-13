@@ -7,6 +7,7 @@ function gx_getEBTELparms,gx_key,a,b,q,parms=parms,formula=formula,ebtel_path=eb
   keys=strsplit(gx_key,'&',/extract)
   if n_elements(keys) lt 3 then return,keys
   e=execute(keys[0])
+  parms=q
   e=execute(keys[1])
   formula=keys[2]
   e=execute(str_replace(str_replace(str_replace(str_replace(keys[2],'q=','a=alog10('),'q0*',''),'L/q[2]','1.'),'B/q[1]','10.')+')')
