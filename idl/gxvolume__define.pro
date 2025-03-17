@@ -1019,7 +1019,7 @@ pro gxVolume::ComputeN0T0,tube_id=tube_id
     if self->hasNT() then begin;because they might have been recomputed above
       
       T=self.parent->Box2Volume('T',/corona_only)*self.Tscale
-      n=self.parent->Box2Volume('n',/corona_only)*self.Tscale
+      n=self.parent->Box2Volume('n',/corona_only)*self.nscale
       if n_elements(blend) eq 0 then blend=0
       if blend eq 1 then begin
         ;This option has been hidden to the non-expert users
