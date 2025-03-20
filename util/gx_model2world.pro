@@ -3,9 +3,12 @@
 ;gx_model2world,model,/all
 ;To selectevely plot only some components, use the corresponding keywords
 ;To plot on a prexisting LOS map, use /over
-pro gx_model2world,model,lines=lines,fluxtubes=fluxtubes,fov=fov,box=box,over=over,$
+;2/20/23 updates:
+; -the fluxtubes keyword may be set to an array of integers indicating the 1-based idices of a set of selected fluxtubes to be displayed
+; -the /centerlines keyword may be set to plot only the centerlines of the fluxtubes
+pro gx_model2world,model,lines=lines,fluxtubes=tubes,centerlines=centerlines,fov=fov,box=box,over=over,$
                   scolor=scolor,lcolor=lcolor,ocolor=ocolor,bcolor=bcolor,fcolor=fcolor,$
-                  sthick=sthick,lthick=lthick, lstyle=lstyle,refmap=ref,_extra=_extra,all=all
+                  sthick=sthick,lthick=lthick, lstyle=lstyle,refmap=ref,black2white=black2white,_extra=_extra,all=all
   default,model,obj_new()
   default,scolor,250
   default,lcolor,150
@@ -43,11 +46,12 @@ pro gx_model2world,model,lines=lines,fluxtubes=fluxtubes,fov=fov,box=box,over=ov
       message,'No LOS reference map found in this model, please plot one and call this procedure using /over!',/info
       return
     endif
-    ref.id= 'HMI Bz'
+    ref.id= 'HMI LOS B'
   end
-  if ~keyword_set(over) and ref.id eq 'HMI Bz' then begin
+  if ~keyword_set(over) and ref.id eq 'HMI LOS B' then begin
     tvlct,r,g,b,/get
     loadct,0,/silent
+    if keyword_set(black2white) then gx_rgb_white2black
     plot_map,ref,fov=get_map_fov(ref)/40,GRID=10,_extra=_extra
     tvlct,r,g,b
   endif
@@ -71,14 +75,17 @@ pro gx_model2world,model,lines=lines,fluxtubes=fluxtubes,fov=fov,box=box,over=ov
       endfor
       endif else message,'No field lines found in this model!',/info
   endif
-  if keyword_set(fluxtubes) then begin
+  if keyword_set(tubes) then begin
     fluxtubes=model->get(/all,isa='gxfluxtube')
+    if size(tubes,/dim) gt 0 then begin
+      fluxtubes=fluxtubes[(tubes-1)<(n_elements(fluxtubes)-1)]  
+    endif
     if obj_valid(fluxtubes[0]) then begin
       for i=0,n_elements(fluxtubes)-1 do begin
         fluxtube=fluxtubes[i]
         if obj_isa(fluxtube,'gxfluxtube') then begin
           fluxtube->getproperty,centerline=centerline
-          tubelines=fluxtube->get(/all,isa='gxbline')
+          if ~keyword_set(centerlines) then tubelines=fluxtube->get(/all,isa='gxbline')
           centerline->GetProperty,data=data
           sdata=gx_transform(data,model->GetSTM(),/inv)*ref.rsun
           oplot,sdata[0,*],sdata[1,*],color=scolor,thick=sthick
