@@ -3,7 +3,7 @@ function gx_search4bestq, gxmpath=gxmpath,a_arr=a_arr,b_arr=b_arr,q_start=q_star
                      ebtel_path=ebtel_path,renderer=renderer,info=info,$
                      xc=xc,yc=yc,xfov=xfov,yfov=yfov,nx=nx,ny=ny,$
                      levels=levels,resize=resize,save_gxc=save_gxc,redo=redo,$
-                     save_result=save_result,plot_best=plot_best,freq=freq,chan=chan,_extra=_extra
+                     save_result=save_result,plot_best=plot_best,freq=freq,chan=chan,nobackground=nobackground,_extra=_extra
   final_result=[]
   catch, error_status
   if error_status ne 0 then begin
@@ -72,6 +72,7 @@ function gx_search4bestq, gxmpath=gxmpath,a_arr=a_arr,b_arr=b_arr,q_start=q_star
           if ~file_exist(modfile) or keyword_set(redo)then begin
             if ~isa(model,'gxmodel') then begin
               model=gx_read(gxmpath)
+              (model->Corona())->SetProperty,ignore=keyword_set(nobackground)
               fovdata=model->SetFOV(b0=ref->get(/b0),l0=ref->get(/l0),rsun=ref->get(/rsun),$
                                     xc=xc,yc=yc,xfov=xfov, yfov=yfov,nx=nx,ny=ny,/compute_grid,_extra=_extra)
               end
