@@ -1441,7 +1441,7 @@ pro gxModel::Slice,parms,row,any_grid,scanner=scanner
     assigned[idx]=1
   end
 
-
+  vol=fltarr(sz[1],sz[2],sz[3])
   chromo_idx=self->GetVertexData('chromo_idx')
   ; start for backward compatibility Dec 18 2014!!!!
   if n_elements(chromo_idx) eq 0 then chromo_idx=self->GetVertexData('idx')

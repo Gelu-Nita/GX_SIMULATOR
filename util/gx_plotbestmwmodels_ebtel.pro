@@ -170,8 +170,8 @@ if arg_present(maps_best) then return_best_maps=1
   
     plot,a,res_img[*,0,k],psym=-1,charsize=charsize,xtitle='a',ytitle='RES',yrange=max(abs(minmax(res_img)))*[-1,1],/xsty, xmargin=xmargin,ymargin=ymargin
     for l=0,n_elements(b)-1 do oplot,a,res_img[*,l,k],psym=-1,color=50+l*30,thick=2
-     oplot,a,result.res_threshold/npix/mod_dS,color=250, thick=2
-     oplot,a,-result.res_threshold/npix/mod_dS, color=250, thick=2
+     oplot,a,result.res2_threshold/npix/mod_dS,color=250, thick=2
+     oplot,a,-result.res2_threshold/npix/mod_dS, color=250, thick=2
 
     plot,b,res2_img[0,*,k],psym=-1,charsize=charsize,xtitle='b',ytitle='RES!U2!N',yrange=minmax(res2_img),/nodata,/xsty, xmargin=xmargin,ymargin=ymargin
     for l=0,n_elements(a)-1 do oplot,b,res2_img[l,*,k],psym=-1,color=50+l*30,thick=2
@@ -183,8 +183,8 @@ if arg_present(maps_best) then return_best_maps=1
   
     plot,b,res_img[0,*,k],psym=-1,charsize=charsize,xtitle='b',ytitle='RES',yrange=max(abs(minmax(res_img)))*[-1,1],/xsty, xmargin=xmargin,ymargin=ymargin
     for l=0,n_elements(a)-1 do oplot,b,res_img[l,*,k],psym=-1,color=50+l*30,thick=2
-    oplot,b,result.res_threshold/npix/mod_dS, color=250, thick=2
-    oplot,b,-result.res_threshold/npix/mod_dS, color=250, thick=2
+    oplot,b,result.res2_threshold/npix/mod_dS, color=250, thick=2
+    oplot,b,-result.res2_threshold/npix/mod_dS, color=250, thick=2
   
   
     !p.multi=[3,3,2,0,0]
@@ -202,14 +202,14 @@ if arg_present(maps_best) then return_best_maps=1
     !p.multi=[4,3,4,0,0]
     plot,a,chi_img[*,0,k],psym=-1,charsize=charsize,xtitle='a',ytitle='CHI',yrange=(max(abs(minmax(chi_img)))>0.25)*[-1,1],/xsty, xmargin=xmargin,ymargin=ymargin
     for l=0,n_elements(b)-1 do oplot,a,chi_img[*,l,k],psym=-1,color=50+l*30,thick=2
-    oplot,a,result.chi_threshold/npix/mod_dS, color=250,thick=2
-    oplot,a,-result.chi_threshold/npix/mod_dS, color=250,thick=2
+    oplot,a,result.chi2_threshold/npix/mod_dS, color=250,thick=2
+    oplot,a,-result.chi2_threshold/npix/mod_dS, color=250,thick=2
     
     !p.multi=[1,3,4,0,0]
     plot,b,chi_img[0,*,k],psym=-1,charsize=charsize,xtitle='b',ytitle='CHI',yrange=(max(abs(minmax(chi_img)))>0.25)*[-1,1],/xsty, xmargin=xmargin,ymargin=ymargin
     for l=0,n_elements(a)-1 do oplot,b,chi_img[l,*,k],psym=-1,color=50+l*30,thick=2
-    oplot,b,result.chi_threshold/npix/mod_dS, color=250,thick=2
-    oplot,b,-result.chi_threshold/npix/mod_dS, color=250,thick=2
+    oplot,b,result.chi2_threshold/npix/mod_dS, color=250,thick=2
+    oplot,b,-result.chi2_threshold/npix/mod_dS, color=250,thick=2
   end
    device,/close
  end
@@ -306,7 +306,7 @@ if arg_present(maps_best) then return_best_maps=1
  !p.multi=[0,3,2,0,0]
  plots=['Best RES solution: ','Best CHI solution: ']
  ab=[[a[idx_res2[0]],b[idx_res2[1]]],[a[idx_chi2[0]],b[idx_chi2[1]]]]
- q=[q_res2_best,q_chi2_best]
+ q=[best_res2_q,best_chi2_q]
  maps_best=[]
  for k=0,1 do begin
    filnam=plots[k]
