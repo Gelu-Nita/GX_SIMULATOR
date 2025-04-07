@@ -3,11 +3,12 @@ message: "If you use this repository, please cite it as below."
 title: "GX_SIMULATOR"
 version: "3.3.1" 
 authors:
-  - family-names:Nita et al.
-    given-names:
+  - family-names:"Nita"
+    given-names:"Gelu"
     affiliation: "New Jersey Institute of Technology" 
     orcid: "https://orcid.org/0000-0003-2846-2453"
 date-released: 2024-12-02 
+doi:https://doi.org/10.5281/zenodo.7882022
 url: "https://github.com/Gelu-Nita/GX_SIMULATOR"
 repository-code: "https://github.com/Gelu-Nita/GX_SIMULATOR"
 keywords:
