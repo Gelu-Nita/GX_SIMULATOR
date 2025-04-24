@@ -46,12 +46,12 @@ function gx_search4bestq, gxmpath=gxmpath,a_arr=a_arr,b_arr=b_arr,q_start=q_star
   if not file_test(psDir) then file_mkdir,psDir
   
   map=obj_new('map')
-  q=q_start
   for ii=0,n_elements(a_arr)-1 do begin
   for jj=0,n_elements(b_arr)-1 do begin
       ;+++++++++++++++++++++++++++++++++++++
      a=a_arr[ii]
      b=b_arr[jj]
+     q=q_start
      t0=systime(/s)
      done=0b
      almost_done=0

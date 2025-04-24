@@ -354,7 +354,7 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
    dx=tag_exist(obsI,'orig_xc')?(obsI.xc-obsI.orig_xc):0.0
    dy=tag_exist(obsI,'orig_yc')?(obsI.yc-obsI.orig_yc):0.0
    obsIsdev=obj_metrics->get(2,/map)
-   plot_map,modI,charsize=charsize,title=modI.id
+   plot_map,modI,charsize=charsize,title=modI.id,_extra=_extra
    plot_map,modI,/over,levels=levels,/perc,color=0,thick=3
    plot_map,obsI,/over,levels=levels,/perc,color=200,thick=3
    if n_elements(mask) eq n_elements(modI.data) then begin
