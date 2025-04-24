@@ -96,7 +96,7 @@ pro gx_model2aia, model, tlb=tlb, xsize=xsize, ysize=ysize, chan=chan, newlines=
   plot_map, ref, _extra=_extra
 
   ;-- Overlay model field lines transformed to reference map coordinates
-  if n_elements(ct) then ct=39
+  if n_elements(ct) eq 0 then ct=39
   loadct, ct
   gx_model2world, model, /lines, ref=ref,_extra=_extra
 
