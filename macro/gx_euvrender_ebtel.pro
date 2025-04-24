@@ -25,8 +25,8 @@ function gx_euvrender_ebtel,model,renderer,info=info,ebtel_path=ebtel_path, q_pa
   default, q_formula, 'q[0]*(B/q[1])^q[3]*(L/q[2])^q[4]'
   q_formula=volume->SetQ(q_formula,/quiet)
   message,'EBTEL heating rate formula in use: '+q_formula,/info
-  volume->Update,/nt,use_dem=use_dem,has_used_ddm=has_used_ddm
-;  if volume->NewNT(NTkey) then volume->SetVertexAttributeData,'NTkey',NTkey
+;  volume->Update,/nt,use_dem=use_dem,has_used_ddm=has_used_ddm
+  if volume->NewNT(NTkey) then volume->SetVertexAttributeData,'NTkey',NTkey
   fovmap=(model->GetFovMap())->get(/map)
   add_prop,fovmap,gx_key=string(model->GetVertexData('NTkey')),/replace
   (model->GetFovMap())->setmap,0,fovmap

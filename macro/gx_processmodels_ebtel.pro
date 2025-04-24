@@ -22,7 +22,7 @@ function q_sigma,x,y
   return, dy / SQRT(second_derivative)
 end
 
-function metrics_min,Qgrid,metrics,acc,done=done
+function metrics_min,Qgrid,metrics,acc=acc,done=done
  chi2=metrics;call it chi2 for convenience
  default, acc,1d-1
  G=(1d0+sqrt(5d0))/2
@@ -247,7 +247,7 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
       _obsI=gx_rebin_map(_obsI,sz[1],sz[2],/total)
       _obsIsdev=gx_rebin_map(_obsIsdev,sz[1],sz[2],/total)
     endif
-    ;EUV special handling of flix conservation done
+    ;EUV special handling of flux conservation done
     
     if n_elements(ObsBeam) gt 0 then modI.data=convol_fft(modI.data, ObsBeam)  
     obj_metrics_arr[i]=gx_metrics_map(modI, _obsI,_obsIsdev,mask=mask,metrics=metrics,apply2=apply2,/no_renorm,_extra=_extra)
@@ -357,6 +357,11 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
    plot_map,modI,charsize=charsize,title=modI.id
    plot_map,modI,/over,levels=levels,/perc,color=0,thick=3
    plot_map,obsI,/over,levels=levels,/perc,color=200,thick=3
+   if n_elements(mask) eq n_elements(modI.data) then begin
+    mask_map=modI
+    mask_map.data=mask
+    plot_map,mask_map,/over,levels=1,color=100,thick=4
+   endif
    get_map_coord,modI,x,y
    sz=size(modI.data)
    sx=sz[1]/100.

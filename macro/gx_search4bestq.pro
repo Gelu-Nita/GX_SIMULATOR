@@ -14,7 +14,7 @@ function gx_search4bestq, gxmpath=gxmpath,a_arr=a_arr,b_arr=b_arr,q_start=q_star
   endif
   ;+++++++++++++++++++++++++++++++++++++++++++
   default,levels,[12,20,30,50,80]
-  default,resize,100
+  ;default,resize,100
   ;++++++++++++++++++++++++++++++++++++++++++++
   default,a_arr,[0.5,0.75,1,1.25,1.5]
   default,b_arr,[0.5,0.75,1,1.25,1.5]
@@ -76,7 +76,8 @@ function gx_search4bestq, gxmpath=gxmpath,a_arr=a_arr,b_arr=b_arr,q_start=q_star
               fovdata=model->SetFOV(b0=ref->get(/b0),l0=ref->get(/l0),rsun=ref->get(/rsun),$
                                     xc=xc,yc=yc,xfov=xfov, yfov=yfov,nx=nx,ny=ny,/compute_grid,_extra=_extra)
               end
-            q0_formula='q[0]'
+            if tag_exist(_extra,'q0_formula') then q0_formula=_extra.q0_formula
+            default,q0_formula,'q[0]'
             q_formula=string(a,b,format="('q0*(B/q[1])^(',g0,')/(L/q[2])^(',g0,')')")
             q_parms=[q[j], 100.0, 1.0000000d+009, 0.0, 0.0]
             if n_elements(freq) gt 0 then begin

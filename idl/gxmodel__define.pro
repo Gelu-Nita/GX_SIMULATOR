@@ -1771,8 +1771,12 @@ linesB= [ interpolate(box.bx,coords[0,*],coords[1,*],coords[2,*]) $
          , interpolate(box.by,coords[0,*],coords[1,*],coords[2,*]) $
          , interpolate(box.bz,coords[0,*],coords[1,*],coords[2,*]) $
          ]
- absB=sqrt(total(linesB^2,1))
  status=status[LinesIndex]
+ physLength=physLength[LinesIndex]
+ avField = avField[LinesIndex]
+ startIdx = startIdx[LinesIndex]
+ endIdx = endIdx[LinesIndex]
+ seedIdx=seedIdx[LinesIndex]
  for i=0,nLines-1 do begin
    lb=linesB[*,linesPos[i]:linesPos[i]+linesLength[i]-1]
    data=coords[0:2,linesPos[i]:linesPos[i]+linesLength[i]-1]

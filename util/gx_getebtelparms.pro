@@ -5,6 +5,7 @@ function gx_getEBTELparms,gx_key,a,b,q,parms=parms,formula=formula,ebtel_path=eb
   default,gx_key,'q=[ 0.0014100000, 100.00000, 1.0000000e+009, 0.00000000, 0.00000000] & q0=q[0] & q=q0*(B/q[1])^0*(L/q[2])^3 & NTDEM= 1 & NTSSDEM= 0'
   ;+++++++++++++++++++++++++++++++++++++++++++++++++++++
   keys=strsplit(gx_key,'&',/extract)
+  mask=1; bypass the mask parameter if present
   if n_elements(keys) lt 3 then return,keys
   e=execute(keys[0])
   parms=q
