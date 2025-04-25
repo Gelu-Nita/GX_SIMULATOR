@@ -24,13 +24,14 @@
 ;
 ; Modifications:
 ;           16-Feb-2016, Bin Chen - set roll_angle to zero for two-dimensional maps. Otherwise it takes -p_angle 
-;
+;           25-Apr-2025, Gelu Nita- replaced vla_readfits by read_sdo, which seems to work where vla_readfits fails
 ; Contact     : bin.chen@njit.edu
 ;-
 
 pro vla_fits2map, files, map,_extra=_extra
 
-vla_readfits,files,index,data,/silent
+;vla_readfits,files,index,data,/silent
+read_sdo,files,index,data,/silent
 n_dim = size( data, /n_dim )
 ;map stokes values in FITS to actual keys, reference: Greisen & Calabretta 2002, A&A, 395, 1061
 stokesvals=[1,2,3,4,-1,-2,-3,-4,-5,-6,-7,-8]
