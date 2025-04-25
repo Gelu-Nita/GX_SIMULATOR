@@ -512,6 +512,15 @@ pro gxchmpview::UpdateMaps
   index_a=self.combobox_index(self.wa)
   index_b=self.combobox_index(self.wb)
   filename=(*self.summary).files[index_a,index_b]
+  if filename eq '' then begin
+    good=where((*self.summary).files ne '')
+    filename=(*self.summary).files[good[0]]
+    good=array_indices((*self.summary).files,good)
+    index_a=good[0]
+    index_a=good[1]
+    widget_control,self.wa,set_combobox_select=index_a
+    widget_control,self.wb,set_combobox_select=index_b
+  endif
   maps=self->List2Map(gx_filevars2struct(filename))
   ptr_free,self.maps
   self.maps=ptr_new(maps)
@@ -568,15 +577,15 @@ pro gxchmpview::UpdateDisplays
   wset,win
   log_metrics=(widget_info(widget_info(self.wBase,find_by_uname='log_metrics'),/COMBOBOX_GETTEXT) eq 'Log Scale')
   gx_data2grid, a, b, data, gridded_data=gdata, x_grid=xg, y_grid=yg, dx=dx, dy=dy
-  map_metrics=make_map(gdata,xc=mean(xg),yc=mean(yg),dx=dx,dy=dy)
+  map_metrics=make_map(gdata,xc=mean(xg),yc=mean(yg),dx=dx,dy=dy,time=(*self.maps).MODIMAGEARR->get(/time))
   map_metrics.id=selected_metrics
   odmin=min(map_metrics.data,max=odmax,/nan)
   if (odmin eq 0) && (odmax eq 0) then begin
     map_metrics.data=1e-15
     cbar=0
   endif else cbar=1
-  bad=where(gdata  le 0,nbad)
-  plot_map,map_metrics,cbar=cbar,log=log_metrics,top=254,bottom=(nbad eq 0)?1:0,cb_title=selected_metrics,xtitle='a',ytitle='b'
+  bad=where(map_metrics.data le 0,nbad)
+  plot_map,map_metrics,cbar=cbar,log=log_metrics, top=254,bottom=(nbad eq 0)?1:0,cb_title=selected_metrics,xtitle='a',ytitle='b'
   if legends[0] then begin
     oplot,a[index_a[[1,1]]],!y.crange,color=0,thick=3,linesty=2
     oplot,!x.crange,b[index_b[[1,1]]],color=0,thick=3,linesty=2
@@ -668,6 +677,10 @@ pro gxchmpview::UpdateDisplays
   index_x=self.combobox_index(self.wx)
   index_y=self.combobox_index(self.wy)
   filename=(*self.summary).files[index_a,index_b]
+  if filename eq '' then begin
+    answ=dialog_message('No solution has been yet computed for this grid point',/info)
+    return
+  endif
   obsI=(*self.Maps).OBSIMAGEARR->get(index_freq,/map)
   modI=(*self.Maps).MODIMAGEARR->get(index_freq,/map)
   cmodI=(*self.Maps).MODIMAGECONVARR->get(index_freq,/map)
@@ -722,7 +735,7 @@ pro gxchmpview::UpdateDisplays
     x=reform(xp[*,0])
     y=map.data[*,0]
     plot,x,y,ylog=log_map,ytitle=map.id,xtitle='X (arcsec)',xmargin=[12,6]
-  endif else plot_map,map,/cbar,log=log_map,top=254
+  endif else plot_map,map,/cbar,log=log_map,bottom=1, top=254
   if selected_map eq 'Data' and legends[3] then begin
     if tag_exist(map,'shiftx') and tag_exist(map,'shifty') then if ~(map.SHIFTX eq 0 and map.SHIFTY eq 0) then $
      map_legend=[map_legend,string(map.SHIFTX,'"',map.SHIFTY,'"',format="('xshift= ',f0.2,a0,'; yshift= ',f0.2,a0)")]
