@@ -2384,7 +2384,7 @@ pro gxModel::AddGyroLayers,fghz,bmax=bmax,smax=smax,hide=hide
      endif  
      if ~obj_valid(iso_all[0]) then iso_all=[]
      self->getproperty,xcoord_conv=xcoord_conv,ycoord_conv=ycoord_conv,zcoord_conv=zcoord_conv
-     dummy=self->getB(bx=bx,by=by,bz=bz)
+     dummy=self->getB(bx=bx,by=by,bz=bz,/volume)
      b_abs = sqrt(bx^2 + by^2 + bz^2)
      te = self->GetVertexData('T0')
      loadct,39

@@ -93,7 +93,7 @@ dem_run=dem_run,ddm_run=ddm_run,qrun=qrun,lrun=lrun,use_dem=use_dem,has_ddm=has_
      dummy_datain[0,*,*]=freqlist#replicate(1d,Npix)
     endif
     
-    dummy_grparms=dblarr(5,nfreq,nparms[7].value-nparms[6].value+1,Npix)
+    dummy_grparms=dblarr(7,nfreq,nparms[7].value-nparms[6].value+1,Npix)
 
     rdat=double(rparms.value)#replicate(1,Npix)
     
@@ -105,13 +105,13 @@ dem_run=dem_run,ddm_run=ddm_run,qrun=qrun,lrun=lrun,use_dem=use_dem,has_ddm=has_
     test_call=call_external(path, 'GET_MW1_SLICE', ndat, rdat,dummy_parmin, tdem, dem, ddm, dummy_datain,dummy_grparms,/unload)
     freqlist=reform(dummy_datain[0,*])
     nchan=nparms[7].value-nparms[6].value+1
-    nychan=5
+    ngrparms=7
     info={parms:parms,$
           nparms:nparms,$
           rparms:rparms,$
-          pixdim:[nfreq,nychan,nchan],$
+          pixdim:[nfreq,ngrparms,nchan],$
           spectrum:{x:{axis:freqlist,label:'Frequency',unit:'GHz'},$
-                    y:{label:['LCP_Teff','LCP_tau','RCP_Teff','RCP_tau','LOS_distance'],unit:['K','K','','','cm']}},$
+                    y:{label:['LCP_Teff','LCP_tau','RCP_Teff','RCP_tau','X','Y','Z'],unit:['K','K','','','cm','cm','cm']}},$
           channels:string(nparms[6].value+lindgen(nchan),format="('s',i0)")}                  
     return
  end
