@@ -884,10 +884,9 @@ pro gxchmpview::UpdateDisplays
    flags=reform((*self.maps).modflagarr[index_freq,*])
    alegend=[alegend,'',$
    string(flags[0],format="('Coronal Voxels: ',i0)"),$
-   string(flags[2],(100d*flags[2])/flags[0],format="('L-B Voxels: ',i0,' (',i0,'%)' )"),$
-   ;string(flags[3],(100d*flags[3])/flags[0],format="('L-Q Voxels: ',i0,' (',i0,'%)' )"),$
-   string(flags[4],(100d*flags[4])/flags[0],format="('L Out Of Table Voxels: ',i0,' (',i0,'%)' )"),$
-   string(flags[5],(100d*flags[5])/flags[0],format="('Q Out Of Table Voxels: ',i0,' (',i0,'%)' )")]
+   string(flags[2],flags[2] eq 0?0:(100d*flags[2])/flags[0],format="('L-B Voxels: ',g0,' (',i0,'%)' )"),$
+   string(flags[4],flags[4] eq 0?0:(100d*flags[4])/flags[0],format="('L Out Of Table Voxels: ',i0,' (',i0,'%)' )"),$
+   string(flags[5],flags[5] eq 0?0:(100d*flags[5])/flags[0],format="('Q Out Of Table Voxels: ',i0,' (',i0,'%)' )")]
    al_legend,alegend,back='grey',/top,/left 
  end
 
