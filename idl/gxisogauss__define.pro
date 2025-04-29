@@ -50,7 +50,7 @@ pro gxisogauss::Select,select
 end
 
 function gxisogauss::GetL
-return,ptr_valid(self.grparms)?reform((*self.grparms)[4,*]):!NUll
+return,ptr_valid(self.grparms)?reform((*self.grparms)[6,*]):!NUll
 end
 
 function gxisogauss::GetT,lcp=lcp,rcp=rcp,te=te,id=id,opacity=opacity,alpha=alpha,effective=effective
