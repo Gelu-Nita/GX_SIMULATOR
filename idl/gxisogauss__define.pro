@@ -158,8 +158,8 @@ pro gxisogauss::update,force_update=force_update,_extra=_extra
   gx_setparm,info,'s_max',self.s
   freqlist=info.spectrum.x.axis
   ;here the gx_rendererinfo automatic settings are replaced
-  gx_setparm,info,'DEM_key',1
-  gx_setparm,info,'DDM_key',1
+  gx_setparm,info,'DEM_key',0
+  gx_setparm,info,'DDM_key',0
   ;end replacement
   info=gx_rendererinfo(renderer,info=info)
   sz=size(grid)
