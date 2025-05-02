@@ -10,7 +10,7 @@ function gx_read,file
     MESSAGE, /INFO, !ERROR_STATE.MSG
     return,obj_new()
  end
- dummy=obj_new('gxvolume');update definition of te gxvolume object
+ dummy=obj_new('gxvolume',dblarr(2,2,2));update definition of the gxvolume object
  restore,file,/relaxed
   ;start provision for arbitrarily named model objects
  osav=obj_new('idl_savefile',file)

@@ -445,11 +445,14 @@ function gxModel::Rsun
    return,self.r*60
 end
 
-function gxModel::SetFOV,xc=xc,yc=yc,xfov=xfov,nx=nx,ny=ny, yfov=yfov,_extra=_extra
- self->SetLos,_extra=_extra
+function gxModel::SetFOV,xc=xc,yc=yc,xfov=xfov,nx=nx,ny=ny, yfov=yfov,fovmap=fovmap,_extra=_extra
+ if valid_map(fovmap) then begin
+   gx_fovmap2scanbox,fovmap,b0=b0,rsun=rsun,l0=l0
+   self->SetLos,b0=b0,rsun=rsun,l0=l0
+ endif else self->SetLos,_extra=_extra
  self->ResetPosition
  rsun=self->Rsun()
- fovmap=self->GetFovMap()
+ fovmap=valid_map(fovmap)?fovmap:self->GetFovMap()
  default,xc,fovmap->get(/xc)
  default,yc,fovmap->get(/yc)
  default, xfov,delta(get_map_xrange(fovmap->get(/map),/edge))

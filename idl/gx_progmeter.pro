@@ -98,7 +98,7 @@ function gx_progmeter,id,value,INIT=init,DESTROY=destroy,GROUP=group,$
   if ~widget_valid(id) then begin
     if n_elements(names) gt 0 then top_idx=where(names eq 'gx_simulator',count) else count=0
     if count gt 0 then begin
-      id=widget_info(ids[top_idx[0]],find_by_uname='StatusBar')     
+      id=widget_valid(ids[top_idx[0]])?widget_info(ids[top_idx[0]],find_by_uname='StatusBar'):0     
     endif else id=0
   endif
   

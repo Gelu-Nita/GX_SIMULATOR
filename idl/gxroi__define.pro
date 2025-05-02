@@ -127,6 +127,7 @@ pro gxROI::ReplaceFovMap
   fovmap.yc=round(fovmap.yc*1000d)/1000d
   ;correction needed to avoid precision math errors
   add_prop,fovmap,b0=self.parent->GetLos(/b0),l0=self.parent->GetLos(/l0),SpaceView=self.parent->SpaceView()
+  if ~obj_valid(self.fovmap) then self.fovmap=obj_new('map')
   self.fovmap->set,0,map=fovmap
   fovdata=data[*,[0,1,2,15]]
   self.fovscreen->SetProperty, data=fovdata
@@ -275,132 +276,6 @@ function gxROI::ComputeGrid
   flags=(self.parent->GetVolume())->getflags()
   return,flags.newGrid
 end
-
-function gxROI::ComputeGrid_old,model=model
-  prog_id = gx_progmeter(/INIT,label='Grid Computation Progress',button='Abort')
-  nx=self.nx
-  ny=self.ny
-  self.scanbox->GetProperty,data=sdata,xcoord_conv=xcoord_conv,ycoord_conv=ycoord_conv,zcoord_conv=zcoord_conv
-  if ~obj_valid(model) then self->GetProperty,parent=model
-  idx=[0,1,11,2,7,4,8,5]; this is coming from gx_simulator conventions
-  ii=idx[1]
-  jj=idx[2]
-  kk=idx[4]
-  dx=xcoord_conv[1]
-  dy=ycoord_conv[1]
-  volume=model->GetVolume()
-  volume->GetVertexAttributeData,'dz',dz
-  dim=(model->size(/volume))[1:3]
-  max_size=total(dim)
-  grid=dblarr(4,nx,ny,max_size)-1
-  if n_elements(dz) eq 0 then begin
-    dz=replicate(zcoord_conv[1],dim)
-  endif
-  sdata=gx_transform(sdata,model->GetSTM(),/invert)
-  vx=sdata[*,ii]-sdata[*,0]
-  vy=sdata[*,jj]-sdata[*,0]
-  vz=sdata[*,kk]-sdata[*,0]
-  Lx=norm(vx)
-  Ly=norm(vy)
-  Lz=norm(vz)
-  delta_x=lx/Nx
-  delta_y=ly/Ny
-  k0=0l
-  k1=0l
-  n=0l
-  LOSarr=dblarr(3,2,nx,ny)
-  t0=systime(/s)
-  stm=model->GetSTM()
-  scale=[[dx,dy,zcoord_conv[1]],[dx,dy,zcoord_conv[1]]]
-  o=sdata[*,0]
-  for j=0,ny-1 do begin
-    for i=0,nx-1 do begin
-      dijk=1d-10;THIS IS APPARENTELY NEDED TO AVOID NUMERICAL ERRORS WHEN AT THE EDGE OF THE SCANBOX
-      LOS_sun=[[o+[(i+dijk)*delta_x,(j+dijk)*delta_y,0]],[o+[(i+dijk)*delta_x,(j+dijk)*delta_y,Lz]]]
-      LOSarr[*,*,i,j]=gx_transform(LOS_sun,stm)*scale
-    end
-  end
-  t1=systime(/s)
-  if (gx_progmeter(prog_id,.25) eq 'Cancel') then goto,escape
-  Nlos=nx*ny
-  LOSarr=reform(LOSarr, 3, 2, Nlos)
-  volume->GetVertexAttributeData,'voxel_id',voxel_id
-  ;erase upper 16 bits of the voxel id
-  voxel_id=ishft(ishft(voxel_id,16),-16)
-  ;if max(dz, min=mindz) eq mindz then voxel_id[*]=gx_voxelid(/chromo)
-  ;end erase upper 16 bits
-  gx_renderirregularmulti, Nlos, dx, dy, dz, LOSarr, $
-    Nvoxels, VoxList, ds, $
-    x_ind, y_ind, z_ind, $
-    entry_point, exit_point, $
-    voxel_id=voxel_id
-  sz=size(x_ind)
-  Nvoxels=reform(NVoxels,nx,ny)
-  entry_point=reform(entry_point,3,nx,ny)
-  exit_point=reform(exit_point,3,nx,ny)
-  ds=reform(ds,sz[1],nx,ny)
-  x_ind=reform(x_ind,sz[1],nx,ny)
-  y_ind=reform(y_ind,sz[1],nx,ny)
-  z_ind=reform(z_ind,sz[1],nx,ny)
-  t2=systime(/s)
-  if (gx_progmeter(prog_id,.5) eq 'Cancel') then goto,escape
-  n=0
-  k=0
-  for j=0,ny-1 do begin
-    for i=0,nx-1 do begin
-      ng=nvoxels[i,j]
-      if ng gt 0 then begin
-        n=max([n,ng])
-        LOS_sun_seg=gx_transform([[entry_point[*,i,j]],[exit_point[*,i,j]]]/scale,stm,/inv)
-        k=(floor(max_size*(min(LOS_sun_seg[2,*])-min(Los_sun[2,*]))/Lz))>0
-        k0=min([k,k0])
-        k1=max([k+ng-1,k1])
-        if k1 ge max_size then begin
-          dk=k1-max_size+64
-          grid=transpose([transpose(grid),transpose(dblarr(4,nx,ny,dk)-1)])
-          max_size+=dk
-        endif
-        grid[0,i,j,k:k+ng-1]=ds[0:ng-1,i,j]
-        grid[1,i,j,k:k+ng-1]=x_ind[0:ng-1,i,j]
-        grid[2,i,j,k:k+ng-1]=y_ind[0:ng-1,i,j]
-        grid[3,i,j,k:k+ng-1]=z_ind[0:ng-1,i,j]
-      end
-    end
-  end
-  t3=systime(/s)
-  if (gx_progmeter(prog_id,.75) eq 'Cancel') then goto,escape
-  grid=grid[*,*,*,(k0-1)>0:(k1-1)<(max_size-1)]
-  max_size=n_elements(grid[0,0,0,*])
-  for i=0,nx-1 do begin
-    for j=0, ny-1 do begin
-      full=where(reform(grid[0,i,j,*]) eq -1, count, comp=comp, ncomp=ncomp)
-      if ncomp gt 0 then begin
-        if lz lt total(grid[0,i,j,comp],/double) then begin
-          print,lz,total(grid[0,i,j,comp],/double)
-        endif
-        if count gt 0 then grid[0,i,j,full]=((Lz-total(grid[0,i,j,comp],/double))/count);>0
-      endif else begin
-        grid[0,i,j,full]=Lz/count
-      endelse
-    endfor
-  endfor
-  t4=systime(/s)
-  sz=size(grid)
-  self.nz=sz[4]
-  ptr_free,self.grid
-  self.grid=ptr_new(temporary(grid))
-  status = gx_progmeter(prog_id,/DESTROY)
-  flags=(self.parent->GetVolume())->setflags(newGrid=0)
-  message,strcompress('ComputeScanGrid execution time: '+string(systime(/s)-t0)),/info
-  if (gx_progmeter(prog_id,1.0) eq 'Cancel') then goto,escape
-  return,flags.newGrid
-  escape:
-  status = gx_progmeter(prog_id,/DESTROY)
-  message,'Grid computation aborted',/info
-  flags=(self.parent->GetVolume())->getflags()
-  return,flags.newGrid
-end
-
 
 function gxROI::GetGrid
   return,self.grid
