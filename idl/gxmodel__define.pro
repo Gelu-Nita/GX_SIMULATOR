@@ -1273,7 +1273,7 @@ pro gxModel::Slice,parms,row,any_grid,scanner=scanner
   ;ASSIGN VoxelZ
   idx=gx_name2idx(parms,'VoxelZ')
   if (size(idx))[0] ne 0 then begin
-    (*scanner).parms[*,*,idx]=vol_ind[*,2]-1e-6;removed epsilon correction
+    (*scanner).parms[*,*,idx]=self->IsCombo(bsize=bsize,csize=csize)?((vol_ind[*,2]-1e-6)-(csize[3]-bsize[3]))>(-1):(vol_ind[*,2]-1e-6);removed epsilon correction
     assigned[idx]=1
   end
 

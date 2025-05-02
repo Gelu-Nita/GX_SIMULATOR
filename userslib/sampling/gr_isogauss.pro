@@ -1,4 +1,4 @@
-pro gr_isogauss,parms,rowdata,nparms,rparms,path,parmin,datain,freqlist,ebtel_path=ebtel_path,libpath=libpath,grparms=grparms,logtdem=logtdem,$
+pro gr_isogauss,parms,rowdata,nparms,rparms,path,parmin,datain,freqlist,rdat,ebtel_path=ebtel_path,libpath=libpath,grparms=grparms,logtdem=logtdem,$
 dem_run=dem_run,ddm_run=ddm_run,qrun=qrun,lrun=lrun,use_dem=use_dem,has_ddm=has_ddm,info=info
  if n_elements(path) eq 0 then path=gx_libpath('grffdem')
  if arg_present(info) then begin
@@ -26,6 +26,9 @@ dem_run=dem_run,ddm_run=ddm_run,qrun=qrun,lrun=lrun,use_dem=use_dem,has_ddm=has_
       ;Start adding LOS parameters needed by the wrapper
       parms=[parms,{Name:'Q',Value:0.0,unit:'',Hint:'Heating rate'}]
       parms=[parms,{Name:'Length',Value:0.0,unit:'cm',Hint:'Half length of the associated fieldline'}]
+      parms=[parms,{Name:'VoxelX',Value:0.0,unit:'',Hint:'LOS node X fractional index'}]
+      parms=[parms,{Name:'VoxelY',Value:0.0,unit:'',Hint:'LOS node Y fractional index'}]
+      parms=[parms,{Name:'VoxelZ',Value:0.0,unit:'',Hint:'LOS node Z fractional index'}]
       ;End adding LOS parameters need by the wrapper
   
       openr,lun,'Long_input.txt',/get,error=err
@@ -97,8 +100,8 @@ dem_run=dem_run,ddm_run=ddm_run,qrun=qrun,lrun=lrun,use_dem=use_dem,has_ddm=has_
 
     rdat=double(rparms.value)#replicate(1,Npix)
     
-    dummy_parmin=replicate(1d,n_elements(parms)-2,Nvox,Npix)
-    for i=0,Nvox-1 do for j=0,Npix-1 do dummy_parmin[*,i,j]=(parms.value)[0:n_elements(parms.value)-3]
+    dummy_parmin=replicate(1d,n_elements(parms)-5,Nvox,Npix)
+    for i=0,Nvox-1 do for j=0,Npix-1 do dummy_parmin[*,i,j]=(parms.value)[0:n_elements(parms.value)-6]
     tdem=dblarr(Ntemp)
     dem=(ddm=dblarr(Ntemp,Nvox,Npix))
 
@@ -111,7 +114,7 @@ dem_run=dem_run,ddm_run=ddm_run,qrun=qrun,lrun=lrun,use_dem=use_dem,has_ddm=has_
           rparms:rparms,$
           pixdim:[nfreq,ngrparms,nchan],$
           spectrum:{x:{axis:freqlist,label:'Frequency',unit:'GHz'},$
-                    y:{label:['LCP_Teff','LCP_tau','RCP_Teff','RCP_tau','X','Y','Z'],unit:['K','K','','','cm','cm','cm']}},$
+                    y:{label:['LCP_Teff','LCP_tau','RCP_Teff','RCP_tau','X','Y','Z'],unit:['K','K','','','index','index','index']}},$
           channels:string(nparms[6].value+lindgen(nchan),format="('s',i0)")}                  
     return
  end
@@ -123,12 +126,12 @@ dem_run=dem_run,ddm_run=ddm_run,qrun=qrun,lrun=lrun,use_dem=use_dem,has_ddm=has_
    Npix=sz[0] 
    Nvox=sz[1]  
    N_parms=sz[2]
-   parms_idx=N_parms-3
+   parms_idx=N_parms-6
    rowdata[*]=0
    avgdem=nparms[6]
    recomputeNT=nparms[7]
    ndat=long(nparms[0:n_elements(nparms)-3])
-   rdat=rparms#replicate(1,Npix)
+   if n_elements(rdat) eq 0 then rdat=rparms#replicate(1,Npix)
    if n_elements(logtdem) gt 0 then tdem=10d0^logtdem
    if n_elements(datain) eq 0 then datain=dblarr(7,Nfreq,Npix)
    if n_elements(grparms) eq 0 then grparms=dblarr(7,Nfreq,nparms[7]-nparms[6]+1,Npix)
@@ -138,6 +141,17 @@ dem_run=dem_run,ddm_run=ddm_run,qrun=qrun,lrun=lrun,use_dem=use_dem,has_ddm=has_
    skip_DEMDDM=(ndat[4] and ndat[5]) 
     for pix=0, Npix-1 do begin
       parmin[*,*]=transpose(parms[pix,*,*])
+      
+      for k=3,5 do begin
+      idx=parmin[parms_idx+k,*]
+      good=where(idx ne -1,count)
+      if count gt 0 then begin
+        idx=minmax(idx[good])
+        rdat[k,pix]=idx[0]
+        rdat[k+3,pix]=idx[1]
+      end
+      end
+
       if ~keyword_set(skip_DEMDDM) then begin
         ;if both DEM_Key and DDM_Key are turned off then skip the gx_dem_interpolate block
       gx_dem_interpolate,n,t,los_dem,los_ddm,ebtel_path=ebtel_path,libpath=libpath,logtdem=logtdem,dem_run=dem_run,ddm_run=ddm_run,qrun=qrun,lrun=lrun,$
