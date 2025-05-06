@@ -389,12 +389,12 @@ pro gxchmpview::UpdateSummary
  files=*(self.pfiles)
  a_arr=[]
  b_arr=[]
+ freq_arr=[]
  n_ab=n_elements(files)
  for k=0,n_ab-1 do begin
   o=obj_new('IDL_Savefile', /relaxed, files[k])
   if k eq 0 then begin
     o->restore,'INSTRUMENT'
-    o->restore,'freqlist'
     o->restore, 'EBTELFILENAME'
     o->restore, 'MODELFILENAME'
     o->restore, 'MODIMAGEARR'
@@ -402,16 +402,19 @@ pro gxchmpview::UpdateSummary
   endif
   o->restore, 'a'
   o->restore, 'b'
+  o->restore,'freqlist'
   a_arr=[a_arr,a]
   b_arr=[b_arr,b]
+  freq_arr=[freq_arr,freqlist]
   obj_destroy,o
  endfor
  a=a_arr[uniq(a_arr,sort(a_arr))]
  b=b_arr[uniq(b_arr,sort(b_arr))]
+ freq=freq_arr[uniq(freq_arr,sort(freq_arr))]
  index_a=[]
  index_b=[]
  
- freq=temporary(freqlist)
+ ;freq=temporary(freqlist)
  N_a=n_elements(a)
  N_b=n_elements(b)
  N_freq=n_elements(freq)
@@ -426,8 +429,9 @@ pro gxchmpview::UpdateSummary
  filenames=strarr(N_a,N_b)
  for k=0,n_ab-1 do begin
    o=obj_new('IDL_Savefile', /relaxed, files[k])
-   index_a=WHERE(a EQ a_arr[k])
-   index_b=WHERE(b EQ b_arr[k])
+   index_a=WHERE(a EQ a_arr[k],count_a)
+   index_b=WHERE(b EQ b_arr[k],count_b)
+   if count_a eq 0 or count_b eq 0 then goto, skip_ab
    filenames[index_a,index_b]=files[k]
    dummy=where(o->Names() eq 'CHIARR',count)
    if count then begin
@@ -449,11 +453,13 @@ pro gxchmpview::UpdateSummary
    o->restore, 'CCarr
    CC[index_a,index_b,*]=CCArr
    o->restore, 'obsImageArr'
-     for index_freq=0, n_elements(freq)-1 do begin
+   o->restore,'freqlist'
+     for index_freq=0, n_elements(freqlist)-1 do begin
        m=obj_isa(obsImageArr,'map')?obsimagearr->get(index_freq,/map):obsimagearr(index_freq)
        if tag_exist(m, 'shiftX') then shiftX[index_a,index_b,index_freq]=m.shiftX
        if tag_exist(m, 'shiftY') then shiftY[index_a, index_b, index_freq]=m.shiftY
      endfor
+   skip_ab: 
    obj_destroy,o
  endfor
  
