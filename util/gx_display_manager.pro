@@ -5,6 +5,16 @@ pro display_freq,selected,tlb
   wstyle=widget_info(tlb,find_by_uname='select_style')
   wshow=widget_info(tlb,find_by_uname='show_s')
   wpallete=widget_info(tlb,find_by_uname='pallete')
+  wSelectScale=widget_info(tlb,find_by_uname='select_scale')
+  wUserScale=widget_info(tlb,find_by_uname='user_scale')
+  widget_control,wSelectScale,get_value=selected_scale
+  widget_control,wUserScale,get_value=user_scale
+  case selected_scale of
+    0: local_scale=1
+    2: local_scale=user_scale
+    else:
+  endcase
+  wUserScale=widget_info(tlb,find_by_uname='user_scale')
   widget_control,wsurface,get_value=surfaces
   widget_control,wopacity,get_value=opacities
   widget_control,wstyle,get_value=styles
@@ -23,7 +33,10 @@ pro display_freq,selected,tlb
   for k=0,selected->Count()-1 do begin
     selected[k]->SetProperty,style=style
     selected[k]->SetOpacity,opacity
-    if show[k] then selected[k]->Display,surface,ct=ct else selected[k]->SetProperty,hide=1
+    if show[k] then selected[k]->Display,surface,ct=ct,local_scale=local_scale, maxT=MaxT else selected[k]->SetProperty,hide=1
+    if n_elements(MaxT) ne 0 then begin
+      widget_control,wUserScale,set_value=maxT
+    endif
   end
 end
 
@@ -221,7 +234,22 @@ pro gx_display_manager_event,event
                           widget_control,widget_info(event.top,find_by_uname='iso_parms'),map=0
                           end
                         end
-                      end                                                                                             
+                       end 
+         'select_scale': begin
+                           if event.select then begin
+                             widget_control,widget_info(event.top,find_by_uname='select_freq'),get_uvalue=selected
+                             display_freq,selected,event.top
+                             refresh=1
+                           end
+                         end    
+         'user_scale': begin   
+                          widget_control,widget_info(event.top,find_by_uname='select_scale'),get_value=selected_scale
+                          if selected_scale eq 2 then begin
+                            widget_control,widget_info(event.top,find_by_uname='select_freq'),get_uvalue=selected
+                            display_freq,selected,event.top
+                            refresh=1
+                          endif
+                       end                                                                                                                  
     else:
   endcase
   widget_control,event.top,set_uvalue=state
@@ -278,6 +306,7 @@ wGenerateIsoSurface=widget_button(wToolbarBase,font=font,  $
     
 
 wSelectBase=widget_base(wObjviewWidBase,/row,uname='select')
+wScaleBase=widget_base(wObjviewWidBase,/row,uname='sscale',/frame)
 all[0]->GetProperty,hide=hide
 
 default,scale,1.2
@@ -324,7 +353,7 @@ oObjviewWid = obj_new('IDLexObjviewWid', $
     value=~hide?gx_bitmap(filepath('image.bmp', subdirectory=subdirectory)):$
     gx_bitmap(filepath('eye_closed.bmp', subdirectory=subdirectory)), $
     /bitmap,tooltip='hide/unhide this object class',uname='show_obj',uvalue=obj)
-    
+      
   wIsoParmsBase=widget_base(wToolbarBase,/row,uname='iso_parms',map=0)
   wIsoFreq=cw_ObjField(wIsoParmsBase,value=[1],unit='GHz',label='Freq',xtextsize=10,uname='iso_freq')
   wIsoFreq=cw_ObjField(wIsoParmsBase,value=3,unit='',label='max s',xtextsize=2,uname='iso_max_s',$
@@ -334,8 +363,6 @@ oObjviewWid = obj_new('IDLexObjviewWid', $
   wIsoCancel= widget_button(font=font, wIsoParmsBase, $
       value=gx_bitmap(filepath('delete.bmp', subdirectory=subdirectory)), $
       /bitmap,tooltip='Cancel isosurface generation',uname='iso_cancel')
-
-  
   
   wSurfaceBase=widget_base(wSelectBase,/column)
   wPropertiesBase=widget_base(wSurfaceBase,/frame,/row,uname='iso_prop')
@@ -360,8 +387,9 @@ oObjviewWid = obj_new('IDLexObjviewWid', $
   wSelect_style=widget_combobox(wPropertiesBase, font=font,value=['Points','Lines','Filled'],uname='select_style')
   widget_control,wSelect_style,set_combobox_select=2
   
-
-  
+  wSelectScale=cw_bgroup(wScaleBase,LABEL_LEFT='Temperature Scale: ',['Surface','Volume', 'User'],$
+    /exclusive,/row, uname='select_scale',set_value=0)
+  wUserScale=objField(wScaleBase,value=1e6,unit=' K',inc=1e6,uname='user_scale',xtextsize=15,min=1, label=' T scaled to: ')
   
   widget_control,tlb,set_uvalue={oDisplay:oObjviewWid,iso:iso,non_iso:non_iso,freq:freq,model:model}
   ; Realize the widgets.

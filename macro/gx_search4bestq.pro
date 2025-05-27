@@ -93,7 +93,10 @@ function gx_search4bestq, gxmpath=gxmpath,a_arr=a_arr,b_arr=b_arr,q_start=q_star
                 save,map,file=modfile
                 obj_destroy,map
             endif
-            if (isa(gxcube) and keyword_set(save_gxc)) then save,gxcube,file=gxcDir+path_sep()+strcompress(string(a,b,q[j],freq,format="('a',f7.2,'b',f7.2,'q',g0,'f',g0,'GHz.gxc')"),/rem)
+            if (isa(gxcube) and keyword_set(save_gxc)) then begin
+              if n_elements(freq) gt 0 then save,gxcube,file=gxcDir+path_sep()+strcompress(string(a,b,q[j],freq[0],format="('a',f7.2,'b',f7.2,'q',g0,'-',g0,' GHz.gxc')"),/rem)
+              if n_elements(chan) gt 0 then save,gxcube,file=gxcDir+path_sep()+strcompress(string(a,b,q[j],chan[0],format="('a',f7.2,'b',f7.2,'q',g0,'-',g0,' A.gxc')"),/rem)
+            endif
           endif else gx_message, modfile+' already exists, no reprocessing requested!',/info
         endfor
         result=gx_processmodels_ebtel(ab=[a,b],ref=ref,$

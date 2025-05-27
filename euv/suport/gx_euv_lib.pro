@@ -39,7 +39,7 @@ pro gx_euv_lib,parms,rowdata,nparms,rparms,sparms,ebtel_path, libpath, $
    ds_pix=ds_arcsec2/ds_rsp
    r=double(response.all)
    
-   norm_pix=rparms[idx.rparms.relabund]*ds_pix
+   norm_pix=rparms[idx.rparms.relabund];*ds_pix
    
    Lparms_M=[Npix, Nvox, Nchan, NT_rsp, NQ, NL, NT_DEM]
    Rparms_M=array_replicate([dS_arcsec2, dS_rsp],Npix)
@@ -47,9 +47,13 @@ pro gx_euv_lib,parms,rowdata,nparms,rparms,sparms,ebtel_path, libpath, $
    res=call_external(libpath, 'GET_GX_EUV_SLICE', $
      Lparms_M, Rparms_M, transpose(parms,[2,1,0]), logTe_rsp, r, $
      Qrun, Lrun, logtDEM, DEM_cor_run, DEM_tr_run, flux_M) 
-     rowdata[*,*,1]=transpose(flux_m[0,*,*]); TR, no TR Mask
-     rowdata[*,*,3]=transpose(flux_m[1,*,*]); Corona 
+     
+     ;['I','Corona','TR','Full TR','TR Mask']
+     
+     rowdata[*,*,1]=norm_pix*transpose(flux_m[0,*,*]); Corona 
+     rowdata[*,*,3]=transpose(flux_m[1,*,*]); Full TR, no TR Mask
      rowdata[*,*,4]=transpose(flux_m[2,*,*]); TR Mask
+     
      rowdata[*,*,2]=rowdata[*,*,3]*rowdata[*,*,4]; Masked TR 
-     rowdata[*,*,0]=rowdata[*,*,1]+AddTR*rowdata[*,*,2]
+     rowdata[*,*,0]=rowdata[*,*,1]+AddTR*rowdata[*,*,2]; Corona+Masked TR if the TR is to be added
 end

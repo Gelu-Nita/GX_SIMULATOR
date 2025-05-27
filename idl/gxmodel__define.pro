@@ -758,7 +758,7 @@ pro gxModel::ComputeTRmask,type=type,threshold=threshold,trmap=trmap,test=test
                 widget_control,wmaps,get_value=idx
                 selected=where(idx gt 0,count)
                 if count eq 0 then begin
-                  answ=dialog_message('At least one residula map must be selected1',/info)
+                  answ=dialog_message('At least one residual map must be selected1',/info)
                   return
                 endif
                 maps=maps[selected]
@@ -1147,9 +1147,16 @@ function gxModel::GetROIBox,xrange=xrange,yrange=yrange,zrange=zrange
   return,gx_getboxedges(xrange=xrange,yrange=yrange,zrange=zrange)
 end
 
-function gxModel::GetGrid
+function gxModel::GetGrid,los_bounds=los_bounds
  scanbox=self->GetROI(/scanbox)
- if ~obj_valid(scanbox) then return,ptr_new() else return, scanbox->GetGrid()
+ if obj_valid(scanbox) then begin
+  los_bounds= scanbox->Get_LOS_Bounds()
+  return, scanbox->GetGrid()
+ endif else begin
+  los_bounds=ptr_new()
+  grid=ptr_new()
+ endelse
+ return,grid
 end
 
 pro gxModel::SetGrid,grid
@@ -1225,7 +1232,7 @@ pro gxModel::Slice,parms,row,any_grid,scanner=scanner
     4: grid=ptr_new(any_grid)
     else:
   endcase
-  if n_elements(grid) eq 0 then grid=self->GetGrid()
+  if n_elements(grid) eq 0 then grid=self->GetGrid(los_bounds=los_bounds)
   if ~ptr_valid(grid) then begin
     message,'No rendering grid computed yet for this model!',/cont
     return
@@ -1279,7 +1286,7 @@ pro gxModel::Slice,parms,row,any_grid,scanner=scanner
     (*scanner).parms[*,*,idx]=self->IsCombo(bsize=bsize,csize=csize)?((vol_ind[*,2]-1e-6)-(csize[3]-bsize[3]))>(-1):(vol_ind[*,2]-1e-6);removed epsilon correction
     assigned[idx]=1
   end
-
+  
   r=self->R(/volume)
   radius=interpolate(temporary(r),vol_ind[*,0],vol_ind[*,1],vol_ind[*,2],missing=missing)
 
@@ -2323,7 +2330,7 @@ function gxModel::GetAU
 end
 
 pro gxModel::AddGyroLayers,fghz,bmax=bmax,smax=smax,hide=hide
-  default,bmax,2400.; Keep only B field values less than 2400 G
+  default,bmax,5000.; Keep only B field values less than 2400 G
   default,smax,3; default maximum harmonics
   default,hide,1; surfaces are hided by default after creation
   b0=[]

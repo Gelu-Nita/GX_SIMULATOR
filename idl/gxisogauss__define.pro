@@ -199,7 +199,7 @@ function gxisogauss::GetRGB,ct
 end
 
 pro gxisogauss::Display,select,hide=hide,lcp=lcp,rcp=rcp,te=te,opaque=opaque,$
-                        force_update=force_update,local_scale=local_scale,ct=ct
+                        force_update=force_update,local_scale=local_scale,ct=ct,maxT=maxT
  if ~obj_valid(self.parent) then return
  self.hide=keyword_set(hide)
  if self.hide then return
@@ -229,14 +229,18 @@ pro gxisogauss::Display,select,hide=hide,lcp=lcp,rcp=rcp,te=te,opaque=opaque,$
  endcase
  if keyword_set(self.opaque) then begin
   alpha=replicate(255b,n_elements(Tb))
-  te_vert=Tb*opacity
+  te_vert=Tb
  endif else begin
   te_vert=Tb
-  alpha=byte((tau<1)*255)
+  alpha=byte((opacity)*255)
  endelse
  rgb=self->GetRGB(ct)
- t0 = self.parent->GetVertexData('T0')
- it = byte(te_vert*255/(keyword_set(local_scale)?max(te_vert):max(t0)))
+ if keyword_set(local_scale) then begin
+  if local_scale eq 1 then maxT=max(te_vert,/nan) else maxT=local_scale
+ endif else begin
+  maxT = max(self.parent->GetVertexData('T0'),/nan)
+ endelse
+ it = byte(te_vert*255/maxT)
  vcol = transpose([[rgb[it,0]],[rgb[it,1]],[rgb[it,2]],[alpha]])
  self.SetProperty,vert_colors=vcol
  self.hide=0

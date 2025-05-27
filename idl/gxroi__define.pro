@@ -264,6 +264,8 @@ function gxROI::ComputeGrid
   self.nz=sz[4]
   ptr_free,self.grid
   self.grid=ptr_new(temporary(grid))
+  ptr_free,self.los_bounds
+  self.los_bounds=ptr_new({entry_point:temporary(entry_point),exit_point:temporary(exit_point)})
   status = gx_progmeter(prog_id,/DESTROY)
   flags=(self.parent->GetVolume())->setflags(newGrid=0)
   message,strcompress('ComputeScanGrid execution time: '+string(systime(/s)-t0)),/info
@@ -279,6 +281,10 @@ end
 
 function gxROI::GetGrid
   return,self.grid
+end
+
+function gxROI::Get_LOS_Bounds
+  return,self.los_bounds
 end
 
 pro gxROI::SetGrid,grid
@@ -310,5 +316,5 @@ function gxROI::GetScanbox
 end
 
 pro gxROI__define
-self={gxROI,inherits IDLgrModel, nx:0l,ny:0l,nz:0l,grid:ptr_new(),scanbox:IdlGrROI(),fovmap:obj_new(),fovscreen:IDLgrPolygon(),fovimage:IDLgrImage()}
+self={gxROI,inherits IDLgrModel, nx:0l,ny:0l,nz:0l,grid:ptr_new(),los_bounds:ptr_new(),scanbox:IdlGrROI(),fovmap:obj_new(),fovscreen:IDLgrPolygon(),fovimage:IDLgrImage()}
 end
