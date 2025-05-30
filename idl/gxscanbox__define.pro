@@ -386,7 +386,7 @@ if size(info,/tname) eq 'STRUCT' then begin
  self->MakeGrid
  self->Slice
  self->ResetAllBridges
- widget_control,self.wSliceSelect,set_combobox_select=(where(((*self.info).parms).name eq 'n_0'))[0],set_value=[((*self.info).parms).name,'B','curlB','divB+','divB-','helB+','helB-','Q0','Q','VoxelID']
+ widget_control,self.wSliceSelect,set_combobox_select=(where(((*self.info).parms).name eq 'n_0'))[0],set_value=[((*self.info).parms).name,'B','curlB','divB+','divB-','helB+','helB-','Q0','Q','tilt','expansion','tilt*expansion','VoxelID']
  if keyword_set(zoom2view) then widget_control,wZoom2view,send_event={id:wZoom2view,top:tlb,handler:wZoom2view,select:1l}
  if keyword_set(zoom2xy) then widget_control,wZoom2xy,send_event={id:wZoom2xy,top:tlb,handler:wZoom2xy,select:1l}
  endif else begin
@@ -397,7 +397,7 @@ if size(info,/tname) eq 'STRUCT' then begin
 end
 
 function gxScanBox::name2idx,name
- return,where(strcompress(strupcase(((*self.info).parms).name),/rem) eq strcompress(strupcase(name),/rem))
+ return,(where(strcompress(strupcase(((*self.info).parms).name),/rem) eq strcompress(strupcase(name),/rem)))[0]
 end
 
 function gxScanBox::AcceptFreqList
