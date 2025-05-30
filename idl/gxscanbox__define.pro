@@ -1716,7 +1716,7 @@ self.wPlotLOSOptions=cw_objPlotOptions(wPlotLOSBase,uname='LOS Profile Plot Opti
  wRow4=widget_base(wColumn,/row,Event_FUNC='gxScanboxHandleEvent',uvalue=self)
  
  wSelect=widget_base(wRow4, /row,/toolbar)
- self.wSliceSelect= widget_combobox(wSelect, value=[((*self.info).parms).name,'B','curlB','divB+','divB-','helB+','helB-','Q0','Q','VoxelID'])
+ self.wSliceSelect= widget_combobox(wSelect, value=[((*self.info).parms).name,'B','curlB','divB+','divB-','helB+','helB-','Q0','Q','tilt','expansion','tilt*expansion','VoxelID'])
  widget_control,self.wSliceSelect,set_combobox_select=(where(((*self.info).parms).name eq 'n_0'))[0]
 
  self.wMinVolume=CW_objFIELD(wSelect, UNAME='MinVolume', LABEL=' Min:',$

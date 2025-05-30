@@ -44,7 +44,6 @@ else return,[0,0,0]
 end
 
 function gxVolume::GetBx,volume=volume
-  ;p is expressed in self's box fractional index coordinates
   self->GetVertexAttributeData,'Bx',Bx
   if keyword_set(volume) then begin
     self->GetVertexAttributeData,'chromo_bcube',chromo_bcube
@@ -58,7 +57,6 @@ function gxVolume::GetBx,volume=volume
 end
 
 function gxVolume::GetBy,volume=volume
-  ;p is expressed in self's box fractional index coordinates
   self->GetVertexAttributeData,'By',By
   if keyword_set(volume) then begin
     self->GetVertexAttributeData,'chromo_bcube',chromo_bcube
@@ -72,7 +70,6 @@ function gxVolume::GetBy,volume=volume
 end
 
 function gxVolume::GetBz,volume=volume
-  ;p is expressed in self's box fractional index coordinates
   self->GetVertexAttributeData,'Bz',Bz
   if keyword_set(volume) then begin
     self->GetVertexAttributeData,'chromo_bcube',chromo_bcube
@@ -813,7 +810,27 @@ pro gxVolume::Update,select,data=data,plot_model_attributes=plot_model_attribute
       'Length': begin
              data=self.parent->box2volume('length',/corona)
              if self->undefined(data) then goto,undefined 
-            end          
+            end   
+       'tilt': begin
+              self->GetLoopsGeometry,tilt=data
+              data=self.parent->box2volume(data,/corona)
+              if self->undefined(data) then goto,undefined
+            end   
+       'expansion': begin
+              self->GetLoopsGeometry,expansion=data
+              data=self.parent->box2volume(data,/corona)
+              if self->undefined(data) then goto,undefined
+            end 
+        'tilt*expansion': begin
+              self->GetLoopsGeometry,expansion=expansion,tilt=tilt
+              data=self.parent->box2volume(expansion*tilt,/corona)
+              if self->undefined(data) then goto,undefined
+            end  
+         'expansion*tilt': begin
+              self->GetLoopsGeometry,expansion=expansion,tilt=tilt
+              data=self.parent->box2volume(expansion*tilt,/corona)
+              if self->undefined(data) then goto,undefined
+            end                    
    else: begin      
          undefined:
          void=self.parent->box2volume(box2vol=data)
