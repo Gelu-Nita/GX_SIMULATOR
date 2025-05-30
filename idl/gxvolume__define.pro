@@ -340,6 +340,20 @@ pro gxVolume::DisplayModelStatistics,data
      widget_control,widget_info(wParent,find_by_uname='GXMODEL:sdev'),set_value=sdev
 end
 
+pro gxVolume::GetLoopsGeometry,tilt=tilt,expansion=expansion,idx=idx
+  self->GetVertexAttributeData,'idx',idx
+  self->GetVertexAttributeData,'bmed',B
+  self->GetVertexAttributeData,'foot1',foot1
+  self->GetVertexAttributeData,'foot2',foot2
+  self->GetVertexAttributeData,'Bx',bx
+  self->GetVertexAttributeData,'By',by
+  self->GetVertexAttributeData,'Bz',bz
+  absB=sqrt(temporary(bx)^2+temporary(by)^2+bz^2)
+  tilt=abs(temporary(bz))/absB
+  expansion=(absB[foot1]+absB[foot2])/B/2
+  tilt=(tilt[foot1]+tilt[foot2])/2
+end
+
 function gxVolume::SetQ,q_formula,quiet=quiet
   q_default='q0*(B/q[1])/(L/q[2])^0.75'
   self->GetVertexAttributeData,'q_formula',undo
@@ -367,6 +381,8 @@ function gxVolume::SetQ,q_formula,quiet=quiet
   self->GetVertexAttributeData,'bmed',B
   self->GetVertexAttributeData,'length',L
   self->GetVertexAttributeData,'dz',dz
+  match=str_match(q_formula,['tilt','gamma'],count=count)
+  if count gt 0 then self->GetLoopsGeometry,tilt=tilt,expansion=gamma
   default,oldQ,L*0
   ;TO BE REVISITED!!!
   if n_elements(dz) gt 0 then dz=max(dz) else dz=self.zcoord_conv[1]
@@ -1602,7 +1618,7 @@ function gxVolume::GetHeat2VolumeFactor,idx=idx,compute=compute
    endif else  h2vfactor=replicate(1,(*h2v).olines?n_elements(idx):(n_elements(idx)+n_elements(oidx)))
    self->Add2RAM,_extra={h2vfactor:h2vfactor,idx:idx}
    q0_formula=self->SetQ0(self->GetVertexData('q0_formula'))
-   self->RequestVolumeUpdate;self->Update,/quiet
+   self->RequestVolumeUpdate
  endif
  idx=self->GetVertexData('idx')
  return,h2vfactor
