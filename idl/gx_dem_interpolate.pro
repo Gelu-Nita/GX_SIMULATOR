@@ -1,6 +1,6 @@
 pro gx_dem_interpolate,n,t,dem,ddm,ebtel_path=ebtel_path,libpath=libpath,logtdem=logtdem,dem_run=dem_run,ddm_run=ddm_run,qrun=qrun,lrun=lrun,qarr=qarr,$
                     larr=larr,tr=tr,avgdem=avgdem,duration=duration,method=method,info=info,expert=expert,$
-                    use_dem=use_dem,has_ddm=has_ddm,has_used_ddm=has_used_ddm
+                    use_dem=use_dem,has_ddm=has_ddm,has_used_ddm=has_used_ddm,NTonly=NTonly
   if keyword_set(info) then goto,getinfo
   if n_elements(logtdem) eq 0 or n_elements(dem_run) eq 0 or n_elements(qrun) eq 0 or n_elements(lrun) eq 0 then begin
     if ~file_exist(ebtel_path) then ebtel_path=gx_ebtel_path()
@@ -39,8 +39,6 @@ pro gx_dem_interpolate,n,t,dem,ddm,ebtel_path=ebtel_path,libpath=libpath,logtdem
       method='Bilinear (shared library)'
       if keyword_set(info) then return
       if ~file_exist(libpath) then libpath=gx_libpath('rendergrff')
-      if n_elements(dem) eq 0 then dem=dblarr(n_elements(logtdem), n_elements(larr))
-      if n_elements(ddm) eq 0 and keyword_set(use_ddm) then ddm=dblarr(n_elements(logtdem), n_elements(larr))
       DEM_on=exist(DEM_run)
       DDM_on=exist(DDM_run)
       if DEM_on then s=size(DEM_run, /dimensions) $
@@ -54,15 +52,17 @@ pro gx_dem_interpolate,n,t,dem,ddm,ebtel_path=ebtel_path,libpath=libpath,logtdem
       NL=s[2]
       NP=n_elements(Qarr)
       
-      Lparms=long([NP, NQ, NL, NT, DEM_on, DDM_on])
+      Lparms=long([NP, NQ, NL, NT, DEM_on, DDM_on,keyword_set(NTonly)])
       
       flag=bytarr(NP)
       
       if DEM_on then begin
+        DEM=keyword_set(NTonly) ? 0 : dblarr(NT, NP)
         n_DEM=dblarr(NP)
         T_DEM=dblarr(NP)
       endif
       if DDM_on then begin
+        DDM=keyword_set(NTonly) ? 0 : dblarr(NT, NP)
         n_DDM=dblarr(NP)
         T_DDM=dblarr(NP)
       endif

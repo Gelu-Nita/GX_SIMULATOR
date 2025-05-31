@@ -976,7 +976,7 @@ pro gxVolume::ComputeNT,question=question,quiet=quiet,force=force,NTDEM=NTDEM,NT
       end
       message,'Computing n-T from DEM/DDM....',/info
       t0=systime(/s)
-      gx_dem_interpolate,n,t,Qarr=Q,Larr=L,avgdem=avgdem,duration=duration,use_dem=use_dem,has_used_ddm=has_used_ddm
+      gx_dem_interpolate,n,t,Qarr=Q,Larr=L,avgdem=avgdem,duration=duration,use_dem=use_dem,has_used_ddm=has_used_ddm,/ntonly
       message,string(systime(/s)-t0,format="('n-T computed from DEM/DDM in ', g0,' seconds')"),/info
       if widget_valid(wdemdt) then begin
         method=keyword_set(has_used_ddm)?'DDM':'DEM'
