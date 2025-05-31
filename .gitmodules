@@ -23,6 +23,7 @@
 [submodule "external/chmp"]
 	path = external/chmp
 	url = https://github.com/kuznetsov-radio/gxmodelfitting/
+	branch = main
 [submodule "external/nlfff"]
 	path = external/nlfff
 	url = https://github.com/Alexey-Stupishin/idlAMaFiL
