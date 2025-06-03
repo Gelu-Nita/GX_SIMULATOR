@@ -1,33 +1,49 @@
 [submodule "gxbox"]
 	path = gxbox
 	url = https://github.com/Sergey-Anfinogentov/GXBox_prep
+	branch = main
+
 [submodule "sfq"]
 	path = sfq
 	url = https://github.com/Sergey-Anfinogentov/SFQ
+	branch = main
+
 [submodule "external/mw/grffdem"]
 	path = external/mw/grffdem
 	url = https://github.com/kuznetsov-radio/GRFF
+	branch = main
+
 [submodule "external/grid"]
 	path = external/grid
 	url = https://github.com/kuznetsov-radio/RenderIrregular
 	branch = main
+
 [submodule "external/mw/mwtransferarr"]
 	path = external/mw/mwtransferarr
 	url = https://github.com/kuznetsov-radio/gyrosynchrotron
+	branch = main
+
 [submodule "external/rendergrff"]
 	path = external/rendergrff
 	url = https://github.com/kuznetsov-radio/gximagecomputing
-        branch = main
+	branch = main
+
 [submodule "ratan"]
 	path = ratan
 	url = https://github.com/Alexey-Stupishin/RATAN-in-GX
+	branch = main
+
 [submodule "external/chmp"]
 	path = external/chmp
 	url = https://github.com/kuznetsov-radio/gxmodelfitting/
 	branch = main
+
 [submodule "external/nlfff"]
 	path = external/nlfff
 	url = https://github.com/Alexey-Stupishin/idlAMaFiL
+	branch = main
+
 [submodule "external/rendereuv"]
 	path = external/rendereuv
 	url = https://github.com/kuznetsov-radio/EUVtransfer
+	branch = main
