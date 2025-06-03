@@ -6,7 +6,7 @@
 [submodule "sfq"]
 	path = sfq
 	url = https://github.com/Sergey-Anfinogentov/SFQ
-	branch = main
+	branch = master
 
 [submodule "external/mw/grffdem"]
 	path = external/mw/grffdem
