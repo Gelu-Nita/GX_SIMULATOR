@@ -41,7 +41,7 @@
 [submodule "external/nlfff"]
 	path = external/nlfff
 	url = https://github.com/Alexey-Stupishin/idlAMaFiL
-	branch = main
+	branch = master
 
 [submodule "external/rendereuv"]
 	path = external/rendereuv
