@@ -21,7 +21,7 @@
 [submodule "external/mw/mwtransferarr"]
 	path = external/mw/mwtransferarr
 	url = https://github.com/kuznetsov-radio/gyrosynchrotron
-	branch = main
+	branch = master
 
 [submodule "external/rendergrff"]
 	path = external/rendergrff
