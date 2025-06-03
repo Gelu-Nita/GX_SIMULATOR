@@ -17,6 +17,7 @@
 [submodule "external/rendergrff"]
 	path = external/rendergrff
 	url = https://github.com/kuznetsov-radio/gximagecomputing
+        branch = main
 [submodule "ratan"]
 	path = ratan
 	url = https://github.com/Alexey-Stupishin/RATAN-in-GX
