@@ -11,7 +11,7 @@
 [submodule "external/mw/grffdem"]
 	path = external/mw/grffdem
 	url = https://github.com/kuznetsov-radio/GRFF
-	branch = main
+	branch = master
 
 [submodule "external/grid"]
 	path = external/grid
