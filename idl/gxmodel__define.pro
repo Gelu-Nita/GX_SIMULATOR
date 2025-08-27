@@ -450,7 +450,7 @@ function gxModel::SetFOV,xc=xc,yc=yc,xfov=xfov,nx=nx,ny=ny, yfov=yfov,fovmap=fov
    gx_fovmap2scanbox,fovmap,b0=b0,rsun=rsun,l0=l0,nx=nx,ny=ny
    self->SetLos,b0=b0,rsun=rsun,l0=l0
  endif else self->SetLos,_extra=_extra
- self->ResetPosition
+ self->ResetPosition,_extra=_extra
  rsun=self->Rsun()
  fovmap=valid_map(fovmap)?fovmap:self->GetFovMap()
  default,xc,fovmap->get(/xc)
