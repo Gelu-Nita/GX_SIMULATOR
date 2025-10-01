@@ -27,7 +27,7 @@ function gx_get_euvi_response,date,Ahead=Ahead,Behind=Behind
 ;			   GXresponse function for later use 
 ;            : defaulted the date input to the current time
 ;            ; changed time format to the same format returned by the aia_get_GXresponse.pro 
-; 25-Feb-2025:  Rewrite to tie in calculation to AIA routines. TAK. I AM NOT SURE IF I HAVE THIS RIGHT
+; 11-Jul-2025:  Rewrite to tie in calculation to AIA routines. TAK. I AM NOT SURE IF I HAVE THIS RIGHT
 ;+
 
  	default,date,RELTIME(/now)
@@ -62,7 +62,8 @@ function gx_get_euvi_response,date,Ahead=Ahead,Behind=Behind
 	NChan=n_elements(EAChan)
 	EAlam=EffArea.lambda	
 	
-		
+	;Want effective area in 'cm^2 DN phot^-1' to parallel the output of aia_get_response(/dn)
+	
 		;  the photon-to-photoelectron conversion factor, and the camera gain:
 	h_c = 6.6262d-34 * 2.9979d8   ; h * c in Joules
 	esi = 3.65 * 1.6022d-19       ; bandgap of Si = 3.65 eV * e in Coulombs
@@ -106,7 +107,7 @@ function gx_get_euvi_response,date,Ahead=Ahead,Behind=Behind
 	endfor
 
 	;Add information about spacecraft POV
-  pb0r=pb0r_stereo(date,/arcsec,ahead=ahead,behind=behind,l0=l0)
+  	pb0r=pb0r_stereo(date,/arcsec,ahead=ahead,behind=behind,l0=l0)
 	RSun_arcsec=pb0r[2] ;(arcsec/RSun)
 	RSun_cm=wcs_rsun(unit='cm') ;cm/RSun
 	
