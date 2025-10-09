@@ -5,26 +5,111 @@
   "creators": [
     {
       "name": "Gelu M. Nita",
-      "affiliation": "New Jersey Institute of Technology",
+      "affiliation": "New Jersey Institute of Technology (NJIT)",
       "orcid": "0000-0003-2846-2453"
+    },
+    {
+      "name": "Gregory D. Fleishman",
+      "affiliation": "New Jersey Institute of Technology (NJIT)",
+      "orcid": "0000-0001-5557-2100"
+    },
+    {
+      "name": "Alexey A. Kuznetsov",
+      "affiliation": "Institute of Solar-Terrestrial Physics",
+      "orcid": "0000-0001-8644-8372"
+    },
+    {
+      "name": "Eduard P. Kontar",
+      "affiliation": "University of Glasgow",
+      "orcid": "0000-0002-8078-0902"
+    },
+    {
+      "name": "Dale E. Gary",
+      "affiliation": "New Jersey Institute of Technology (NJIT)",
+      "orcid": "0000-0003-2520-8396"
+    },
+    {
+      "name": "Sergey Anfinogentov",
+      "affiliation": "Institute of Solar-Terrestrial Physics",
+      "orcid": "0000-0002-1107-7420"
+    },
+    {
+      "name": "Alexey A. Stupishin",
+      "affiliation": "Saint Petersburg State University",
+      "orcid": "0000-0002-5453-2307"
+    }
+  ],
+  "contributors": [
+    {
+      "name": "James A. Klimchuk",
+      "affiliation": "NASA Goddard Space Flight Center",
+      "orcid": "0000-0003-2255-0305",
+      "type": "Researcher"
+    },
+    {
+      "name": "Nicholeen Viall",
+      "affiliation": "NASA Goddard Space Flight Center",
+      "orcid": "0000-0003-1692-1704",
+      "type": "Researcher"
+    },
+    {
+      "name": "Maria Loukitcheva",
+      "affiliation": "Max Planck Institute for Solar System Research (MPS)",
+      "orcid": "0000-0001-5246-9044",
+      "type": "Researcher"
+    },
+    {
+      "name": "Samuel Schonfeld",
+      "affiliation": "United States Air Force Research Laboratory",
+      "orcid": "0000-0002-5476-2794",
+      "type": "Researcher"
+    },
+    {
+      "name": "Therese A. Kucera",
+      "affiliation": "NASA Goddard Space Flight Center",
+      "orcid": "0000-0001-9632-447X",
+      "type": "Researcher"
+    },
+    {
+      "name": "Viktor V. Fedenev",
+      "affiliation": "Institute of Solar-Terrestrial Physics",
+      "orcid": "0000-0003-2990-1390",
+      "type": "Researcher"
     }
   ],
   "license": "MIT",
   "keywords": [
-    "Simulator",
-    "GX",
+    "GX_Simulator",
     "IDL",
     "Solar Physics",
     "Radio Emission",
     "X-ray",
     "EUV",
-    "Gyro-resonance"
+    "Gyroresonance",
+    "Modeling"
   ],
   "related_identifiers": [
     {
       "identifier": "https://github.com/Gelu-Nita/GX_SIMULATOR",
       "relation": "isSupplementTo",
       "scheme": "url"
+    },
+    {
+      "identifier": "https://doi.org/10.1088/0004-637X/799/2/236",
+      "relation": "isDescribedBy",
+      "scheme": "doi"
+    },
+    {
+      "identifier": "https://doi.org/10.3847/1538-4357/aaa4bf",
+      "relation": "isDescribedBy",
+      "scheme": "doi"
+    },
+    {
+      "identifier": "https://doi.org/10.3847/1538-4365/acd343",
+      "relation": "isDescribedBy",
+      "scheme": "doi"
     }
-  ]
+  ],
+  "access_right": "open",
+  "notes": "This record acknowledges the contributions of all original developers and collaborators who participated in the design, coding, and testing of the GX Simulator framework since its inception."
 }
