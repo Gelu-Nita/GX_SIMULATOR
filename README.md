@@ -23,6 +23,33 @@ cd gx_simulator
 git submodule update --init --recursive --remote
 ```
 
+##### 🔁 Updating Submodules Safely (optional)
+
+To update all submodules and commit pointer changes without pushing:
+
+```bash
+bash tools/update-submodules-and-commit.sh
+```
+
+To make this easier, define an alias in your `~/.bashrc` or `~/.bash_profile`:
+
+```bash
+alias update-gx="bash $(pwd)/tools/update-submodules-and-commit.sh"
+```
+
+Then you can simply run:
+
+```bash
+update-gx
+```
+
+This script:
+- Updates all submodules recursively
+- Commits pointer changes inside submodules and the main repo
+- Leaves you with a clean working tree
+- Reminds you to push manually (`git push`)
+
+
 #### Add GX_SIMULATOR to your SSW_INSTR list by editig the appropriate SSWIDL script
 
 ## Additional actions required on Mac systems
