@@ -6,7 +6,7 @@ pro GS_Transfer_DP,parms,rowdata,path,datain,info=info
     if n_elements(parms) gt 0 then dummy=temporary(parms)
     if n_elements(info) eq 0 then begin
       result=call_external(path,'GET_PARMS',/F_VALUE,/unload )
-      openr,lun,'parms.txt',/get,error=error
+      openr,lun,'Parms.txt',/get,error=error
       if error eq 1 then return
       line=''
       WHILE ~ EOF(lun) DO BEGIN 
