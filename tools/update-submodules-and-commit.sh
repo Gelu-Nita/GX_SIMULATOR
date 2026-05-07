@@ -3,16 +3,21 @@ set -euo pipefail
 
 DRY_RUN=0
 PUSH=0
+TOP_LEVEL_ONLY=0
 
 usage() {
   cat <<'USAGE'
-Usage: bash tools/update-submodules-and-commit.sh [--dry-run] [--push]
+Usage: bash tools/update-submodules-and-commit.sh [--dry-run] [--push] [--top-level-only]
 
 Maintainer-only helper for synchronizing GX_SIMULATOR submodule pointers.
 
 Options:
   --dry-run   Update submodules, then report commits/pushes without creating them.
   --push      Push submodule commits first, then push the GX_SIMULATOR commit.
+  --top-level-only
+              Do not commit inside submodule repositories. Only record top-level
+              GX_SIMULATOR submodule pointers whose target commits are already
+              visible on remotes.
   -h, --help  Show this help.
 
 Dry-run still runs:
@@ -29,6 +34,9 @@ while [ "$#" -gt 0 ]; do
       ;;
     --push)
       PUSH=1
+      ;;
+    --top-level-only)
+      TOP_LEVEL_ONLY=1
       ;;
     -h|--help)
       usage
@@ -212,6 +220,10 @@ else
   echo "No-push mode: commits may be created locally, but nothing will be pushed."
 fi
 
+if [ "$TOP_LEVEL_ONLY" -eq 1 ]; then
+  echo "Top-level-only mode: submodule repositories will not receive commits."
+fi
+
 echo
 echo "Updating all submodules recursively from their configured remote branches..."
 run git submodule update --init --recursive --remote
@@ -226,9 +238,14 @@ done < <(
     cut -d' ' -f2-
 )
 
-for repo in "${SUBMODULES[@]}"; do
-  commit_pointer_updates "$repo"
-done
+if [ "$TOP_LEVEL_ONLY" -eq 1 ]; then
+  echo
+  echo "Skipping commits inside submodule repositories because --top-level-only was provided."
+else
+  for repo in "${SUBMODULES[@]}"; do
+    commit_pointer_updates "$repo"
+  done
+fi
 
 commit_pointer_updates "."
 

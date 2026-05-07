@@ -48,6 +48,15 @@ To also push the created submodule commits first, then push the top-level GX_SIM
 bash tools/update-submodules-and-commit.sh --push
 ```
 
+If you only want GX_SIMULATOR to record updated top-level submodule pointers, and do not have write access to nested submodule repositories owned by others, use:
+
+```bash
+bash tools/update-submodules-and-commit.sh --top-level-only --dry-run
+bash tools/update-submodules-and-commit.sh --top-level-only --push
+```
+
+This mode does not create commits inside submodule repositories. It only records top-level GX_SIMULATOR pointers to commits that are already available from the submodules' remotes.
+
 For a report-only maintainer check, use:
 
 ```bash
@@ -92,4 +101,3 @@ print, gx_libpath('grid')
 ```
 
  
-
