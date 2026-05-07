@@ -55,7 +55,7 @@ bash tools/update-submodules-and-commit.sh --top-level-only --dry-run
 bash tools/update-submodules-and-commit.sh --top-level-only --push
 ```
 
-This mode does not create commits inside submodule repositories. It only records top-level GX_SIMULATOR pointers to commits that are already available from the submodules' remotes.
+This mode does not create commits inside submodule repositories. It updates only GX_SIMULATOR's direct submodules to their configured remote branches, restores nested submodules to the commits recorded by their parent repositories, and records top-level GX_SIMULATOR pointers to commits that are already available from the submodules' remotes.
 
 For a report-only maintainer check, use:
 

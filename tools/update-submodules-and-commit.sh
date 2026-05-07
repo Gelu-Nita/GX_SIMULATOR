@@ -23,6 +23,10 @@ Options:
 Dry-run still runs:
   git submodule update --init --recursive --remote
 
+With --top-level-only, dry-run instead runs:
+  git submodule update --init --remote
+  git submodule foreach 'git submodule update --init --recursive'
+
 It does not commit or push.
 USAGE
 }
@@ -210,6 +214,10 @@ echo "with write access to GX_SIMULATOR and the relevant submodule repositories.
 echo "Normal users should use git submodule update --init --recursive instead."
 echo
 
+if [ "$TOP_LEVEL_ONLY" -eq 1 ]; then
+  echo "Top-level-only mode: submodule repositories will not receive commits."
+fi
+
 if [ "$DRY_RUN" -eq 1 ]; then
   echo "Dry-run mode: submodules will be updated, but commits and pushes will be reported only."
 fi
@@ -220,13 +228,17 @@ else
   echo "No-push mode: commits may be created locally, but nothing will be pushed."
 fi
 
-if [ "$TOP_LEVEL_ONLY" -eq 1 ]; then
-  echo "Top-level-only mode: submodule repositories will not receive commits."
-fi
-
 echo
-echo "Updating all submodules recursively from their configured remote branches..."
-run git submodule update --init --recursive --remote
+if [ "$TOP_LEVEL_ONLY" -eq 1 ]; then
+  echo "Updating direct GX_SIMULATOR submodules from their configured remote branches..."
+  run git submodule update --init --remote
+  echo
+  echo "Restoring nested submodules to the commits recorded by their parent submodules..."
+  run git submodule foreach 'git submodule update --init --recursive'
+else
+  echo "Updating all submodules recursively from their configured remote branches..."
+  run git submodule update --init --recursive --remote
+fi
 
 SUBMODULES=()
 while IFS= read -r repo; do
