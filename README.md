@@ -6,7 +6,7 @@ GX_Simulator is an interactive IDL widget application intended to provide a flex
 - [ ] All OS platforms: SSWIDL installed from https://www.lmsal.com/solarsoft/ with the following list of required instruments included: ontology vso sdo aia hessi chianti hxt spex xray norh gx_simulator
 - [ ] Linux/Mac platforms: gcc 4.8 or later
 
-# Here are the steps needed to download the latest version of the package, including the linked external submodule dependencies
+# Here are the steps needed to download the package, including the linked external submodule dependencies
 
 #### If not already installed on your system, download and install git for command line
 
@@ -17,38 +17,44 @@ https://git-scm.com/
 #### CD to your SSW/packages/ installation folder and issue the following sequence of commands
 
 ```bash
-rm -rf gx_simulator
 git clone https://github.com/Gelu-Nita/GX_SIMULATOR gx_simulator
 cd gx_simulator
+git submodule update --init --recursive
+```
+
+This checks out the submodule commits recorded by the GX_SIMULATOR repository. That is the recommended normal installation path because it makes the checkout reproducible.
+
+If you want your local copy to follow the latest commits from each configured submodule branch, you can run:
+
+```bash
 git submodule update --init --recursive --remote
 ```
 
-##### 🔁 Updating Submodules Safely (optional)
+After using `--remote`, `git status` may show modified submodules. That is not necessarily an error. It means your local clone has moved one or more submodules to newer commits than the submodule pointers currently recorded upstream in GX_SIMULATOR. Normal users do not need to commit or push those pointer changes.
 
-To update all submodules and commit pointer changes without pushing:
+##### Developer/maintainer submodule synchronization
+
+Committing updated submodule pointers is a repository maintenance operation. Only developers with write access to GX_SIMULATOR and the relevant submodule repositories should run the synchronization helper.
+
+To update all submodules recursively and commit any changed nested and top-level submodule pointers locally:
 
 ```bash
 bash tools/update-submodules-and-commit.sh
 ```
 
-To make this easier, define an alias in your `~/.bashrc` or `~/.bash_profile`:
+To also push the created submodule commits first, then push the top-level GX_SIMULATOR commit:
 
 ```bash
-alias update-gx="bash $(pwd)/tools/update-submodules-and-commit.sh"
+bash tools/update-submodules-and-commit.sh --push
 ```
 
-Then you can simply run:
+For a report-only maintainer check, use:
 
 ```bash
-update-gx
+bash tools/update-submodules-and-commit.sh --dry-run
 ```
 
-This script:
-- Updates all submodules recursively
-- Commits pointer changes inside submodules and the main repo
-- Leaves you with a clean working tree
-- Reminds you to push manually (`git push`)
-
+Dry-run mode still runs `git submodule update --init --recursive --remote`, then reports the commits and pushes it would make without creating commits or pushing. The helper refuses to commit in a detached-HEAD submodule and refuses to create parent commits that point to submodule commits not available from a remote branch unless `--push` is used.
 
 #### Add GX_SIMULATOR to your SSW_INSTR list by editig the appropriate SSWIDL script
 
@@ -86,5 +92,4 @@ print, gx_libpath('grid')
 ```
 
  
-
 
