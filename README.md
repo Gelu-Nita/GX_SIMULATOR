@@ -19,18 +19,18 @@ https://git-scm.com/
 ```bash
 git clone https://github.com/Gelu-Nita/GX_SIMULATOR gx_simulator
 cd gx_simulator
-git submodule update --init --recursive
-```
-
-This checks out the submodule commits recorded by the GX_SIMULATOR repository. That is the recommended normal installation path because it makes the checkout reproducible.
-
-If you want your local copy to follow the latest commits from each configured submodule branch, you can run:
-
-```bash
 git submodule update --init --recursive --remote
 ```
 
-After using `--remote`, `git status` may show modified submodules. That is not necessarily an error. It means your local clone has moved one or more submodules to newer commits than the submodule pointers currently recorded upstream in GX_SIMULATOR. Normal users do not need to commit or push those pointer changes.
+This downloads GX_SIMULATOR and updates all configured submodules recursively from their remote branches. This is the recommended normal installation path because it gives users the latest available external libraries, including the nested AMaFiL library used by `external/nlfff`, even when the upstream `nlfff` repository has not yet updated its recorded AMaFiL pointer.
+
+After this command, `git status` may show modified submodules. That is expected and harmless for normal users. It means one or more local submodules were advanced beyond the exact commit pointers recorded by their parent repositories. Normal users do not need to commit or push those pointer changes.
+
+For a fully reproducible checkout that uses only the exact submodule commits recorded by GX_SIMULATOR and its parent submodules, developers can instead run:
+
+```bash
+git submodule update --init --recursive
+```
 
 ##### Developer/maintainer submodule synchronization
 
