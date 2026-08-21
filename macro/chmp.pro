@@ -6,6 +6,7 @@ pro chmp_help
   print,'% IDL-> chmp, /fov; to print the current FOV settings
   print,'% IDL-> chmp, /res; to print the current map resolution settings
   print,'% IDL-> chmp, /refdatapath; to print the current reference data path
+  print,'% IDL-> chmp, keywords="search_mode=''spectrum'', freq=[...]" ; extra gx_search4bestq keywords
   print,'% IDL-> chmp, /gxmpath; to print the current GX model data path
   print,'% IDL-> chmp, /bridges; to print the current status of the parallel execution threads
   print,'% IDL-> chmp, /status; to report the status of the application, including all of the above
@@ -22,7 +23,7 @@ pro chmp_self
   common chmp, self
   if ~isa(self,'chmp') then begin
     self={chmp,active:0l,GXMpath:'',RefDataPath:'',modDir:'',psDir:'',TmpDir:'',EbtelPath:'',$
-      renderer:'',alist:'',blist:'',qlist:'',levels:'',fov:'',res:'',completed:0l,$
+      renderer:'',alist:'',blist:'',qlist:'',levels:'',fov:'',res:'',keywords:'',completed:0l,$
       RefDataStruct:ptr_new(),solution:obj_new(),bridges:obj_new(),tasks:obj_new(),WinOS:0l,quiet:0L}
     if file_exist('gxchmp.ini') and ~keyword_set(fresh) then restore,'gxchmp.ini'
     if alist eq '' then alist='1.0'
@@ -54,6 +55,8 @@ pro chmp_self
     self.fov=fov
     default,res,'raw=[200,200]; resize=[100,100]'
     self.res=res
+    default,keywords,''
+    self.keywords=keywords
     default,tasks,list()
     self.tasks=tasks
     default,solution,list()
@@ -254,6 +257,7 @@ function chmp_script,task_id=task_id
   script+=strcompress(string(task.b,format="(', b_arr= ',g0)"))
   script+=', q_start=['+arr2str(task.q)+']'
   script+=string(arr2str((str2arr(', levels=['+self.levels+']')),format="(a0)"))
+  if strcompress(', '+self.keywords,/rem) ne ',' then script+=', '+self.keywords
   script+=')'
   return,strcompress(script)
 end
@@ -279,6 +283,7 @@ pro chmp_status,status=status,_extra=_extra
     if keyword_set(moddir)then message,'moddir='+self.moddir,/info
     if keyword_set(psdir)then message,'psdir='+self.psdir,/info
     if keyword_set(tmpdir)then message,'tmpdir='+self.tmpdir,/info
+    if keyword_set(keywords)then message,'keywords='+self.keywords,/info
     if keyword_set(script)then print,chmp_script()
     if keyword_set(tasks)then begin
       tasklist=self.tasks
@@ -420,10 +425,17 @@ function chmp_ready
   endif
  ;-------------------------------------------------------------------- 
  if file_exist(self.refdatapath) and self.refdatapath ne '' then begin
-   restore,self.refdatapath
-   if size(ref,/tname) eq 'STRUCT' then begin
-     if tag_exist(ref,'a_beam') then valid_ref=1
-   endif else valid_ref=0
+   is_spectrum=(strpos(strlowcase(self.keywords),'search_mode') ge 0) and $
+               (strpos(strlowcase(self.keywords),'spectrum') ge 0)
+   if is_spectrum then begin
+     ref=gx_ref2chmp_spectrum(self.refdatapath)
+     valid_ref=size(ref,/tname) eq 'STRUCT'
+   endif else begin
+     restore,self.refdatapath
+     if size(ref,/tname) eq 'STRUCT' then begin
+       if tag_exist(ref,'a_beam') then valid_ref=1
+     endif else valid_ref=0
+   endelse
  endif else valid_ref=0
  if ~valid_ref then begin
    chmp_status,/refdatapath
@@ -701,6 +713,11 @@ pro chmp, nthreads,fresh=fresh, _extra=_extra
         message, 'No EBTEL table named "'+file_basename(ebtelpath)+'" found in '+file_dirname(self.ebtelpath),/info
     endif
     chmp_status,/ebtelpath
+  endif
+
+  if isa(keywords) then begin
+    if isa(keywords,/string) then self.keywords=keywords
+    chmp_status,/keywords
   endif
 
   if keyword_set(flush) then chmp_flush_queue

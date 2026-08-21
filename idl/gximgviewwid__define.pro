@@ -1150,11 +1150,9 @@ pro gxImgViewWid::MapArray2ImgCubeFile,tlb
         ny=sz[2]
         map=eomap[0]
         rsun=(pb0r(map.time)*60)[2]
-        run=map.rsun
-        arcsec=gx_rsun(unit='cm')/rsun
-        ds=map.dx*map.dy*(arcsec^2)
         freqs=eomap.freq
-        coeff=1.4568525e-026*ds*(freqs^2)*1e4;conversion from K to sfu assuming Tb is given in 10^4K
+        ; Legacy EOVSA Tb maps are stored in units of 10^4 K
+        coeff=gx_tb2sfu(map.dx*map.dy,freqs,R=rsun)*1d4
         
         for i=0,sz[3]-1 do eomap[i].data=eomap[i].data*coeff[i]
         data=eomap.data

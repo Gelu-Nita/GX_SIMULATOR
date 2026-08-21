@@ -3,7 +3,8 @@ function gx_search4bestq, gxmpath=gxmpath,a_arr=a_arr,b_arr=b_arr,q_start=q_star
                      ebtel_path=ebtel_path,renderer=renderer,info=info,$
                      xc=xc,yc=yc,xfov=xfov,yfov=yfov,nx=nx,ny=ny,$
                      levels=levels,resize=resize,save_gxc=save_gxc,redo=redo,$
-                     save_result=save_result,plot_best=plot_best,freq=freq,chan=chan,nobackground=nobackground,_extra=_extra
+                     save_result=save_result,plot_best=plot_best,freq=freq,chan=chan,$
+                     search_mode=search_mode,nobackground=nobackground,_extra=_extra
   final_result=[]
   catch, error_status
   if error_status ne 0 then begin
@@ -36,7 +37,21 @@ function gx_search4bestq, gxmpath=gxmpath,a_arr=a_arr,b_arr=b_arr,q_start=q_star
   ;+++++++++++++++++++++++++++++++++++++++++++++
   default,renderer,gx_findfile((!version.os_family eq 'Windows')?'AR_GRFF_nonLTE.pro':'grffdemtransfer.pro',folder='')
   ;+++++++++++++++++++++++++++++++++++++++++++++
-  ref=gx_ref2chmp(refdatapath,freq=freq,chan=chan,err_msg=err_msg,_extra=_extra)
+  default,search_mode,'image'
+  search_mode=strlowcase(strcompress(search_mode,/rem))
+  spectrum_mode=search_mode eq 'spectrum'
+  if spectrum_mode then begin
+    if n_elements(freq) eq 0 and n_elements(chan) eq 0 then $
+      message,'search_mode=spectrum requires freq= or chan= vector (preselected set)'
+    if n_elements(freq) eq 1 or n_elements(chan) eq 1 then $
+      message,'WARNING: spectrum mode with a single axis point degenerates to one-point spectral metrics.',/info
+    ref=gx_ref2chmp_spectrum(refdatapath,freq=freq,chan=chan,err_msg=err_msg,_extra=_extra)
+    if size(ref,/tname) ne 'STRUCT' then message,'Failed to build spectrum reference container: '+err_msg
+    ref_geom=ref.ref0
+  endif else begin
+    ref=gx_ref2chmp(refdatapath,freq=freq,chan=chan,err_msg=err_msg,_extra=_extra)
+    ref_geom=ref
+  endelse
   ;+++++++++++++++++++++++++++++++++++++++++++++
   if not file_test(modDir) then file_mkdir,modDir
   if keyword_set(save_gxc) then begin
@@ -60,10 +75,17 @@ function gx_search4bestq, gxmpath=gxmpath,a_arr=a_arr,b_arr=b_arr,q_start=q_star
      default,apply2,3
      force_done=0
      if n_elements(freq) ne 0 then begin
-       if isa(_extra,'STRUCT') then begin
-         if ~tag_exist(_extra,'f_min') then _extra=create_struct(_extra,'f_min',freq*1d9)
-         if ~tag_exist(_extra,'n_freq') then _extra=create_struct(_extra,'n_freq',1)
-       endif else _extra={f_min:freq*1d9,n_freq:1}
+       if spectrum_mode then begin
+         ; render the full preselected frequency set
+         if isa(_extra,'STRUCT') then begin
+           if ~tag_exist(_extra,'freqlist') then _extra=create_struct(_extra,'freqlist',freq)
+         endif else _extra={freqlist:freq}
+       endif else begin
+         if isa(_extra,'STRUCT') then begin
+           if ~tag_exist(_extra,'f_min') then _extra=create_struct(_extra,'f_min',freq*1d9)
+           if ~tag_exist(_extra,'n_freq') then _extra=create_struct(_extra,'n_freq',1)
+         endif else _extra={f_min:freq*1d9,n_freq:1}
+       endelse
      endif
      counter=0
      REPEAT BEGIN; until done       
@@ -73,7 +95,7 @@ function gx_search4bestq, gxmpath=gxmpath,a_arr=a_arr,b_arr=b_arr,q_start=q_star
             if ~isa(model,'gxmodel') then begin
               model=gx_read(gxmpath)
               (model->Corona())->SetProperty,ignore=keyword_set(nobackground)
-              fovdata=model->SetFOV(b0=ref->get(/b0),l0=ref->get(/l0),rsun=ref->get(/rsun),$
+              fovdata=model->SetFOV(b0=ref_geom->get(/b0),l0=ref_geom->get(/l0),rsun=ref_geom->get(/rsun),$
                                     xc=xc,yc=yc,xfov=xfov, yfov=yfov,nx=nx,ny=ny,/compute_grid,_extra=_extra)
               end
             if tag_exist(_extra,'q0_formula') then q0_formula=_extra.q0_formula
@@ -103,6 +125,7 @@ function gx_search4bestq, gxmpath=gxmpath,a_arr=a_arr,b_arr=b_arr,q_start=q_star
           modDir=modDir,psDir=psDir,$
           levels=levels,resize=resize,$
           file_arr=file_arr,apply2=apply2,done=force_done,$
+          search_mode=search_mode,$
           refdatapath=refdatapath,gxmpath=gxmpath,q_start=q_start,counter=counter,_extra=_extra)
         if size(result,/tname) eq 'STRUCT' then begin
           add_q=(apply2 eq 1)?((result.res2_done eq 0) and (result.chi2_done  eq 0)):((result.res2_done eq 0) or (result.chi2_done  eq 0))

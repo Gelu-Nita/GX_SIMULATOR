@@ -68,13 +68,19 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
                        modDir=modDir,modFiles=modFiles,psDir=psDir,$
                        levels=levels,mask=mask,resize=resize,$
                        file_arr=file_arr,q_arr=q_arr,corr_beam=corr_beam,$
-                       apply2=apply2,charsize=charsize,counter=counter,_extra=_extra
+                       apply2=apply2,charsize=charsize,counter=counter,$
+                       search_mode=search_mode,_extra=_extra
  ;++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  ;This routine provides a means to search for the best EBTEL GX model to data match 
  ;in a set of GX microwave maps obtained using the gx_mwrender_ebtel gx_euvrender_ebtel macros, which are looked for 
  ;either in a modDir directory, or in an modFiles path array pointing to a subset of selected models
+ ;search_mode='image' (default): minimize image metrics at one FREQ/CHAN
+ ;search_mode='spectrum': minimize FOV-integrated spectral metrics over a FREQ/CHAN set
  ;++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++                      
  ;check validity of input data
+ default,search_mode,'image'
+ search_mode=strlowcase(strcompress(search_mode,/rem))
+ spectrum_mode=search_mode eq 'spectrum'
  if ~isa(modDir,'STRING') then begin
    message,'Undefined model repository, operation aborted!',/info
    return, !null
@@ -95,27 +101,61 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
    endif
  endelse
 
- if ~valid_map(ref) then begin
-  invalid_ref:
-  err_msg=['Undefined reference data map object, operation aborted!',$
-     'Use gx_ref2chmp.pro to create a valid reference data map object']  
-  message,'',/info
-  box_message,err_msg
-  return, !null
+ if spectrum_mode then begin
+   if size(ref,/tname) ne 'STRUCT' then goto, invalid_ref
+   if ~tag_exist(ref,'search_mode') or ~tag_exist(ref,'refs') or ~tag_exist(ref,'axis') then goto, invalid_ref
+   if ref.n lt 1 or n_elements(ref.refs) lt 1 then goto, invalid_ref
+   spec_axis=ref.axis
+   spec_is_chan=ref.is_chan
+   spec_refs=ref.refs
+   S_obs=ref.S_obs
+   S_sdev=ref.S_sdev
+   has_sdev=ref.has_sdev
+   if total(has_sdev) eq n_elements(has_sdev) then spec_sdev_ok=1b else begin
+     spec_sdev_ok=0b
+     message,'WARNING: incomplete spectral SDEV; chi2 may be unavailable (res2 still used).',/info
+   endelse
+   ; representative image ref for PS titles / FOV geometry tags
+   ref0=ref.ref0
+   if ~obj_valid(ref0) then goto, invalid_ref
+   _obsI=ref0->get(0,/map)
+   _obsIsdev=ref0->get(1,/map)
+   a_beam=ref0->get(0,/a_beam)
+   b_beam=ref0->get(0,/b_beam)
+   phi_beam=ref0->get(0,/phi_beam)
+   if spec_is_chan then begin
+     ref_freq=!null
+     ref_chan=spec_axis[0]
+   endif else begin
+     ref_freq=spec_axis[0]
+     ref_chan=!null
+   endelse
+   corr_beam=~is_number(corr_beam)?ref0->get(0,/corr_beam):1
  endif else begin
-  if ref->get(0,/count) lt 2 then goto, invalid_ref
-  _obsI=ref->get(0,/map)
-  _obsIsdev=ref->get(1,/map)
-  a_beam=ref->get(0,/a_beam)
-  b_beam=ref->get(0,/b_beam)
-  phi_beam=ref->get(0,/phi_beam)
-  ref_freq=ref->get(0,/freq)
-  ref_chan=ref->get(0,/chan)
-  corr_beam=~is_number(corr_beam)?ref->get(0,/corr_beam):1
-  if n_elements(ref_freq) eq 0 and n_elements(ref_chan) eq 0 then begin
-    message,'Required FREQ or CHAN reference data are missing!',/info
-    goto,invalid_ref
-  endif
+   if ~valid_map(ref) then begin
+    invalid_ref:
+    err_msg=spectrum_mode? $
+      ['Undefined spectrum reference container, operation aborted!',$
+       'Use gx_ref2chmp_spectrum.pro to create a valid multi-ref container']: $
+      ['Undefined reference data map object, operation aborted!',$
+       'Use gx_ref2chmp.pro to create a valid reference data map object']
+    message,'',/info
+    box_message,err_msg
+    return, !null
+   endif
+   if ref->get(0,/count) lt 2 then goto, invalid_ref
+   _obsI=ref->get(0,/map)
+   _obsIsdev=ref->get(1,/map)
+   a_beam=ref->get(0,/a_beam)
+   b_beam=ref->get(0,/b_beam)
+   phi_beam=ref->get(0,/phi_beam)
+   ref_freq=ref->get(0,/freq)
+   ref_chan=ref->get(0,/chan)
+   corr_beam=~is_number(corr_beam)?ref->get(0,/corr_beam):1
+   if n_elements(ref_freq) eq 0 and n_elements(ref_chan) eq 0 then begin
+     message,'Required FREQ or CHAN reference data are missing!',/info
+     goto,invalid_ref
+   endif
  endelse
  ;+++++++++++++++++++++++++++++++++++
  default,counter,0l
@@ -195,64 +235,119 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
    res2_best=dblarr(count)
    chi2_best=dblarr(count)
    obj_metrics_arr=objarr(count)
+   spec_diag=ptr_new()
  
    for i=0,count-1 do begin
     print,'restoring{ ',modFiles[good[i]]
     obj_destroy,map
     restore,modFiles[good[i]]
     
-    if n_elements(resize) ne 0 then begin
-      if n_elements(resize) eq 1 then resize=[resize,resize]
-      for k=0, map->get(/count)-1 do begin
-        ;added option of preserving total flux if the map is an EUV map, which is expected to have a CHAN tag
-        rmap=gx_rebin_map(map->get(k,/map),resize[0],resize[1],total=is_number(map->get(k,/chan)))
-        rmap.id='rebinned_'+rmap.id
-        map->setmap,k,rmap
-      endfor
-    endif
-    
-    if ~isa(obsBeam) then begin
-      if isa(a_beam) and isa(b_beam) and isa(phi_beam)then begin
-        dx=map->get(/dx)
-        dy=map->get(/dy)
-        width=size(map->get(/data),/dimensions)
-        ;ensure that width is odd
-        if width[0] mod 2 eq 0 then width[0]+=1
-        if width[1] mod 2 eq 0 then width[1]+=1
-        if ~is_number(corr_beam) then corr_beam=1
-        obsBeam=gx_psf(corr_beam*[a_beam,b_beam]/[dx,dy],phi_beam,width)
+    if spectrum_mode then begin
+      ;----- spectrum minimization path -----
+      spec=gx_mapobj2fovspectrum(map,spec_axis,is_chan=spec_is_chan,refs=spec_refs,$
+        corr_beam=corr_beam,resize=resize,err_msg=em,mod_maps=mod_maps)
+      obj_destroy,map
+      if ~isa(spec,'STRUCT') then begin
+        message,'Spectrum build failed for '+modFiles[good[i]]+': '+em,/info
+        res2[i]=!values.d_nan
+        chi2[i]=!values.d_nan
+        obj_metrics_arr[i]=obj_new()
+        if n_elements(mod_maps) gt 0 then obj_destroy,mod_maps
+        continue
       endif
-    end  
-    
-    if n_elements(ref_freq) gt 0 then begin
-      freq=map->get(/freq)
-      for k=1,map->get(/count)-1 do freq=[freq,map->get(k,/freq)]
-      m=min(abs(freq-ref_freq),modidx)
-    endif
-    
-    if n_elements(ref_chan) gt 0 then begin
-      chan=map->get(/chan)
-      for k=1,map->get(/count)-1 do chan=[chan,map->get(k,/chan)]
-      m=min(abs(chan-ref_chan),modidx)
-    endif
-    
-    modI=map->get(modidx,/map)
-    obj_destroy,map
-    
-    ;here handle the _obsI and _obsIsdev maps if tey are EUV maps, to conserve flux
-    if n_elements(ref_chan) gt 0 then begin
-      sub_map,_obsI,_obsI,ref=modI
-      sub_map,_obsIsdev,_obsIsdev,ref=modI
-      sz=size(modI.data)
-      _obsI=gx_rebin_map(_obsI,sz[1],sz[2],/total)
-      _obsIsdev=gx_rebin_map(_obsIsdev,sz[1],sz[2],/total)
-    endif
-    ;EUV special handling of flux conservation done
-    
-    if n_elements(ObsBeam) gt 0 then modI.data=convol_fft(modI.data, ObsBeam)  
-    obj_metrics_arr[i]=gx_metrics_map(modI, _obsI,_obsIsdev,mask=mask,metrics=metrics,apply2=apply2,/no_renorm,_extra=_extra)
-    res2[i]=metrics.res2_norm
-    chi2[i]=metrics.chi2
+      if keyword_set(spec_sdev_ok) then $
+        smetrics=gx_metrics_spectrum(spec.S_mod,S_obs,S_sdev) $
+      else smetrics=gx_metrics_spectrum(spec.S_mod,S_obs)
+      if ~isa(smetrics,'STRUCT') then begin
+        res2[i]=!values.d_nan
+        chi2[i]=!values.d_nan
+      endif else begin
+        res2[i]=smetrics.res2_norm
+        if tag_exist(smetrics,'chi2') then chi2[i]=smetrics.chi2 else chi2[i]=!values.d_nan
+      endelse
+      ; diagnostic image metrics for each selected channel (do not drive search)
+      chan_metrics=objarr(n_elements(spec_axis))
+      for kk=0,n_elements(spec_axis)-1 do begin
+        modI=mod_maps[kk]->get(0,/map)
+        obsI=spec_refs[kk]->get(0,/map)
+        obsIsdev=spec_refs[kk]->get(1,/map)
+        if keyword_set(spec_is_chan) then begin
+          sub_map,obsI,obsI,ref=modI
+          sub_map,obsIsdev,obsIsdev,ref=modI
+          sz=size(modI.data)
+          obsI=gx_rebin_map(obsI,sz[1],sz[2],/total)
+          obsIsdev=gx_rebin_map(obsIsdev,sz[1],sz[2],/total)
+        endif
+        chan_metrics[kk]=gx_metrics_map(modI,obsI,obsIsdev,mask=mask,metrics=imetrics,$
+          apply2=apply2,/no_renorm,_extra=_extra)
+      endfor
+      obj_destroy,mod_maps
+      ; keep representative (first-axis) image metrics object for existing PS panels
+      obj_metrics_arr[i]=obj_clone(chan_metrics[0])
+      if ~ptr_valid(spec_diag) then begin
+        spec_diag=ptr_new(replicate({q:0d,S_mod:dblarr(n_elements(spec_axis)),$
+          channel_image_metrics:objarr(n_elements(spec_axis)),$
+          smetrics:smetrics},count))
+      endif
+      (*spec_diag)[i].q=q[i]
+      (*spec_diag)[i].S_mod=spec.S_mod
+      (*spec_diag)[i].channel_image_metrics=chan_metrics
+      (*spec_diag)[i].smetrics=smetrics
+    endif else begin
+      ;----- image minimization path (unchanged) -----
+      if n_elements(resize) ne 0 then begin
+        if n_elements(resize) eq 1 then resize=[resize,resize]
+        for k=0, map->get(/count)-1 do begin
+          ;added option of preserving total flux if the map is an EUV map, which is expected to have a CHAN tag
+          rmap=gx_rebin_map(map->get(k,/map),resize[0],resize[1],total=is_number(map->get(k,/chan)))
+          rmap.id='rebinned_'+rmap.id
+          map->setmap,k,rmap
+        endfor
+      endif
+      
+      if ~isa(obsBeam) then begin
+        if isa(a_beam) and isa(b_beam) and isa(phi_beam)then begin
+          dx=map->get(/dx)
+          dy=map->get(/dy)
+          width=size(map->get(/data),/dimensions)
+          ;ensure that width is odd
+          if width[0] mod 2 eq 0 then width[0]+=1
+          if width[1] mod 2 eq 0 then width[1]+=1
+          if ~is_number(corr_beam) then corr_beam=1
+          obsBeam=gx_psf(corr_beam*[a_beam,b_beam]/[dx,dy],phi_beam,width)
+        endif
+      end  
+      
+      if n_elements(ref_freq) gt 0 then begin
+        freq=map->get(/freq)
+        for k=1,map->get(/count)-1 do freq=[freq,map->get(k,/freq)]
+        m=min(abs(freq-ref_freq),modidx)
+      endif
+      
+      if n_elements(ref_chan) gt 0 then begin
+        chan=map->get(/chan)
+        for k=1,map->get(/count)-1 do chan=[chan,map->get(k,/chan)]
+        m=min(abs(chan-ref_chan),modidx)
+      endif
+      
+      modI=map->get(modidx,/map)
+      obj_destroy,map
+      
+      ;here handle the _obsI and _obsIsdev maps if tey are EUV maps, to conserve flux
+      if n_elements(ref_chan) gt 0 then begin
+        sub_map,_obsI,_obsI,ref=modI
+        sub_map,_obsIsdev,_obsIsdev,ref=modI
+        sz=size(modI.data)
+        _obsI=gx_rebin_map(_obsI,sz[1],sz[2],/total)
+        _obsIsdev=gx_rebin_map(_obsIsdev,sz[1],sz[2],/total)
+      endif
+      ;EUV special handling of flux conservation done
+      
+      if n_elements(ObsBeam) gt 0 then modI.data=convol_fft(modI.data, ObsBeam)  
+      obj_metrics_arr[i]=gx_metrics_map(modI, _obsI,_obsIsdev,mask=mask,metrics=metrics,apply2=apply2,/no_renorm,_extra=_extra)
+      res2[i]=metrics.res2_norm
+      chi2[i]=metrics.chi2
+    endelse
    endfor
    sort_idx=sort(q)
 ;  =================chi2=========================
@@ -340,6 +435,29 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
      gx_plot_label,0.7,0.2, string(chi2_solution.tol, format="('tol = ',g0)") ,xlog=xlog,charsize=charsize
      gx_plot_label,0.7,0.1, string(counter,format="('Run#: ',g0)"),xlog=xlog,charsize=charsize
    !p.font=-1
+
+   if spectrum_mode and ptr_valid(spec_diag) then begin
+     ; FOV-integrated spectrum comparison for the current best Q samples
+     !p.multi=[0,1,2]
+     ib_res2=res2_solution.metrics_best_idx
+     ib_chi2=chi2_solution.metrics_best_idx
+     S_mod_res2=(*spec_diag)[sort_idx[ib_res2]].S_mod
+     S_mod_chi2=(*spec_diag)[sort_idx[ib_chi2]].S_mod
+     xtit=spec_is_chan?'Channel':'Frequency (GHz)'
+     ytit=spec_is_chan?'FOV integral':'FOV flux [sfu]'
+     yrange=[min([S_obs,S_mod_res2,S_mod_chi2],/nan),max([S_obs,S_mod_res2,S_mod_chi2],/nan)]
+     if yrange[0] eq yrange[1] then yrange=yrange+[-1,1]
+     plot,spec_axis,S_obs,psym=-4,thick=2,charsize=1.2*charsize,$
+       xtitle=xtit,ytitle=ytit,title='Spectrum (res2-best Q)',yrange=yrange
+     oplot,spec_axis,S_mod_res2,psym=-5,color=250,thick=2
+     gx_plot_label,0.01,0.9,'obs',charsize=charsize
+     gx_plot_label,0.01,0.8,'model (res2)',color=250,charsize=charsize
+     plot,spec_axis,S_obs,psym=-4,thick=2,charsize=1.2*charsize,$
+       xtitle=xtit,ytitle=ytit,title='Spectrum (chi2-best Q)',yrange=yrange
+     oplot,spec_axis,S_mod_chi2,psym=-5,color=250,thick=2
+     gx_plot_label,0.01,0.9,'obs',charsize=charsize
+     gx_plot_label,0.01,0.8,'model (chi2)',color=250,charsize=charsize
+   endif
  endif
  
  range_idx=[chi2_range_idx,res2_range_idx]
@@ -348,6 +466,7 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
  !p.multi=[0,2,3,0,1]
  for k=0,n_elements(range_idx)-1 do begin
    obj_metrics=obj_metrics_arr[range_idx[k]]
+   if ~obj_valid(obj_metrics) then continue
    modI=obj_metrics->get(0,/map)
    modI.id=strmid(modI.id,strpos(modI.id,'GX'))
    obsI=obj_metrics->get(1,/map)
@@ -379,6 +498,24 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
  file_arr=file_arr[idx]
  q_arr=q_arr[idx]
 
+ ; spectrum diagnostics (empty placeholders keep image-mode struct shape compatible within one call)
+ if spectrum_mode and ptr_valid(spec_diag) then begin
+   S_mod_res2_best=(*spec_diag)[sort_idx[res2_solution.metrics_best_idx]].S_mod
+   S_mod_chi2_best=(*spec_diag)[sort_idx[chi2_solution.metrics_best_idx]].S_mod
+   channel_image_metrics=ptr_new((*spec_diag)[sort_idx[res2_solution.metrics_best_idx]].channel_image_metrics)
+   spec_all=ptr_new(*spec_diag)
+ endif else begin
+   S_mod_res2_best=0d
+   S_mod_chi2_best=0d
+   channel_image_metrics=ptr_new()
+   spec_all=ptr_new()
+   if ~spectrum_mode then begin
+     spec_axis=0d
+     S_obs=0d
+     S_sdev=0d
+   endif
+ endelse
+
  result=[result,{a:double(a[0]),b:double(b[0]),$
   q_res2_best:double(q_res2_best),q_res2_range:double(q_res2_range), res2_best:double(res2_best),$
   q_chi2_best:double(q_chi2_best),q_chi2_range:double(q_chi2_range), chi2_best:double(chi2_best),$
@@ -389,8 +526,12 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
   refdatapath:tag_exist(_extra,'refdatapath',/quiet)?_extra.refdatapath:'',$
   gxmpath:tag_exist(_extra,'gxmpath',/quiet)?_extra.gxmpath:'',$
   q_start:tag_exist(_extra,'q_start',/quiet)?_extra.q_start:[0.0001,0.001],counter:counter,$
-  allmetrics:ptr_new({q:q[sort_idx],res2:res2[sort_idx],chi2:chi2[sort_idx]})}]
+  allmetrics:ptr_new({q:q[sort_idx],res2:res2[sort_idx],chi2:chi2[sort_idx]}),$
+  search_mode:search_mode,spec_axis:double(spec_axis),S_obs:double(S_obs),S_sdev:double(S_sdev),$
+  S_mod_res2_best:double(S_mod_res2_best),S_mod_chi2_best:double(S_mod_chi2_best),$
+  channel_image_metrics:channel_image_metrics,spec_allmetrics:spec_all}]
 
+ if ptr_valid(spec_diag) then ptr_free,spec_diag
  obj_destroy,obj_metrics_arr
  if ncomp gt 1 then begin
   a0=a0[comp]
