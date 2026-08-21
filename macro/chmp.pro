@@ -6,7 +6,8 @@ pro chmp_help
   print,'% IDL-> chmp, /fov; to print the current FOV settings
   print,'% IDL-> chmp, /res; to print the current map resolution settings
   print,'% IDL-> chmp, /refdatapath; to print the current reference data path
-  print,'% IDL-> chmp, keywords="search_mode=''spectrum'', freq=[...]" ; extra gx_search4bestq keywords
+  print,'% IDL-> chmp, keywords="search_mode=''spectrum'', freqlist=[...], spec_freq=[...]" ; MW spectrum (spec_freq optional)'
+  print,'% IDL-> chmp, keywords="search_mode=''spectrum'', chan=[94,131,...]" ; EUV spectrum (omit chan= to use all ref channels; chan= must be 2+ if set)'
   print,'% IDL-> chmp, /gxmpath; to print the current GX model data path
   print,'% IDL-> chmp, /bridges; to print the current status of the parallel execution threads
   print,'% IDL-> chmp, /status; to report the status of the application, including all of the above

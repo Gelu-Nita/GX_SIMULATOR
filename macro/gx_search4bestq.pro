@@ -4,7 +4,8 @@ function gx_search4bestq, gxmpath=gxmpath,a_arr=a_arr,b_arr=b_arr,q_start=q_star
                      xc=xc,yc=yc,xfov=xfov,yfov=yfov,nx=nx,ny=ny,$
                      levels=levels,resize=resize,save_gxc=save_gxc,redo=redo,$
                      save_result=save_result,plot_best=plot_best,freq=freq,chan=chan,$
-                     search_mode=search_mode,nobackground=nobackground,_extra=_extra
+                     search_mode=search_mode,spec_freq=spec_freq,spec_chan=spec_chan,$
+                     nobackground=nobackground,_extra=_extra
   final_result=[]
   catch, error_status
   if error_status ne 0 then begin
@@ -40,17 +41,65 @@ function gx_search4bestq, gxmpath=gxmpath,a_arr=a_arr,b_arr=b_arr,q_start=q_star
   default,search_mode,'image'
   search_mode=strlowcase(strcompress(search_mode,/rem))
   spectrum_mode=search_mode eq 'spectrum'
+  ;
+  ; Frequency / channel roles:
+  ;   Image mode:
+  ;     freq= (MW) or chan= (EUV) = single-channel image metric axis.
+  ;     Optional _extra.freqlist may synthesize more MW frequencies.
+  ;   Spectrum mode (MW):
+  ;     Synthesis list = _extra.freqlist if set, else freq=.
+  ;     Metric axis     = spec_freq= if set, else the full synthesis list.
+  ;   Spectrum mode (EUV):
+  ;     Renderer always synthesizes all instrument channels.
+  ;     chan= omitted  → metric/ref axis = all channels in the reference set.
+  ;     chan=[...]     → must list 2+ channels (a single chan= is an error).
+  ;     spec_chan= is not used (avoids confusion with image-mode chan=).
+  ;
+  mw_mode=0b
   if spectrum_mode then begin
-    if n_elements(freq) eq 0 and n_elements(chan) eq 0 then $
-      message,'search_mode=spectrum requires freq= or chan= vector (preselected set)'
-    if n_elements(freq) eq 1 or n_elements(chan) eq 1 then $
-      message,'WARNING: spectrum mode with a single axis point degenerates to one-point spectral metrics.',/info
-    ref=gx_ref2chmp_spectrum(refdatapath,freq=freq,chan=chan,err_msg=err_msg,_extra=_extra)
+    if isa(_extra,'STRUCT') and tag_exist(_extra,'freqlist') then begin
+      synth_freq=double(_extra.freqlist)
+      mw_mode=1b
+    endif else if n_elements(freq) gt 0 then begin
+      synth_freq=double(freq)
+      mw_mode=1b
+    endif
+
+    if mw_mode then begin
+      if n_elements(spec_freq) gt 0 then metric_freq=double(spec_freq) else metric_freq=synth_freq
+      if n_elements(metric_freq) eq 1 then $
+        message,'WARNING: spectrum mode with a single metric frequency degenerates to one-point spectral metrics.',/info
+      ; Ensure renderer synthesizes the full list
+      if isa(_extra,'STRUCT') then begin
+        if tag_exist(_extra,'freqlist') then _extra.freqlist=synth_freq $
+        else _extra=create_struct(_extra,'freqlist',synth_freq)
+      endif else _extra={freqlist:synth_freq}
+      ref=gx_ref2chmp_spectrum(refdatapath,freq=metric_freq,err_msg=err_msg,_extra=_extra)
+    endif else begin
+      ; EUV spectrum: renderer always synthesizes all instrument channels.
+      ; Metric/ref axis = chan=[...] if provided (must be 2+), else all channels
+      ; found in the reference set.
+      if n_elements(spec_chan) gt 0 then $
+        message,'WARNING: spec_chan= is ignored for EUV spectrum mode; use chan=[...] (2+) or omit chan= to use all reference channels.',/info
+      if n_elements(chan) eq 1 then $
+        message,"search_mode=spectrum cannot use a single chan= value; omit chan= to use all channels in the reference set, or pass chan=[...] with at least two channels"
+      if n_elements(chan) ge 2 then begin
+        ref=gx_ref2chmp_spectrum(refdatapath,chan=chan,err_msg=err_msg,_extra=_extra)
+      endif else begin
+        ; omit chan= → all channels present in the multi-ref set
+        ref=gx_ref2chmp_spectrum(refdatapath,err_msg=err_msg,_extra=_extra)
+      endelse
+      if size(ref,/tname) eq 'STRUCT' then begin
+        if ref.n lt 2 then $
+          message,'search_mode=spectrum needs at least two EUV reference channels; the reference set has fewer than two'
+      endif
+    endelse
     if size(ref,/tname) ne 'STRUCT' then message,'Failed to build spectrum reference container: '+err_msg
     ref_geom=ref.ref0
   endif else begin
     ref=gx_ref2chmp(refdatapath,freq=freq,chan=chan,err_msg=err_msg,_extra=_extra)
     ref_geom=ref
+    mw_mode=n_elements(freq) gt 0
   endelse
   ;+++++++++++++++++++++++++++++++++++++++++++++
   if not file_test(modDir) then file_mkdir,modDir
@@ -74,18 +123,11 @@ function gx_search4bestq, gxmpath=gxmpath,a_arr=a_arr,b_arr=b_arr,q_start=q_star
      done_chi=0b
      default,apply2,3
      force_done=0
-     if n_elements(freq) ne 0 then begin
-       if spectrum_mode then begin
-         ; render the full preselected frequency set
-         if isa(_extra,'STRUCT') then begin
-           if ~tag_exist(_extra,'freqlist') then _extra=create_struct(_extra,'freqlist',freq)
-         endif else _extra={freqlist:freq}
-       endif else begin
-         if isa(_extra,'STRUCT') then begin
-           if ~tag_exist(_extra,'f_min') then _extra=create_struct(_extra,'f_min',freq*1d9)
-           if ~tag_exist(_extra,'n_freq') then _extra=create_struct(_extra,'n_freq',1)
-         endif else _extra={f_min:freq*1d9,n_freq:1}
-       endelse
+     if ~spectrum_mode and n_elements(freq) ne 0 then begin
+       if isa(_extra,'STRUCT') then begin
+         if ~tag_exist(_extra,'f_min') then _extra=create_struct(_extra,'f_min',freq*1d9)
+         if ~tag_exist(_extra,'n_freq') then _extra=create_struct(_extra,'n_freq',1)
+       endif else _extra={f_min:freq*1d9,n_freq:1}
      endif
      counter=0
      REPEAT BEGIN; until done       
@@ -102,7 +144,8 @@ function gx_search4bestq, gxmpath=gxmpath,a_arr=a_arr,b_arr=b_arr,q_start=q_star
             default,q0_formula,'q[0]'
             q_formula=string(a,b,format="('q0*(B/q[1])^(',g0,')/(L/q[2])^(',g0,')')")
             q_parms=[q[j], 100.0, 1.0000000d+009, 0.0, 0.0]
-            if n_elements(freq) gt 0 then begin
+            if keyword_set(mw_mode) or (n_elements(freq) gt 0) or $
+               (isa(_extra,'STRUCT') and tag_exist(_extra,'freqlist')) then begin
              map=gx_mwrender_ebtel(model,renderer,info=info,ebtel_path=ebtel_path,$
                  q_parms=q_parms,q_formula=q_formula,q0_formula=q0_formula,$
                  gxcube=gxcube,_extra=_extra)
@@ -116,7 +159,10 @@ function gx_search4bestq, gxmpath=gxmpath,a_arr=a_arr,b_arr=b_arr,q_start=q_star
                 obj_destroy,map
             endif
             if (isa(gxcube) and keyword_set(save_gxc)) then begin
-              if n_elements(freq) gt 0 then save,gxcube,file=gxcDir+path_sep()+strcompress(string(a,b,q[j],freq[0],format="('a',f7.2,'b',f7.2,'q',g0,'-',g0,' GHz.gxc')"),/rem)
+              if n_elements(synth_freq) gt 0 then $
+                save,gxcube,file=gxcDir+path_sep()+strcompress(string(a,b,q[j],synth_freq[0],format="('a',f7.2,'b',f7.2,'q',g0,'-',g0,' GHz.gxc')"),/rem) $
+              else if n_elements(freq) gt 0 then $
+                save,gxcube,file=gxcDir+path_sep()+strcompress(string(a,b,q[j],freq[0],format="('a',f7.2,'b',f7.2,'q',g0,'-',g0,' GHz.gxc')"),/rem)
               if n_elements(chan) gt 0 then save,gxcube,file=gxcDir+path_sep()+strcompress(string(a,b,q[j],chan[0],format="('a',f7.2,'b',f7.2,'q',g0,'-',g0,' A.gxc')"),/rem)
             endif
           endif else gx_message, modfile+' already exists, no reprocessing requested!',/info
