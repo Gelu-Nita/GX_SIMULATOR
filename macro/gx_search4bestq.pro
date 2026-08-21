@@ -34,7 +34,7 @@ function gx_search4bestq, gxmpath=gxmpath,a_arr=a_arr,b_arr=b_arr,q_start=q_star
   ;++++++++++++++++++++++++++++++++++++++++++++++
   default,ebtel_path, gx_findfile('ebtel.sav',folder='')
   ;+++++++++++++++++++++++++++++++++++++++++++++
-  default,renderer,gx_findfile((!version.os_family eq 'Windows')?'AR_GRFF_nonLTE.pro':'mwgrtransfer.pro',folder='')
+  default,renderer,gx_findfile((!version.os_family eq 'Windows')?'AR_GRFF_nonLTE.pro':'grffdemtransfer.pro',folder='')
   ;+++++++++++++++++++++++++++++++++++++++++++++
   ref=gx_ref2chmp(refdatapath,freq=freq,chan=chan,err_msg=err_msg,_extra=_extra)
   ;+++++++++++++++++++++++++++++++++++++++++++++
