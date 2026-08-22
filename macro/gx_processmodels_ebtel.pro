@@ -75,7 +75,36 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
  ;in a set of GX microwave maps obtained using the gx_mwrender_ebtel gx_euvrender_ebtel macros, which are looked for 
  ;either in a modDir directory, or in an modFiles path array pointing to a subset of selected models
  ;search_mode='image' (default): minimize image metrics at one FREQ/CHAN
- ;search_mode='spectrum': minimize FOV-integrated spectral metrics over a FREQ/CHAN set
+ ;search_mode='spectrum': minimize ROI-integrated spectral metrics over a FREQ/CHAN set
+ ;  (ref = objarr of standard CHMP map objects from gx_ref2chmp; spectra prepared
+ ;   at metric time via gx_maps2spectrum using the same mask as image mode)
+ ;
+ ; RESULT (per a,b): shares the legacy image-search tags (a,b,q_*_best,*_best_file,
+ ; *_best_metrics, allmetrics, ...). In spectrum mode those *_best / q_*_best /
+ ; *_best_file values come from spectral RES2/CHI2; *_best_metrics are still
+ ; single map objects (channel 0 image metrics at the winning Q) for legacy PS/plotters.
+ ;
+ ; Spectrum-only convenience tags: search_mode, spec_axis, S_obs, S_sdev,
+ ; S_mod_res2_best, S_mod_chi2_best, and spec_allmetrics.
+ ;
+ ; spec_allmetrics (spectrum mode): pointer to an array of structs, one per sampled Q:
+ ;   .q                      Q0 for that sample
+ ;   .S_mod, .S_obs, .S_sdev ROI-integrated spectra
+ ;   .smetrics               gx_metrics_spectrum result (drives the Q search)
+ ;   .channel_image_metrics  objarr(n_chan) of gx_metrics_map objects (diagnostics)
+ ; Image mode leaves spec_allmetrics as a null pointer.
+ ;
+ ; Future channel-aware display:
+ ;   Use gx_result_select_channel(result, index=k) or freq=/chan= to build a
+ ;   temporary result with RES2_BEST_METRICS / CHI2_BEST_METRICS swapped to that
+ ;   channel's image metrics (at the spectral q_*_best Qs), then pass it to
+ ;   gx_plotbestmwmodels_ebtel / gx_chmp2grid / the CHMP GUI unchanged.
+ ;   Manual extract (same logic as the wrapper):
+ ;   sam = *result[i].spec_allmetrics
+ ;   jr = where(abs(sam.q - result[i].q_res2_best) eq min(abs(sam.q - result[i].q_res2_best)), /null)
+ ;   jc = where(abs(sam.q - result[i].q_chi2_best) eq min(abs(sam.q - result[i].q_chi2_best)), /null)
+ ;   cim_res2 = sam[jr[0]].channel_image_metrics   ; objarr(n_chan)
+ ;   cim_chi2 = sam[jc[0]].channel_image_metrics
  ;++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++                      
  ;check validity of input data
  default,search_mode,'image'
@@ -102,22 +131,29 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
  endelse
 
  if spectrum_mode then begin
-   if size(ref,/tname) ne 'STRUCT' then goto, invalid_ref
-   if ~tag_exist(ref,'search_mode') or ~tag_exist(ref,'refs') or ~tag_exist(ref,'axis') then goto, invalid_ref
-   if ref.n lt 1 or n_elements(ref.refs) lt 1 then goto, invalid_ref
-   spec_axis=ref.axis
-   spec_is_chan=ref.is_chan
-   spec_refs=ref.refs
-   S_obs=ref.S_obs
-   S_sdev=ref.S_sdev
-   has_sdev=ref.has_sdev
-   if total(has_sdev) eq n_elements(has_sdev) then spec_sdev_ok=1b else begin
-     spec_sdev_ok=0b
-     message,'WARNING: incomplete spectral SDEV; chi2 may be unavailable (res2 still used).',/info
-   endelse
-   ; representative image ref for PS titles / FOV geometry tags
-   ref0=ref.ref0
-   if ~obj_valid(ref0) then goto, invalid_ref
+   ; ref is objarr (or single) of standard CHMP map objects from gx_ref2chmp
+   if size(ref,/tname) ne 'OBJREF' then goto, invalid_ref
+   nref=n_elements(ref)
+   if nref lt 1 then goto, invalid_ref
+   for ir=0,nref-1 do if ~obj_valid(ref[ir]) or ref[ir]->get(/count) lt 2 then goto, invalid_ref
+   spec_refs=ref
+   spec_axis=dblarr(nref)
+   spec_is_chan=0b
+   for ir=0,nref-1 do begin
+     rf=ref[ir]->get(0,/freq)
+     rc=ref[ir]->get(0,/chan)
+     if n_elements(rf) gt 0 && finite(rf[0]) then begin
+       spec_axis[ir]=double(rf[0])
+       if ir eq 0 then spec_is_chan=0b
+     endif else if n_elements(rc) gt 0 && finite(rc[0]) then begin
+       spec_axis[ir]=double(rc[0])
+       if ir eq 0 then spec_is_chan=1b
+     endif else goto, invalid_ref
+   endfor
+   ; Spectra (S_obs/S_mod/…) are computed per model under mask via gx_maps2spectrum
+   S_obs=dblarr(nref) ; filled after first successful prep (for PS); updated each Q
+   S_sdev=dblarr(nref)
+   ref0=ref[0]
    _obsI=ref0->get(0,/map)
    _obsIsdev=ref0->get(1,/map)
    a_beam=ref0->get(0,/a_beam)
@@ -135,8 +171,8 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
    if ~valid_map(ref) then begin
     invalid_ref:
     err_msg=spectrum_mode? $
-      ['Undefined spectrum reference container, operation aborted!',$
-       'Use gx_ref2chmp_spectrum.pro to create a valid multi-ref container']: $
+      ['Undefined spectrum reference objarr, operation aborted!',$
+       'Use gx_ref2chmp.pro on a multi-freq/chan ref path (dir or file list)']: $
       ['Undefined reference data map object, operation aborted!',$
        'Use gx_ref2chmp.pro to create a valid reference data map object']
     message,'',/info
@@ -244,8 +280,9 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
     
     if spectrum_mode then begin
       ;----- spectrum minimization path -----
-      spec=gx_mapobj2fovspectrum(map,spec_axis,is_chan=spec_is_chan,refs=spec_refs,$
-        corr_beam=corr_beam,resize=resize,err_msg=em,mod_maps=mod_maps)
+      ; Prep spectra under the same ROI mask as image metrics, then 1D spectral metrics
+      spec=gx_maps2spectrum(map,spec_refs,mask=mask,apply2=apply2,resize=resize,$
+        corr_beam=corr_beam,err_msg=em,mod_maps=mod_maps)
       obj_destroy,map
       if ~isa(spec,'STRUCT') then begin
         message,'Spectrum build failed for '+modFiles[good[i]]+': '+em,/info
@@ -255,9 +292,12 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
         if n_elements(mod_maps) gt 0 then obj_destroy,mod_maps
         continue
       endif
+      S_obs=spec.S_obs
+      S_sdev=spec.S_sdev
+      spec_sdev_ok=total(spec.has_sdev) eq n_elements(spec.has_sdev)
       if keyword_set(spec_sdev_ok) then $
-        smetrics=gx_metrics_spectrum(spec.S_mod,S_obs,S_sdev) $
-      else smetrics=gx_metrics_spectrum(spec.S_mod,S_obs)
+        smetrics=gx_metrics_spectrum(spec.S_mod,spec.S_obs,spec.S_sdev) $
+      else smetrics=gx_metrics_spectrum(spec.S_mod,spec.S_obs)
       if ~isa(smetrics,'STRUCT') then begin
         res2[i]=!values.d_nan
         chi2[i]=!values.d_nan
@@ -286,11 +326,14 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
       obj_metrics_arr[i]=obj_clone(chan_metrics[0])
       if ~ptr_valid(spec_diag) then begin
         spec_diag=ptr_new(replicate({q:0d,S_mod:dblarr(n_elements(spec_axis)),$
+          S_obs:dblarr(n_elements(spec_axis)),S_sdev:dblarr(n_elements(spec_axis)),$
           channel_image_metrics:objarr(n_elements(spec_axis)),$
           smetrics:smetrics},count))
       endif
       (*spec_diag)[i].q=q[i]
       (*spec_diag)[i].S_mod=spec.S_mod
+      (*spec_diag)[i].S_obs=spec.S_obs
+      (*spec_diag)[i].S_sdev=spec.S_sdev
       (*spec_diag)[i].channel_image_metrics=chan_metrics
       (*spec_diag)[i].smetrics=smetrics
     endif else begin
@@ -437,22 +480,25 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
    !p.font=-1
 
    if spectrum_mode and ptr_valid(spec_diag) then begin
-     ; FOV-integrated spectrum comparison for the current best Q samples
+     ; ROI-integrated spectrum comparison for the current best Q samples
      !p.multi=[0,1,2]
      ib_res2=res2_solution.metrics_best_idx
      ib_chi2=chi2_solution.metrics_best_idx
+     S_obs_res2=(*spec_diag)[sort_idx[ib_res2]].S_obs
+     S_obs_chi2=(*spec_diag)[sort_idx[ib_chi2]].S_obs
      S_mod_res2=(*spec_diag)[sort_idx[ib_res2]].S_mod
      S_mod_chi2=(*spec_diag)[sort_idx[ib_chi2]].S_mod
      xtit=spec_is_chan?'Channel':'Frequency (GHz)'
-     ytit=spec_is_chan?'FOV integral':'FOV flux [sfu]'
-     yrange=[min([S_obs,S_mod_res2,S_mod_chi2],/nan),max([S_obs,S_mod_res2,S_mod_chi2],/nan)]
+     ytit=spec_is_chan?'ROI integral':'ROI flux [sfu]'
+     yrange=[min([S_obs_res2,S_obs_chi2,S_mod_res2,S_mod_chi2],/nan),$
+             max([S_obs_res2,S_obs_chi2,S_mod_res2,S_mod_chi2],/nan)]
      if yrange[0] eq yrange[1] then yrange=yrange+[-1,1]
-     plot,spec_axis,S_obs,psym=-4,thick=2,charsize=1.2*charsize,$
+     plot,spec_axis,S_obs_res2,psym=-4,thick=2,charsize=1.2*charsize,$
        xtitle=xtit,ytitle=ytit,title='Spectrum (res2-best Q)',yrange=yrange
      oplot,spec_axis,S_mod_res2,psym=-5,color=250,thick=2
      gx_plot_label,0.01,0.9,'obs',charsize=charsize
      gx_plot_label,0.01,0.8,'model (res2)',color=250,charsize=charsize
-     plot,spec_axis,S_obs,psym=-4,thick=2,charsize=1.2*charsize,$
+     plot,spec_axis,S_obs_chi2,psym=-4,thick=2,charsize=1.2*charsize,$
        xtitle=xtit,ytitle=ytit,title='Spectrum (chi2-best Q)',yrange=yrange
      oplot,spec_axis,S_mod_chi2,psym=-5,color=250,thick=2
      gx_plot_label,0.01,0.9,'obs',charsize=charsize
@@ -499,15 +545,17 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
  q_arr=q_arr[idx]
 
  ; spectrum diagnostics (empty placeholders keep image-mode struct shape compatible within one call)
+ ; Per-channel image metrics live only under spec_allmetrics[j].channel_image_metrics
+ ; (see header); no top-level channel_image_metrics tag.
  if spectrum_mode and ptr_valid(spec_diag) then begin
    S_mod_res2_best=(*spec_diag)[sort_idx[res2_solution.metrics_best_idx]].S_mod
    S_mod_chi2_best=(*spec_diag)[sort_idx[chi2_solution.metrics_best_idx]].S_mod
-   channel_image_metrics=ptr_new((*spec_diag)[sort_idx[res2_solution.metrics_best_idx]].channel_image_metrics)
+   S_obs=(*spec_diag)[sort_idx[res2_solution.metrics_best_idx]].S_obs
+   S_sdev=(*spec_diag)[sort_idx[res2_solution.metrics_best_idx]].S_sdev
    spec_all=ptr_new(*spec_diag)
  endif else begin
    S_mod_res2_best=0d
    S_mod_chi2_best=0d
-   channel_image_metrics=ptr_new()
    spec_all=ptr_new()
    if ~spectrum_mode then begin
      spec_axis=0d
@@ -529,7 +577,7 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
   allmetrics:ptr_new({q:q[sort_idx],res2:res2[sort_idx],chi2:chi2[sort_idx]}),$
   search_mode:search_mode,spec_axis:double(spec_axis),S_obs:double(S_obs),S_sdev:double(S_sdev),$
   S_mod_res2_best:double(S_mod_res2_best),S_mod_chi2_best:double(S_mod_chi2_best),$
-  channel_image_metrics:channel_image_metrics,spec_allmetrics:spec_all}]
+  spec_allmetrics:spec_all}]
 
  if ptr_valid(spec_diag) then ptr_free,spec_diag
  obj_destroy,obj_metrics_arr

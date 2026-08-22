@@ -1364,16 +1364,17 @@ function gxchmp::HandleEvent, event
       if _extra eq ',' then _extra=''
       is_spectrum=(strpos(strlowcase(_extra),'search_mode') ge 0) and (strpos(strlowcase(_extra),'spectrum') ge 0)
       if is_spectrum then begin
-        dummy=execute('ref=gx_ref2chmp_spectrum(refdatapath'+_extra+')')
-        valid=size(ref,/tname) eq 'STRUCT'
+        dummy=execute('ref=gx_ref2chmp(refdatapath'+_extra+')')
+        valid=size(ref,/tname) eq 'OBJREF'
+        if valid then valid=obj_valid(ref[0])
         if valid then begin
           self.refdatapath=refdatapath
-          a_beam=ref.ref0->get(/a_beam)
-          b_beam=ref.ref0->get(/b_beam)
-          phi_beam=ref.ref0->get(/phi_beam)
-          corr_beam=ref.ref0->get(/corr_beam)
+          a_beam=ref[0]->get(/a_beam)
+          b_beam=ref[0]->get(/b_beam)
+          phi_beam=ref[0]->get(/phi_beam)
+          corr_beam=ref[0]->get(/corr_beam)
           widget_control,widget_info(self.wbase,find_by_uname='psf_info'),set_value=$
-            strcompress(string(ref.n,format="('spectrum refs: ',i0,' | ')")+$
+            strcompress(string(n_elements(ref),format="('spectrum refs: ',i0,' | ')")+$
             string([a_beam,b_beam,phi_beam,corr_beam], $
             format="('a_beam= ',g0,', b_beam= ',g0,', phi_beam= ',g0,', corr_beam= ',g0)"))
         endif else answ=dialog_message('Not a valid spectrum reference set!')

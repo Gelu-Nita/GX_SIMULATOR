@@ -429,8 +429,9 @@ function chmp_ready
    is_spectrum=(strpos(strlowcase(self.keywords),'search_mode') ge 0) and $
                (strpos(strlowcase(self.keywords),'spectrum') ge 0)
    if is_spectrum then begin
-     ref=gx_ref2chmp_spectrum(self.refdatapath)
-     valid_ref=size(ref,/tname) eq 'STRUCT'
+     ref=gx_ref2chmp(self.refdatapath)
+     valid_ref=size(ref,/tname) eq 'OBJREF'
+     if valid_ref then valid_ref=obj_valid(ref[0])
    endif else begin
      restore,self.refdatapath
      if size(ref,/tname) eq 'STRUCT' then begin

@@ -1,3 +1,9 @@
+;+
+; Returns an array of structs (one per a,b). Legacy image tags are always present.
+; Spectrum mode adds search_mode, spec_axis, S_obs, S_sdev, S_mod_*_best, and
+; spec_allmetrics — see header of gx_processmodels_ebtel.pro. To display one
+; spectrum channel with legacy plotters/GUI, use gx_result_select_channel.
+;-
 function gx_search4bestq, gxmpath=gxmpath,a_arr=a_arr,b_arr=b_arr,q_start=q_start, $
                      modDir=modDir,psDir=psDir,tmpDir=tmpDir,refdatapath=refdatapath,$
                      ebtel_path=ebtel_path,renderer=renderer,info=info,$
@@ -65,37 +71,40 @@ function gx_search4bestq, gxmpath=gxmpath,a_arr=a_arr,b_arr=b_arr,q_start=q_star
       mw_mode=1b
     endif
 
+    ; Same ref loader as image mode: objarr (or single) of CHMP map objects
+    ref_all=gx_ref2chmp(refdatapath,err_msg=err_msg,_extra=_extra)
+    if size(ref_all,/tname) ne 'OBJREF' then $
+      message,'Failed to load reference maps via gx_ref2chmp: '+ $
+        (size(err_msg,/tname) eq 'STRING'?strjoin(err_msg,' '):'unknown error')
+
     if mw_mode then begin
       if n_elements(spec_freq) gt 0 then metric_freq=double(spec_freq) else metric_freq=synth_freq
       if n_elements(metric_freq) eq 1 then $
         message,'WARNING: spectrum mode with a single metric frequency degenerates to one-point spectral metrics.',/info
-      ; Ensure renderer synthesizes the full list
       if isa(_extra,'STRUCT') then begin
         if tag_exist(_extra,'freqlist') then _extra.freqlist=synth_freq $
         else _extra=create_struct(_extra,'freqlist',synth_freq)
       endif else _extra={freqlist:synth_freq}
-      ref=gx_ref2chmp_spectrum(refdatapath,freq=metric_freq,err_msg=err_msg,_extra=_extra)
+      ref=gx_ref_select_axis(ref_all,freq=metric_freq,err_msg=err_msg,is_chan=spec_is_chan,axis=spec_axis)
     endif else begin
-      ; EUV spectrum: renderer always synthesizes all instrument channels.
-      ; Metric/ref axis = chan=[...] if provided (must be 2+), else all channels
-      ; found in the reference set.
       if n_elements(spec_chan) gt 0 then $
         message,'WARNING: spec_chan= is ignored for EUV spectrum mode; use chan=[...] (2+) or omit chan= to use all reference channels.',/info
       if n_elements(chan) eq 1 then $
         message,"search_mode=spectrum cannot use a single chan= value; omit chan= to use all channels in the reference set, or pass chan=[...] with at least two channels"
       if n_elements(chan) ge 2 then begin
-        ref=gx_ref2chmp_spectrum(refdatapath,chan=chan,err_msg=err_msg,_extra=_extra)
+        ref=gx_ref_select_axis(ref_all,chan=chan,err_msg=err_msg,is_chan=spec_is_chan,axis=spec_axis)
       endif else begin
-        ; omit chan= → all channels present in the multi-ref set
-        ref=gx_ref2chmp_spectrum(refdatapath,err_msg=err_msg,_extra=_extra)
+        ref=gx_ref_select_axis(ref_all,err_msg=err_msg,is_chan=spec_is_chan,axis=spec_axis)
       endelse
-      if size(ref,/tname) eq 'STRUCT' then begin
-        if ref.n lt 2 then $
+      if size(ref,/tname) eq 'OBJREF' then begin
+        if n_elements(ref) lt 2 then $
           message,'search_mode=spectrum needs at least two EUV reference channels; the reference set has fewer than two'
       endif
     endelse
-    if size(ref,/tname) ne 'STRUCT' then message,'Failed to build spectrum reference container: '+err_msg
-    ref_geom=ref.ref0
+    if size(ref,/tname) ne 'OBJREF' then $
+      message,'Failed to select spectrum reference axis: '+ $
+        (size(err_msg,/tname) eq 'STRING'?strjoin(err_msg,' '):'unknown error')
+    ref_geom=ref[0]
   endif else begin
     ref=gx_ref2chmp(refdatapath,freq=freq,chan=chan,err_msg=err_msg,_extra=_extra)
     ref_geom=ref
