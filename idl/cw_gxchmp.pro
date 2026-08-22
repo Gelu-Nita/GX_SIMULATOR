@@ -24,7 +24,7 @@ function gxchmp::INIT,wBase,uname=uname, GXMpath=GXMpath,RefDataPath=RefDataPath
   self.gxmpath=gxmpath
   default,EBTELpath,gx_findfile('ebtel.sav',folder='')
   self.EBTELpath=EBTELpath
-  default,renderer,gx_findfile(self.WinOS?'AR_GRFF_nonLTE.pro':'mwgrtransfer.pro',folder='')
+  default,renderer,gx_findfile(self.WinOS?'AR_GRFF_nonLTE.pro':'grffdemtransfer.pro',folder='')
   self.renderer=renderer
   info_renderer=gx_rendererinfo(renderer)
   valid=size(info_renderer,/tname) eq 'STRUCT'

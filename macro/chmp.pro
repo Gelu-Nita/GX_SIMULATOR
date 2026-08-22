@@ -40,7 +40,7 @@ pro chmp_self
     self.gxmpath=gxmpath
     default,EBTELpath,gx_findfile('ebtel.sav',folder='')
     self.EBTELpath=EBTELpath
-    default,renderer,gx_findfile(self.WinOS?'AR_GRFF_nonLTE.pro':'mwgrtransfer.pro',folder='')
+    default,renderer,gx_findfile(self.WinOS?'AR_GRFF_nonLTE.pro':'grffdemtransfer.pro',folder='')
     self.renderer=renderer
     default,alist,'0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1,1.1,1.2,1.3'
     self.alist=alist
