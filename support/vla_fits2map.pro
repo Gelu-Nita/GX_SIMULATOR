@@ -25,13 +25,43 @@
 ; Modifications:
 ;           16-Feb-2016, Bin Chen - set roll_angle to zero for two-dimensional maps. Otherwise it takes -p_angle 
 ;           25-Apr-2025, Gelu Nita- replaced vla_readfits by read_sdo, which seems to work where vla_readfits fails
+;           21-Aug-2026, Prefer read_sdo,/use_shared_lib (fitsio.so) so tile-compressed
+;                        EOVSA FITS work on darwin_arm64 where imcopy fails (FITSIO 415)
 ; Contact     : bin.chen@njit.edu
 ;-
 
 pro vla_fits2map, files, map,_extra=_extra
 
 ;vla_readfits,files,index,data,/silent
-read_sdo,files,index,data,/silent
+; Prefer fitsio.so shared-lib decompression. Tile-compressed EOVSA/VLA
+; products fail with the heritage imcopy binary on darwin_arm64 (FITSIO 415).
+so_path = ''
+so_file = ssw_bin_path('fitsio.so', /ontology, found=so_found)
+if so_found then begin
+  so_path = file_dirname(so_file)
+endif else begin
+  ont = getenv('SSW_ONTOLOGY')
+  if ont eq '' then begin
+    ssw = getenv('SSW')
+    if ssw ne '' then ont = concat_dir(ssw, 'vobs/ontology')
+  endif
+  if ont ne '' then begin
+    cand = concat_dir(concat_dir(ont, 'binaries'), !version.os + '_' + !version.arch)
+    if file_exist(concat_dir(cand, 'fitsio.so')) then so_path = cand
+  endif
+endelse
+if so_path ne '' then begin
+  if strmid(so_path, 0, 1, /reverse_offset) ne path_sep() then so_path += path_sep()
+  read_sdo, files, index, data, /silent, /use_shared_lib, shared_lib_path=so_path, _extra=_extra
+endif else begin
+  read_sdo, files, index, data, /silent, /use_shared_lib, _extra=_extra
+endelse
+if n_elements(data) eq 0 then $
+  read_sdo, files, index, data, /silent, _extra=_extra
+if n_elements(data) eq 0 then begin
+  message, 'Failed to read FITS data from ' + files[0], /info
+  return
+endif
 n_dim = size( data, /n_dim )
 ;map stokes values in FITS to actual keys, reference: Greisen & Calabretta 2002, A&A, 395, 1061
 stokesvals=[1,2,3,4,-1,-2,-3,-4,-5,-6,-7,-8]

@@ -46,13 +46,17 @@
   ;       chi_img=res_img/data_sdev
   ;       chi=total(chi_img[mask_pix])/n_mask_pix       
   ;       chi2_img=chi_img^2
-  ;       chi2=total(chi2_img[mask_pix])/(n_mask_pix-n_free)-chi^2        
+  ;       chi2=total(chi2_img[mask_pix])/(n_mask_pix-n_free)
+  ;            minus chi^2 unless /no_renorm (CHMP passes /no_renorm)
   ;
   ; :Author: Sergey Anfinopgentov (anfinogentov@iszf.irk.ru)
   ;  Modification history:
   ;  07/08/20-Gelu Nita (gnita@njit.edu) Redefined metrics and addded the option of using SDEV images
   ;  06/07/23-Gelu Nita (gnita@njit.edu) added the no_renorm keyword to allow computation of classic metrics
   ;  02/15/24-Gelu Nita (gnita@njit.edu) fixed bug related to byte image mask
+;  08/26/26-Gelu Nita / Cursor: relative/CHI metrics skip zero data_obs/sdev
+;           pixels (apply2=2/3 + EUV background → Inf; broke CHMP Q search)
+;-
 function gx_metrics_image, data_model, data_obs, data_sdev,mask=mask,apply2=apply2,n_free=n_free,no_renorm=no_renorm
   if ~isa(data_model) or ~isa(data_obs) then begin
     message, 'Model Data, Observational Data, or both, not provided',/info
@@ -121,15 +125,27 @@ function gx_metrics_image, data_model, data_obs, data_sdev,mask=mask,apply2=appl
          res_img= data_model_d - data_obs_d
          if nbad gt 0 then res_img[bad]=0
          res= total(res_img[mask_pix])/n_mask_pix
-         res_img_norm=res_img/data_obs_d
+         ; Relative residuals: apply2=2/3 can include model-bright pixels where
+         ; data~0 (common for EUV). Division by zero → Inf and breaks CHMP Q
+         ; search. Average only over mask pixels with usable data_obs.
+         res_img_norm = res_img*0d
+         use_norm = img_mask and finite(data_obs_d) and (data_obs_d ne 0)
+         un = where(use_norm, n_norm)
+         if n_norm gt 0 then res_img_norm[un] = res_img[un]/data_obs_d[un]
          if nbad gt 0 then res_img_norm[bad]=1
-         res_norm=total(res_img_norm[mask_pix])/n_mask_pix
+         if n_norm gt 0 then begin
+           res_norm=total(res_img_norm[un])/n_norm
+           res2_img_norm=res_img_norm^2
+           if nbad gt 0 then res2_img_norm[bad]=1
+           res2_norm=total(res2_img_norm[un])/n_norm-(keyword_set(no_renorm)?0:res_norm^2)
+         endif else begin
+           res_norm=!values.d_nan
+           res2_img_norm=res_img_norm*0d+1
+           res2_norm=!values.d_nan
+         endelse
          res2_img=res_img^2
          if nbad gt 0 then res2_img[bad]=0
          res2=total(res2_img[mask_pix])/n_mask_pix-keyword_set(no_renorm)?0:res^2
-         res2_img_norm=res_img_norm^2
-         if nbad gt 0 then res2_img_norm[bad]=1
-         res2_norm=total(res2_img_norm[mask_pix])/n_mask_pix-(keyword_set(no_renorm)?0:res_norm^2)
  metrics={R:R,$
           mask_img:img_mask,$
           res_img:res_img,$
@@ -142,12 +158,26 @@ function gx_metrics_image, data_model, data_obs, data_sdev,mask=mask,apply2=appl
           res2_norm:res2_norm}
  if isa(data_sdev_d) then begin
          default,n_free,0
-         chi_img=res_img/data_sdev_d
+         ; Same zero-sdev guard (AIA placeholder sdev = intensity → 0 in bg)
+         chi_img=res_img*0d
+         use_chi=img_mask and finite(data_sdev_d) and (data_sdev_d ne 0)
+         uc=where(use_chi,n_chi)
+         if n_chi gt 0 then chi_img[uc]=res_img[uc]/data_sdev_d[uc]
          if nbad gt 0 then chi_img[bad]=0
-         chi=total(chi_img[mask_pix])/n_mask_pix
-         chi2_img=chi_img^2
-         if nbad gt 0 then chi2_img[bad]=1
-         chi2=total(chi2_img[mask_pix])/(n_mask_pix-n_free)-(keyword_set(no_renorm)?0:chi^2)
+         if n_chi gt 0 then begin
+           chi=total(chi_img[uc])/n_chi
+           chi2_img=chi_img^2
+           if nbad gt 0 then chi2_img[bad]=1
+           denom=n_chi-n_free
+           if denom le 0 then begin
+             message,'CHI2 denominator (n_chi-n_free) <= 0; returning NaN chi2.',/info
+             chi2=!values.d_nan
+           endif else chi2=total(chi2_img[uc])/denom-(keyword_set(no_renorm)?0:chi^2)
+         endif else begin
+           chi=!values.d_nan
+           chi2_img=chi_img*0d+1
+           chi2=!values.d_nan
+         endelse
  chi_metrics={$
          chi_img:chi_img,$
          chi:chi,$

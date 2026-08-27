@@ -28,11 +28,9 @@ function gx_mwcube2tbmaps,gxcube,map
  info=gxcube.info
  fovmap=gxcube.fovmap
  freq=(((info).spectrum).x.axis)
- freq2=freq^2
  nfreq=n_elements(freq)
  dx=fovmap->Get(/dx)
  dy=fovmap->Get(/dy)
- coeff=gx_sfu2tb(dx*dy)
  amap=fovmap->get(/map)
  add_prop,amap,renderer=file_basename(gxcube.renderer),/replace
  add_prop,amap,freq=0d
@@ -43,13 +41,15 @@ function gx_mwcube2tbmaps,gxcube,map
  i=map->get(/count)
  for k=0,nfreq-1 do begin
   amap.freq=freq[k]
+  ; Tb = sfu / gx_tb2sfu(ds,freq)  ==  gx_sfu2tb(ds)*sfu/freq^2
+  tb_scale=1d/gx_tb2sfu(dx*dy,freq[k])
   amap.id=string(freq[k],format="('GX Tb_I ',g0,' GHz')")
   amap.Stokes='I'
-  amap.data=coeff*(gxcube.data[*,*,k,1,0]+gxcube.data[*,*,k,0,0])/freq2[k]/2
+  amap.data=tb_scale*(gxcube.data[*,*,k,1,0]+gxcube.data[*,*,k,0,0])/2
   map->setmap,i++,amap
   amap.id=string(freq[k],format="('GX Tb_V ',g0,' GHz')")
   amap.Stokes='V'
-  amap.data=coeff*(gxcube.data[*,*,k,1,0]-gxcube.data[*,*,k,0,0])/freq2[k]/2
+  amap.data=tb_scale*(gxcube.data[*,*,k,1,0]-gxcube.data[*,*,k,0,0])/2
   map->setmap,i++,amap
  endfor
  return,map

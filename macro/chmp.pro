@@ -6,6 +6,9 @@ pro chmp_help
   print,'% IDL-> chmp, /fov; to print the current FOV settings
   print,'% IDL-> chmp, /res; to print the current map resolution settings
   print,'% IDL-> chmp, /refdatapath; to print the current reference data path
+  print,'% IDL-> chmp, keywords="search_mode=''spectrum'', a_beam=1.5, b_beam=1.5, phi_beam=0" ; spectrum (all refs; optional spec_weights=)'
+  print,'% IDL-> chmp, keywords="chan=94, a_beam=1.5, b_beam=1.5, phi_beam=0" ; EUV image (scalar chan=)'
+  print,'% IDL-> chmp, keywords="freq=5.0, a_beam=..., b_beam=..., phi_beam=..." ; MW image (scalar freq=)'
   print,'% IDL-> chmp, /gxmpath; to print the current GX model data path
   print,'% IDL-> chmp, /bridges; to print the current status of the parallel execution threads
   print,'% IDL-> chmp, /status; to report the status of the application, including all of the above
@@ -16,23 +19,80 @@ pro chmp_help
   print,'% IDL-> chmp, /loud; to turn on run-time execution progress messages
   print,'% IDL-> chmp, /exit; to abort all active tasks, flush the pending task queue, and exit the application
   gx_message,'% Any logical combination of the arguments and keywords listed above should result in a valid single-line calling sequence',/info,level=-1
+  gx_message,'% See also doc/CHMP_search.md (search_mode / spec_weights rules)',/info,level=-1
+end
+
+; Validate a reference path (file or directory) the same way as gx_search4bestq / GUI.
+; Directories and FITS without beam headers get default a_beam/b_beam/phi_beam=1.5/1.5/0.
+function chmp_valid_refpath, path, keywords=keywords, err_msg=err_msg
+  compile_opt idl2, hidden
+  err_msg = ''
+  if n_elements(path) eq 0 then return, 0b
+  path0 = strtrim(path[0], 2)
+  if path0 eq '' then begin
+    err_msg = 'Empty reference path'
+    return, 0b
+  endif
+  if ~(file_test(path0) or file_test(path0, /directory)) then begin
+    err_msg = 'Reference path not found: ' + path0
+    return, 0b
+  endif
+
+  use_beam = file_test(path0, /directory)
+  if ~use_beam and file_exist(path0) then begin
+    bname = strupcase(file_basename(path0))
+    dot = strpos(bname, '.', /reverse_search)
+    if dot ge 0 then begin
+      ext = strmid(bname, dot + 1)
+      use_beam = (ext eq 'FITS') or (ext eq 'FTS') or (ext eq 'FIT')
+    endif
+  endif
+  ; Optional beam overrides from keywords= text (e.g. a_beam=2)
+  a_kw = 1.5
+  b_kw = 1.5
+  phi_kw = 0.0
+  if n_elements(keywords) gt 0 and strtrim(keywords[0], 2) ne '' then begin
+    ks = strlowcase(keywords[0])
+    if stregex(ks, 'a_beam', /boolean) or stregex(ks, 'b_beam', /boolean) or $
+       stregex(ks, 'phi_beam', /boolean) then use_beam = 1b
+  endif
+
+  catch, load_err
+  if load_err ne 0 then begin
+    catch, /cancel
+    err_msg = !error_state.msg
+    return, 0b
+  endif
+  em = ''
+  if use_beam then $
+    refs = gx_ref2chmp(path0, a_beam=a_kw, b_beam=b_kw, phi_beam=phi_kw, err_msg=em, /quiet) $
+  else refs = gx_ref2chmp(path0, err_msg=em, /quiet)
+  catch, /cancel
+
+  if size(refs, /tname) ne 'OBJREF' or ~obj_valid(refs[0]) then begin
+    err_msg = (size(em, /tname) eq 'STRING' and n_elements(em) gt 0 and em[0] ne '') ? $
+      strjoin(em, ' ') : 'Could not load reference data'
+    return, 0b
+  endif
+  return, 1b
 end
 
 pro chmp_self
   common chmp, self
   if ~isa(self,'chmp') then begin
     self={chmp,active:0l,GXMpath:'',RefDataPath:'',modDir:'',psDir:'',TmpDir:'',EbtelPath:'',$
-      renderer:'',alist:'',blist:'',qlist:'',levels:'',fov:'',res:'',completed:0l,$
+      renderer:'',alist:'',blist:'',qlist:'',levels:'',fov:'',res:'',keywords:'',completed:0l,$
       RefDataStruct:ptr_new(),solution:obj_new(),bridges:obj_new(),tasks:obj_new(),WinOS:0l,quiet:0L}
     if file_exist('gxchmp.ini') and ~keyword_set(fresh) then restore,'gxchmp.ini'
     if alist eq '' then alist='1.0'
     if blist eq '' then blist='0.75'
     self.WinOS=(!version.os_family eq 'Windows')
-    default,modDir,curdir()+path_sep()+'moddir'
+    work = curdir()
+    default,modDir,work+path_sep()+'modDir'
+    default,psDir,work+path_sep()+'psDir'
+    default,tmpDir,work+path_sep()+'tmpDir'
     self.modDir=modDir
-    default,psDir,curdir()+path_sep()+'psdir'
     self.psDir=psDir
-    default,tmpDir,curdir()+path_sep()+'tmpdir'
     self.tmpDir=TmpDir
     default,refdatapath,''
     self.refdatapath=refdatapath
@@ -54,6 +114,8 @@ pro chmp_self
     self.fov=fov
     default,res,'raw=[200,200]; resize=[100,100]'
     self.res=res
+    default,keywords,''
+    self.keywords=keywords
     default,tasks,list()
     self.tasks=tasks
     default,solution,list()
@@ -254,6 +316,7 @@ function chmp_script,task_id=task_id
   script+=strcompress(string(task.b,format="(', b_arr= ',g0)"))
   script+=', q_start=['+arr2str(task.q)+']'
   script+=string(arr2str((str2arr(', levels=['+self.levels+']')),format="(a0)"))
+  if strcompress(', '+self.keywords,/rem) ne ',' then script+=', '+self.keywords
   script+=')'
   return,strcompress(script)
 end
@@ -279,6 +342,7 @@ pro chmp_status,status=status,_extra=_extra
     if keyword_set(moddir)then message,'moddir='+self.moddir,/info
     if keyword_set(psdir)then message,'psdir='+self.psdir,/info
     if keyword_set(tmpdir)then message,'tmpdir='+self.tmpdir,/info
+    if keyword_set(keywords)then message,'keywords='+self.keywords,/info
     if keyword_set(script)then print,chmp_script()
     if keyword_set(tasks)then begin
       tasklist=self.tasks
@@ -419,16 +483,17 @@ function chmp_ready
     return,0  
   endif
  ;-------------------------------------------------------------------- 
- if file_exist(self.refdatapath) and self.refdatapath ne '' then begin
-   restore,self.refdatapath
-   if size(ref,/tname) eq 'STRUCT' then begin
-     if tag_exist(ref,'a_beam') then valid_ref=1
-   endif else valid_ref=0
+ if self.refdatapath ne '' and $
+    (file_test(self.refdatapath) or file_test(self.refdatapath, /directory)) then begin
+   valid_ref = chmp_valid_refpath(self.refdatapath, keywords=self.keywords, err_msg=em)
  endif else valid_ref=0
  if ~valid_ref then begin
    chmp_status,/refdatapath
-   message,'Not a valid path or a valid data referance file structure defined,'+$
-     string(10b)+'use "chmp, refdatapath=reference data path" to define one!',/info
+   msg = 'Not a valid path or a valid data reference file structure defined,'+$
+     string(10b)+'use "chmp, refdatapath=reference data path" to define one!'
+   if n_elements(em) gt 0 and size(em, /tname) eq 'STRING' and em[0] ne '' then $
+     msg = msg + string(10b) + em
+   message,msg,/info
    return,0  
  endif
  ;------------------------------------
@@ -577,6 +642,7 @@ pro chmp, nthreads,fresh=fresh, _extra=_extra
       RefDataPath=self.RefDataPath
       modDir=self.modDir
       psDir=self.psDir
+      tmpDir=self.tmpDir
       alist=self.alist
       blist=self.blist
       qlist=self.qlist
@@ -585,7 +651,9 @@ pro chmp, nthreads,fresh=fresh, _extra=_extra
       fov=self.fov
       res=self.res
       ebtelpath=self.ebtelpath
-      save,GXMpath,RefDataPath,modDir,psDir,alist,blist,qlist,levels,renderer,fov,res,ebtelpath,file='gxchmp.ini'
+      keywords=self.keywords
+      save,GXMpath,RefDataPath,modDir,psDir,tmpDir,alist,blist,qlist,levels,renderer,fov,res,ebtelpath,keywords,$
+        file=curdir()+path_sep()+'gxchmp.ini'
       obj_destroy,self.tasks
       obj_destroy,self.bridges
       obj_destroy,self.solution
@@ -634,13 +702,13 @@ pro chmp, nthreads,fresh=fresh, _extra=_extra
 
   if isa(refdatapath) then begin
     if isa(refdatapath,/string) then begin
-      if file_exist(refdatapath) and refdatapath ne '' then begin
-        restore,refdatapath
-        if size(ref,/tname) eq 'STRUCT' then begin
-          if tag_exist(ref,'a_beam') then valid=1
-        endif else valid=0
-      endif else valid=0
-      if valid eq 1 then self.refdatapath=refdatapath else message,'Not a valid path or a valid data referance file structure!',/info
+      valid = chmp_valid_refpath(refdatapath, keywords=self.keywords, err_msg=em)
+      if valid eq 1 then self.refdatapath=refdatapath else begin
+        msg = 'Not a valid path or a valid data reference file structure!'
+        if n_elements(em) gt 0 and size(em, /tname) eq 'STRING' and em[0] ne '' then $
+          msg = msg + ' ' + em
+        message,msg,/info
+      endelse
     endif
     if ~keyword_set(status) then chmp_status,/refdatapath
   end
@@ -701,6 +769,11 @@ pro chmp, nthreads,fresh=fresh, _extra=_extra
         message, 'No EBTEL table named "'+file_basename(ebtelpath)+'" found in '+file_dirname(self.ebtelpath),/info
     endif
     chmp_status,/ebtelpath
+  endif
+
+  if isa(keywords) then begin
+    if isa(keywords,/string) then self.keywords=keywords
+    chmp_status,/keywords
   endif
 
   if keyword_set(flush) then chmp_flush_queue
