@@ -78,6 +78,8 @@ function gx_result_select_channel, result, index=index, freq=freq, chan=chan, $
 
   ; Resolve the requested axis value, then match it onto the stored CIM axis
   ; (spec_axis_all after all-channel storage; spec_axis on older savs).
+  ; Heuristic matches BoB / gx_plot_chmp helpers: CHAN axes are EUV wavelengths.
+  is_chan_axis = max(double(axis_cim), /nan) ge 50d
   if n_elements(index) gt 0 then begin
     ich = long(index[0])
     if (ich lt 0) or (ich ge n_chan) then begin
@@ -87,11 +89,35 @@ function gx_result_select_channel, result, index=index, freq=freq, chan=chan, $
     endif
     want = spec_axis[ich]
   endif else if n_elements(freq) gt 0 then begin
+    if keyword_set(is_chan_axis) then begin
+      err_msg = 'gx_result_select_channel: result axis looks like CHAN (EUV); use chan= or index=, not freq='
+      message, err_msg, /info
+      return, !null
+    endif
     d = abs(double(axis_cim) - double(freq[0]))
-    want = axis_cim[(where(d eq min(d)))[0]]
+    thr = (1d-3 * abs(double(freq[0]))) > 1d-6
+    ii = (where(d eq min(d)))[0]
+    if d[ii] gt thr then begin
+      err_msg = string(freq[0], format="('gx_result_select_channel: requested freq=',g0,' GHz not found in spec axis')")
+      message, err_msg, /info
+      return, !null
+    endif
+    want = axis_cim[ii]
   endif else if n_elements(chan) gt 0 then begin
+    if ~keyword_set(is_chan_axis) then begin
+      err_msg = 'gx_result_select_channel: result axis looks like FREQ (MW); use freq= or index=, not chan='
+      message, err_msg, /info
+      return, !null
+    endif
     d = abs(double(axis_cim) - double(chan[0]))
-    want = axis_cim[(where(d eq min(d)))[0]]
+    thr = (1d-3 * abs(double(chan[0]))) > 1d-6
+    ii = (where(d eq min(d)))[0]
+    if d[ii] gt thr then begin
+      err_msg = string(chan[0], format="('gx_result_select_channel: requested chan=',g0,' not found in spec axis')")
+      message, err_msg, /info
+      return, !null
+    endif
+    want = axis_cim[ii]
   endif else begin
     err_msg = 'gx_result_select_channel: set index=, freq=, or chan='
     message, err_msg, /info

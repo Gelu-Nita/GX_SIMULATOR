@@ -6,7 +6,8 @@
 ;    Path inputs:
 ;      - One .sav or .fits/.fts/.fit file → one map object
 ;      - Directory of those files, or a string array of paths, with 2+ items →
-;        objarr(n) of map objects sorted by FREQ then CHAN
+;        objarr(n) of map objects sorted by axis value (FREQ or CHAN; mixed
+;        FREQ+CHAN sets are rejected)
 ;      - Directory with exactly one convertible file → one map object
 ;
 ;    If an item has no sdev map and no rms tag, the intensity map is copied as
@@ -153,7 +154,13 @@ function gx_ref2chmp, refdata, freq=freq, chan=chan, $
       is_chan_vec = is_chan_vec[0:n_ok-1]
     endif
 
-    ; Sort by axis (freq or chan value)
+    ; Reject mixed FREQ/CHAN sets (same rule as gx_ref_select_axis)
+    if n_elements(uniq(is_chan_vec, sort(is_chan_vec))) gt 1 then begin
+      err_msg = 'gx_ref2chmp: mixed FREQ and CHAN references are not allowed in one set'
+      goto, exit_fail
+    endif
+
+    ; Sort by axis value (all FREQ or all CHAN)
     ord = sort(axis)
     refs = refs[ord]
     if n_ok eq 1 then return, refs[0]

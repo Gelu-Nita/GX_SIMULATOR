@@ -489,7 +489,7 @@ function chmp_ready
  endif else valid_ref=0
  if ~valid_ref then begin
    chmp_status,/refdatapath
-   msg = 'Not a valid path or a valid data referance file structure defined,'+$
+   msg = 'Not a valid path or a valid data reference file structure defined,'+$
      string(10b)+'use "chmp, refdatapath=reference data path" to define one!'
    if n_elements(em) gt 0 and size(em, /tname) eq 'STRING' and em[0] ne '' then $
      msg = msg + string(10b) + em
@@ -704,7 +704,7 @@ pro chmp, nthreads,fresh=fresh, _extra=_extra
     if isa(refdatapath,/string) then begin
       valid = chmp_valid_refpath(refdatapath, keywords=self.keywords, err_msg=em)
       if valid eq 1 then self.refdatapath=refdatapath else begin
-        msg = 'Not a valid path or a valid data referance file structure!'
+        msg = 'Not a valid path or a valid data reference file structure!'
         if n_elements(em) gt 0 and size(em, /tname) eq 'STRING' and em[0] ne '' then $
           msg = msg + ' ' + em
         message,msg,/info

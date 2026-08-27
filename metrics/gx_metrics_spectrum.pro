@@ -166,17 +166,24 @@ function gx_metrics_spectrum, data_model, data_obs, data_sdev, $
 
   res_spec = data_model_d - data_obs_d
   res = total(weff[active] * res_spec[active])
-  ; Avoid Inf/NaN from zero obs on inactive points; active points still use obs
+  ; Relative metrics only over finite, nonzero obs (zero obs must not pad wsum)
   res_spec_norm = make_array(n, /double, value=0d)
   good_obs = where((weff gt 0d) and finite(data_obs_d) and (data_obs_d ne 0d), ngood_obs)
-  if ngood_obs gt 0 then $
+  if ngood_obs gt 0 then begin
     res_spec_norm[good_obs] = res_spec[good_obs] / data_obs_d[good_obs]
-  res_norm = total(weff[active] * res_spec_norm[active]) / wsum
+    wsum_obs = total(weff[good_obs])
+    res_norm = total(weff[good_obs] * res_spec_norm[good_obs]) / wsum_obs
+    res2_spec_norm = res_spec_norm^2
+    res2_norm = total(weff[good_obs] * res2_spec_norm[good_obs]) / wsum_obs
+  endif else begin
+    message, 'No finite nonzero data_obs in positive-weight set; RES*_NORM set to NaN.', /info
+    res_norm = !values.d_nan
+    res2_spec_norm = res_spec_norm^2
+    res2_norm = !values.d_nan
+  endelse
   res2_spec = res_spec^2
   if ninactive gt 0 then res2_spec[inactive] = 0
   res2 = total(weff[active] * res2_spec[active]) / wsum - (res^2) / wsum
-  res2_spec_norm = res_spec_norm^2
-  res2_norm = total(weff[active] * res2_spec_norm[active]) / wsum
 
   metrics = {R:R, $
     mask_spec:spec_mask, $
@@ -194,17 +201,24 @@ function gx_metrics_spectrum, data_model, data_obs, data_sdev, $
     default, n_free, 0
     chi_spec = make_array(n, /double, value=0d)
     good_sd = where((weff gt 0d) and finite(data_sdev_d) and (data_sdev_d ne 0d), ngood_sd)
-    if ngood_sd gt 0 then $
+    if ngood_sd gt 0 then begin
       chi_spec[good_sd] = res_spec[good_sd] / data_sdev_d[good_sd]
-    chi = total(weff[active] * chi_spec[active]) / wsum
-    chi2_spec = chi_spec^2
-    ; Match legacy fill outside the active set
-    if ninactive gt 0 then chi2_spec[inactive] = 1
-    denom = wsum - double(n_free)
-    if denom le 0d then begin
-      message, 'CHI2 denominator (sum(weights)-n_free) <= 0; returning NaN chi2.', /info
+      wsum_sd = total(weff[good_sd])
+      chi = total(weff[good_sd] * chi_spec[good_sd]) / wsum_sd
+      chi2_spec = chi_spec^2
+      if ninactive gt 0 then chi2_spec[inactive] = 1
+      denom = wsum_sd - double(n_free)
+      if denom le 0d then begin
+        message, 'CHI2 denominator (sum(weights with valid sdev)-n_free) <= 0; returning NaN chi2.', /info
+        chi2 = !values.d_nan
+      endif else chi2 = total(weff[good_sd] * chi2_spec[good_sd]) / denom
+    endif else begin
+      message, 'No finite nonzero data_sdev in positive-weight set; CHI/CHI2 set to NaN.', /info
+      chi = !values.d_nan
+      chi2_spec = chi_spec^2
+      if ninactive gt 0 then chi2_spec[inactive] = 1
       chi2 = !values.d_nan
-    endif else chi2 = total(weff[active] * chi2_spec[active]) / denom
+    endelse
     chi_metrics = {$
       chi_spec:chi_spec, $
       chi:chi, $

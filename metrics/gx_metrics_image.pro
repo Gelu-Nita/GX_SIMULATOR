@@ -168,7 +168,11 @@ function gx_metrics_image, data_model, data_obs, data_sdev,mask=mask,apply2=appl
            chi=total(chi_img[uc])/n_chi
            chi2_img=chi_img^2
            if nbad gt 0 then chi2_img[bad]=1
-           chi2=total(chi2_img[uc])/(n_chi-n_free)-(keyword_set(no_renorm)?0:chi^2)
+           denom=n_chi-n_free
+           if denom le 0 then begin
+             message,'CHI2 denominator (n_chi-n_free) <= 0; returning NaN chi2.',/info
+             chi2=!values.d_nan
+           endif else chi2=total(chi2_img[uc])/denom-(keyword_set(no_renorm)?0:chi^2)
          endif else begin
            chi=!values.d_nan
            chi2_img=chi_img*0d+1
