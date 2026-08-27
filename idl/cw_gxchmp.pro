@@ -1,7 +1,19 @@
+function gxchmp_normalize_dir, path, default_name
+  compile_opt idl2, hidden
+  default_path = curdir() + path_sep() + default_name
+  if n_elements(path) eq 0 then return, default_path
+  p = strtrim(path[0], 2)
+  if p eq '' then return, default_path
+  if file_test(p, /directory) then return, p
+  parent = file_dirname(p)
+  if strtrim(parent, 2) ne '' and file_test(parent, /directory) then return, p
+  return, default_path
+end
+
 function gxchmp::INIT,wBase,uname=uname, GXMpath=GXMpath,RefDataPath=RefDataPath,modDir=modDir,psDir=psDir,$
                        TmpDir=TmpDir,alist=alist,blist=blist,qlist=qlist,$
                        levels=levels,solution=solution, renderer=renderer,EBTELpath=EBTELpath,$
-                       fov=fov,res=res,keywords=keywords,_extra=_extra
+                       fov=fov,res=res,keywords=keywords,fresh=fresh,_extra=_extra
   compile_opt hidden
   catch, error_stat
   if error_stat ne 0 then begin
@@ -10,14 +22,36 @@ function gxchmp::INIT,wBase,uname=uname, GXMpath=GXMpath,RefDataPath=RefDataPath
     return, 0
   end
   self.WinOS=!version.os_family eq 'Windows'
+  work = curdir()
+  def_mod = work + path_sep() + 'modDir'
+  def_ps  = work + path_sep() + 'psDir'
+  def_tmp = work + path_sep() + 'tmpDir'
+  default, modDir, def_mod
+  default, psDir, def_ps
+  default, tmpDir, def_tmp
+  inifile = work + path_sep() + 'gxchmp.ini'
+  if file_exist(inifile) and ~keyword_set(fresh) and $
+     ~arg_present('modDir') and ~arg_present('psDir') and ~arg_present('TmpDir') then begin
+    catch, ini_err
+    if ini_err eq 0 then begin
+      restore, inifile
+      default, modDir, def_mod
+      default, psDir, def_ps
+      default, tmpDir, def_tmp
+      default, refdatapath, ''
+      default, gxmpath, ''
+      default, keywords, ''
+      catch, /cancel
+    endif else catch, /cancel
+  endif
+  modDir = gxchmp_normalize_dir(modDir, 'modDir')
+  psDir  = gxchmp_normalize_dir(psDir, 'psDir')
+  tmpDir = gxchmp_normalize_dir(tmpDir, 'tmpDir')
+  self.modDir = modDir
+  self.psDir = psDir
+  self.tmpDir = TmpDir
   default,keywords,''
   self.keywords=keywords
-  default,modDir,curdir()+path_sep()+'moddir'
-  self.modDir=modDir
-  default,psDir,curdir()+path_sep()+'PsDir'
-  self.psDir=psDir
-  default,tmpDir,curdir()+path_sep()+'tmpDir'
-  self.tmpDir=TmpDir
   default,refdatapath,''
   self.refdatapath=refdatapath
   default,gxmpath,''
@@ -71,7 +105,7 @@ pro objgxchmpKill,wBase
     alist=alist,blist=blist,qlist=qlist,levels=levels,renderer=renderer,$
     fov=fov,res=res, ebtelpath=ebtelpath,keywords=keywords
   save,GXMpath,RefDataPath,modDir,psDir,tmpDir,alist,blist,qlist,$
-    levels,renderer,fov,res,ebtelpath,keywords,file='gxchmp.ini'
+    levels,renderer,fov,res,ebtelpath,keywords,file=curdir()+path_sep()+'gxchmp.ini'
   obj_destroy,obj
 end
 
@@ -295,7 +329,25 @@ pro gxchmp::UpdateTaskQueue
       widget_control,wQueue,table_ysize=n_elements(rows)
       if n_elements(rows) gt 0 then widget_control,wQueue,set_value=rows,row_labels=[rows_labels]
       self->PlotTasks
+      self->UpdateScriptPreview
 end          
+
+pro gxchmp::UpdateScriptPreview, task_id=task_id
+  compile_opt idl2, hidden
+  if ~widget_valid(self.wIDBase) then return
+  wScript = widget_info(self.wIDBase, find_by_uname='script')
+  if ~widget_valid(wScript) then return
+  if self.tasks->Count() eq 0 then begin
+    widget_control, wScript, set_value=$
+      'Add (a,b,Q) tasks to the Best Models Search Queue, then select a row to preview the gx_search4bestq script.'
+    return
+  endif
+  default, task_id, 0
+  if task_id lt 0 or task_id ge self.tasks->Count() then task_id = 0
+  script = self->GetScript(task_id=task_id)
+  widget_control, wScript, set_value=strreplace(script, 'result', $
+    strcompress(string(task_id, format="('result',i0)"), /rem))
+end
 
 pro gxchmp::GetProperty,GXMpath=GXMpath,RefDataPath=RefDataPath,modDir=modDir,psDir=psDir,$
                        TmpDir=TmpDir,alist=alist,blist=blist,qlist=qlist,$
@@ -519,7 +571,8 @@ function gxchmp::IsCompatible,result
     return, 0
   end
  if self.solution->IsEmpty() then return,1
- dummy=[self.solution(0),result[0]]
+ ; Compare paths only. Do not concatenate structs: spectrum-mode results have extra
+ ; tags (search_mode, spec_axis, ...) and [old, new] would throw on a tag mismatch.
  if ~(tag_exist(self.solution(0),'refdatapath') and tag_exist(result[0],'refdatapath') $
   and tag_exist(self.solution(0),'gxmpath') and tag_exist(result[0],'gxmpath')) then return,1 ;hopefully the users know what their are doing
  return, file_basename(self.solution(0).refdatapath) eq file_basename(result[0].refdatapath) and $
@@ -596,6 +649,60 @@ pro gxchmp::SaveScript
 end
   
   
+function gxchmp::DefaultExtraKeywords, refpath=refpath
+  compile_opt idl2, hidden
+  if n_elements(refpath) eq 0 then refpath = self.refdatapath
+  if refpath eq '' then return, ''
+  if ~(file_test(refpath) or file_test(refpath, /directory)) then return, ''
+
+  refs = gxchmp_load_refs(refpath, err_msg=em, /quiet)
+  if size(refs, /tname) ne 'OBJREF' or ~obj_valid(refs[0]) then return, ''
+
+  ; Beam defaults only (averaged AIA FITS lack BMAJ/BMIN). Do not guess chan= or
+  ; freq= — image mode needs a scalar axis from the user; MW uses freq, EUV chan.
+  ; Do not set search_mode= either; user chooses image vs spectrum explicitly.
+  beam = 'a_beam=1.5, b_beam=1.5, phi_beam=0'
+  if n_elements(refs) gt 1 then return, beam
+
+  if file_test(refpath, /directory) then return, beam
+  bname = strupcase(file_basename(refpath))
+  dot = strpos(bname, '.', /reverse_search)
+  if dot ge 0 then begin
+    ext = strmid(bname, dot + 1)
+    if (ext eq 'FITS') or (ext eq 'FTS') or (ext eq 'FIT') then return, beam
+  endif
+  return, ''
+end
+
+pro gxchmp::ApplyDefaultExtraToWidget
+  compile_opt idl2, hidden
+  if ~widget_valid(self.wIDBase) then return
+  w = widget_info(self.wIDBase, find_by_uname='_extra')
+  if ~widget_valid(w) then return
+  widget_control, w, get_value=kwtxt
+  if strtrim(kwtxt[0], 2) ne '' then return
+  defkw = self->DefaultExtraKeywords()
+  if defkw eq '' then return
+  widget_control, w, set_value=defkw, set_uvalue=defkw
+  self.keywords = defkw
+end
+
+function gxchmp::GetScriptKeywords
+  compile_opt idl2, hidden
+  kw = ''
+  if widget_valid(self.wIDBase) then begin
+    w = widget_info(self.wIDBase, find_by_uname='_extra')
+    if widget_valid(w) then begin
+      widget_control, w, get_value=kwtxt
+      kw = strtrim(kwtxt[0], 2)
+    endif
+  endif
+  if kw eq '' then kw = strtrim(self.keywords, 2)
+  if kw eq '' then kw = self->DefaultExtraKeywords()
+  if kw ne '' then self.keywords = kw
+  return, kw
+end
+
 function gxchmp::GetScript,task_id=task_id
 if self.tasks->Count() eq 0 then return,'No tasks in the execution queue!'
 script='result=gx_search4bestq('
@@ -631,20 +738,20 @@ script+=strcompress(string(task.a,format="(', a_arr= ',g0)"))
 script+=strcompress(string(task.b,format="(', b_arr= ',g0)"))
 script+=', q_start=['+arr2str(task.q)+']'
 script+=string(arr2str((str2arr(', levels=['+self.levels+']')),format="(a0)"))
-if strcompress(', '+self.keywords,/rem) ne ',' then script+=', '+self.keywords
-;if widget_valid(self.wIDBase) then begin
-;  w_extra=widget_info(self.wIDBase,find_by_uname='_extra')
-;  if widget_valid(w_extra) then begin
-;    widget_control,w_extra,get_value=_extra
-;    if strcompress(', '+_extra,/rem) ne ',' then script+=', '+_extra
-;  endif
-;endif
+kw = self->GetScriptKeywords()
+if strcompress(', '+kw, /rem) ne ',' then script += ', '+kw
 script+=')'
 return,strcompress(script)
 end
 
 pro gxchmp::OnStartSearch
 if self->check_fields() eq 0 then return
+kw = self->GetScriptKeywords()
+ok = self->valid_extra(_extra=kw, err_msg=em)
+if ~keyword_set(ok) then begin
+  void = dialog_message((em ne '' ? em : 'Invalid _extra keywords!'), /error)
+  return
+endif
 if self.bridges->Count() eq 0 then begin
   answ=dialog_message('At least one parallel thread should be intialized before the search is started! Please do so and try again!',/info)
   return
@@ -836,7 +943,10 @@ pro gxchmp::CreatePanel,xsize=xsize,ysize=ysize
   wlabel=widget_label(wRefDatapathBase,value='Reference Data Path          ',scr_xsize=label_scr_xsize)
   wSelectRefDatapath= widget_button(wRefDatapathBase, $
     value=gx_bitmap(filepath('open.bmp', subdirectory=subdirectory)), $
-    /bitmap,tooltip='Select the path to a valid reference data structure',uname='refdatapath_select')
+    /bitmap,tooltip='Select a reference .sav or FITS file',uname='refdatapath_select')
+  wSelectRefDatadir= widget_button(wRefDatapathBase, $
+    value=gx_bitmap(filepath('open.bmp', subdirectory=subdirectory)), $
+    /bitmap,tooltip='Select a directory of reference .sav and/or FITS files',uname='refdatapath_dir_select')
   geom = widget_info (wRefDatapathBase, /geom)
   wRefDatapathPath=widget_text(wRefDatapathBase,scr_xsize=scr_xsize-geom.scr_xsize,uname='refdatapath',/editable,$
     value=self.RefDataPath)  
@@ -1098,6 +1208,8 @@ pro gxchmp::CreatePanel,xsize=xsize,ysize=ysize
                           graphics_level=1 $
                           )  
   self.displays=[wgrid, wmap, wres,  wchi,wtask]                                              
+  if self.refdatapath ne '' then self->ApplyDefaultExtraToWidget
+  self->UpdateScriptPreview
 end
 
 function gxchmp::check_fields
@@ -1301,9 +1413,317 @@ pro gxchmp::PlotTasks
   tvlct,rgb_curr
 end  
 
-function gxchmp::valid_extra,_extra=_extra
-          return,1
-         end 
+; Pack keyword arguments into a struct (for parsing _extra text via EXECUTE).
+function gxchmp_kw_pack, _extra=_extra
+  compile_opt idl2, hidden
+  if n_elements(_extra) eq 0 then return, {__gxchmp_empty:1}
+  return, _extra
+end
+
+; Convert a GUI _extra string like "search_mode='spectrum', spec_weights=[1,0,1]"
+; into a keyword struct. Returns !null on syntax error (err_msg set).
+function gxchmp_extra_to_struct, kwstring, err_msg=err_msg
+  compile_opt idl2, hidden
+  err_msg = ''
+  if n_elements(kwstring) eq 0 then return, {__gxchmp_empty:1}
+  s = strtrim(kwstring[0], 2)
+  if s eq '' then return, {__gxchmp_empty:1}
+  ; Allow a leading comma (GetScript sometimes normalizes that way)
+  while strlen(s) gt 0 && strmid(strcompress(s, /rem), 0, 1) eq ',' do $
+    s = strtrim(strmid(strcompress(s, /rem), 1), 2)
+  if s eq '' then return, {__gxchmp_empty:1}
+
+  catch, err
+  if err ne 0 then begin
+    catch, /cancel
+    err_msg = 'Invalid _extra syntax: ' + !error_state.msg
+    return, !null
+  endif
+  ok = execute('__gxchmp_st = gxchmp_kw_pack(' + s + ')', 1)
+  if ~ok then begin
+    err_msg = 'Invalid _extra syntax: ' + !error_state.msg
+    return, !null
+  endif
+  return, __gxchmp_st
+end
+
+; Load CHMP reference(s) from a path, honoring _extra beam/freqlist keywords.
+; For directories and FITS files without beam headers, default a_beam/b_beam/phi_beam
+; to 1.5/1.5/0 (averaged AIA FITS convention) unless _extra overrides them.
+function gxchmp_load_refs, refpath, _extra=_extra, err_msg=err_msg, quiet=quiet
+  compile_opt idl2, hidden
+  err_msg = ''
+  default, quiet, 1
+  em = ''
+
+  if n_elements(refpath) eq 0 or strtrim(refpath[0], 2) eq '' then begin
+    err_msg = 'No reference path provided'
+    return, !null
+  endif
+  refpath = refpath[0]
+
+  st = {__gxchmp_empty:1}
+  if n_elements(_extra) gt 0 then begin
+    if size(_extra, /tname) eq 'STRING' then begin
+      if strtrim(_extra[0], 2) ne '' then begin
+        st = gxchmp_extra_to_struct(_extra, err_msg=em)
+        if size(st, /tname) ne 'STRUCT' then begin
+          err_msg = em
+          return, !null
+        endif
+      endif
+    endif else if size(_extra, /tname) eq 'STRUCT' then st = _extra
+  endif
+
+  use_beam = 0b
+  if tag_exist(st, 'a_beam') or tag_exist(st, 'b_beam') or tag_exist(st, 'phi_beam') then $
+    use_beam = 1b
+  if ~use_beam then begin
+    if file_test(refpath, /directory) then use_beam = 1b else if file_exist(refpath) then begin
+      bname = strupcase(file_basename(refpath))
+      dot = strpos(bname, '.', /reverse_search)
+      if dot ge 0 then begin
+        ext = strmid(bname, dot + 1)
+        use_beam = (ext eq 'FITS') or (ext eq 'FTS') or (ext eq 'FIT')
+      endif
+    endif
+  endif
+
+  ; Only beam/freqlist affect gx_ref2chmp loading. Search keywords (chan, freq,
+  ; search_mode, spec_weights, ...) must not be forwarded — chan= would stamp
+  ; every ref and break axis validation.
+  a_kw = !null
+  b_kw = !null
+  phi_kw = !null
+  corr_kw = !null
+  if use_beam then begin
+    a_kw = tag_exist(st, 'a_beam') ? st.a_beam : 1.5
+    b_kw = tag_exist(st, 'b_beam') ? st.b_beam : 1.5
+    phi_kw = tag_exist(st, 'phi_beam') ? st.phi_beam : 0.0
+    if tag_exist(st, 'corr_beam') then corr_kw = st.corr_beam
+  endif else begin
+    if tag_exist(st, 'a_beam') then a_kw = st.a_beam
+    if tag_exist(st, 'b_beam') then b_kw = st.b_beam
+    if tag_exist(st, 'phi_beam') then phi_kw = st.phi_beam
+    if tag_exist(st, 'corr_beam') then corr_kw = st.corr_beam
+  endelse
+
+  catch, load_err
+  if load_err ne 0 then begin
+    catch, /cancel
+    err_msg = !error_state.msg
+    return, !null
+  endif
+
+  if tag_exist(st, 'freqlist') then begin
+    if n_elements(a_kw) gt 0 then begin
+      if n_elements(corr_kw) gt 0 then $
+        refs = gx_ref2chmp(refpath, freqlist=st.freqlist, a_beam=a_kw, b_beam=b_kw, $
+          phi_beam=phi_kw, corr_beam=corr_kw, err_msg=em, quiet=quiet) $
+      else refs = gx_ref2chmp(refpath, freqlist=st.freqlist, a_beam=a_kw, b_beam=b_kw, $
+        phi_beam=phi_kw, err_msg=em, quiet=quiet)
+    endif else refs = gx_ref2chmp(refpath, freqlist=st.freqlist, err_msg=em, quiet=quiet)
+  endif else if n_elements(a_kw) gt 0 then begin
+    if n_elements(corr_kw) gt 0 then $
+      refs = gx_ref2chmp(refpath, a_beam=a_kw, b_beam=b_kw, phi_beam=phi_kw, $
+        corr_beam=corr_kw, err_msg=em, quiet=quiet) $
+    else refs = gx_ref2chmp(refpath, a_beam=a_kw, b_beam=b_kw, phi_beam=phi_kw, err_msg=em, quiet=quiet)
+  endif else refs = gx_ref2chmp(refpath, err_msg=em, quiet=quiet)
+
+  catch, /cancel
+  if size(refs, /tname) ne 'OBJREF' or ~obj_valid(refs[0]) then begin
+    if em ne '' then err_msg = (size(em, /tname) eq 'STRING') ? strjoin(em, ' ') : string(em)
+    if err_msg eq '' then err_msg = 'Could not load reference data'
+    return, !null
+  endif
+  return, refs
+end
+
+function gxchmp_ref_psf_label, ref, search_mode=search_mode
+  compile_opt idl2, hidden
+  if size(ref, /tname) ne 'OBJREF' or ~obj_valid(ref[0]) then return, ''
+  nref = n_elements(ref)
+  r0 = ref[0]
+  a_beam = r0->get(/a_beam)
+  b_beam = r0->get(/b_beam)
+  phi_beam = r0->get(/phi_beam)
+  corr_beam = r0->get(/corr_beam)
+  beamstr = string([a_beam, b_beam, phi_beam, corr_beam], $
+    format="('a_beam= ',g0,', b_beam= ',g0,', phi_beam= ',g0,', corr_beam= ',g0)")
+  default, search_mode, 'image'
+  if (nref gt 1) or (strlowcase(strcompress(search_mode, /rem)) eq 'spectrum') then $
+    return, strcompress(string(nref, format="('refs: ',i0,' | ')") + beamstr)
+  return, strcompress(beamstr)
+end
+
+; Validate CHMP _extra keywords against gx_search4bestq mode rules.
+; Returns 1b if OK, 0b if not (err_msg explains why).
+function gxchmp::valid_extra, err_msg=err_msg, _extra=_extra
+  compile_opt idl2, hidden
+  err_msg = ''
+
+  if n_elements(_extra) eq 0 then return, 1b
+
+  if size(_extra, /tname) eq 'STRING' then begin
+    st = gxchmp_extra_to_struct(_extra, err_msg=err_msg)
+    if size(st, /tname) ne 'STRUCT' then return, 0b
+  endif else if size(_extra, /tname) eq 'STRUCT' then st = _extra $
+  else begin
+    err_msg = 'valid_extra: unexpected _extra type'
+    return, 0b
+  endelse
+
+  if tag_exist(st, '__gxchmp_empty') then return, 1b
+
+  search_mode = 'image'
+  if tag_exist(st, 'search_mode') then $
+    search_mode = strlowcase(strcompress(string(st.search_mode), /rem))
+
+  has_chan = tag_exist(st, 'chan')
+  has_freq = tag_exist(st, 'freq')
+  has_sw = tag_exist(st, 'spec_weights')
+  has_sc = tag_exist(st, 'spec_chan')
+  has_sf = tag_exist(st, 'spec_freq')
+  has_fl = tag_exist(st, 'freqlist')
+
+  if search_mode eq 'spectrum' then begin
+    if has_chan or has_freq or has_sc or has_sf then begin
+      err_msg = "search_mode='spectrum': use spec_weights= to include/exclude or weight channels; " + $
+        'chan=, freq=, spec_chan=, and spec_freq= are only valid for search_mode=image'
+      return, 0b
+    endif
+    if has_sw then begin
+      sw = st.spec_weights
+      if total(double(sw) gt 0d) lt 1 then begin
+        err_msg = 'spec_weights must have at least one positive entry'
+        return, 0b
+      endif
+      ; Length check against loaded refs when a path is available
+      refpath = self.refdatapath
+      if refpath eq '' and widget_valid(self.wBase) then begin
+        w = widget_info(self.wBase, find_by_uname='refdatapath')
+        if widget_valid(w) then begin
+          widget_control, w, get_value=refpath
+          refpath = refpath[0]
+        endif
+      endif
+      if refpath ne '' and (file_test(refpath) or file_test(refpath, /directory)) then begin
+        refs = gxchmp_load_refs(refpath, _extra=st, err_msg=em, /quiet)
+        if size(refs, /tname) ne 'OBJREF' then begin
+          err_msg = 'Could not load reference set to validate spec_weights: ' + em
+          return, 0b
+        endif
+        nref = n_elements(refs)
+        if n_elements(sw) ne nref then begin
+          ; Build axis list for the message
+          ax = dblarr(nref)
+          for i = 0, nref - 1 do begin
+            rf = refs[i]->get(0, /freq)
+            rc = refs[i]->get(0, /chan)
+            if n_elements(rf) gt 0 && finite(rf[0]) then ax[i] = rf[0] $
+            else if n_elements(rc) gt 0 && finite(rc[0]) then ax[i] = rc[0]
+          endfor
+          err_msg = 'spec_weights length (' + strtrim(n_elements(sw), 2) + $
+            ') must equal number of reference axes (' + strtrim(nref, 2) + $
+            '), order [' + strjoin(strtrim(string(ax, format='(g0)'), 2), ', ') + ']'
+          return, 0b
+        endif
+      endif
+    endif
+    return, 1b
+  endif
+
+  ;----- image mode (default) -----
+  if has_sw then begin
+    err_msg = "search_mode=image (default): spec_weights= is only valid with search_mode='spectrum'"
+    return, 0b
+  endif
+  if has_sc or has_sf then begin
+    err_msg = 'search_mode=image: use chan= or freq= (scalar); spec_chan=/spec_freq= are not used'
+    return, 0b
+  endif
+  if has_chan and has_freq then begin
+    err_msg = 'search_mode=image: specify only one of freq= or chan=, not both'
+    return, 0b
+  endif
+  if has_chan and n_elements(st.chan) gt 1 then begin
+    err_msg = 'search_mode=image: chan= must be a scalar (vector image searches not implemented yet)'
+    return, 0b
+  endif
+  if has_freq and n_elements(st.freq) gt 1 then begin
+    err_msg = 'search_mode=image: freq= must be a scalar (vector image searches not implemented yet)'
+    return, 0b
+  endif
+
+  ; If refs are loaded, check chan/freq exists and type matches
+  refpath = self.refdatapath
+  if refpath eq '' and widget_valid(self.wBase) then begin
+    w = widget_info(self.wBase, find_by_uname='refdatapath')
+    if widget_valid(w) then begin
+      widget_control, w, get_value=refpath
+      refpath = refpath[0]
+    endif
+  endif
+  if (has_chan or has_freq) and refpath ne '' and $
+     (file_test(refpath) or file_test(refpath, /directory)) then begin
+    refs = gxchmp_load_refs(refpath, _extra=st, err_msg=em, /quiet)
+    if size(refs, /tname) ne 'OBJREF' then begin
+      err_msg = 'Could not load reference set to validate chan=/freq=: ' + em
+      return, 0b
+    endif
+    probe = gx_ref_select_axis(refs, err_msg=em2, is_chan=refs_are_chan, axis=all_axis)
+    if size(probe, /tname) ne 'OBJREF' then begin
+      err_msg = (size(em2, /tname) eq 'STRING') ? em2 : 'Failed to inspect reference axes'
+      return, 0b
+    endif
+    axlist = '[' + strjoin(strtrim(string(all_axis, format='(g0)'), 2), ', ') + ']'
+    if keyword_set(refs_are_chan) then begin
+      if has_freq then begin
+        err_msg = 'Reference set is CHAN (EUV); use scalar chan=, not freq=. Available: ' + axlist
+        return, 0b
+      endif
+      if has_chan then begin
+        sel = gx_ref_select_axis(refs, chan=st.chan, err_msg=em3, axis=sel_axis)
+        if size(sel, /tname) ne 'OBJREF' then begin
+          err_msg = 'Requested chan=' + strtrim(string(st.chan[0], format='(g0)'), 2) + $
+            ' not in reference set ' + axlist
+          return, 0b
+        endif
+      endif
+    endif else begin
+      if has_chan then begin
+        err_msg = 'Reference set is FREQ (MW); use scalar freq=, not chan=. Available: ' + axlist + ' GHz'
+        return, 0b
+      endif
+      if has_freq then begin
+        sel = gx_ref_select_axis(refs, freq=st.freq, err_msg=em3, axis=sel_axis)
+        if size(sel, /tname) ne 'OBJREF' then begin
+          err_msg = 'Requested freq=' + strtrim(string(st.freq[0], format='(g0)'), 2) + $
+            ' GHz not in reference set ' + axlist
+          return, 0b
+        endif
+      endif
+    endelse
+  endif
+
+  ; Multi-channel ref directories require explicit axis selection in image mode
+  if ~has_chan and ~has_freq and refpath ne '' and $
+     (file_test(refpath) or file_test(refpath, /directory)) then begin
+    refs = gxchmp_load_refs(refpath, _extra=st, err_msg=em, /quiet)
+    if size(refs, /tname) eq 'OBJREF' and n_elements(refs) gt 1 then begin
+      probe = gx_ref_select_axis(refs, err_msg=em2, is_chan=refs_are_chan, axis=all_axis)
+      if size(probe, /tname) eq 'OBJREF' then begin
+        axlist = '[' + strjoin(strtrim(string(all_axis, format='(g0)'), 2), ', ') + ']'
+        if keyword_set(refs_are_chan) then $
+          err_msg = 'search_mode=image: specify scalar chan= in _extra (available ' + axlist + ')' $
+        else err_msg = 'search_mode=image: specify scalar freq= in _extra (available ' + axlist + ' GHz)'
+        return, 0b
+      endif
+    endif
+  endif
+
+  return, 1b
+end
 
 function gxchmp::HandleEvent, event
   compile_opt hidden
@@ -1349,9 +1769,13 @@ function gxchmp::HandleEvent, event
       goto,refdatapath_select
     end
     'refdatapath_select':begin
-        refdatapath=dialog_pickfile(filter='*.sav',$
-        DEFAULT_EXTENSION='sav',/read,$
-        title='Please select a data reference file',/must_exist)
+        refdatapath=dialog_pickfile(filter=['*.sav','*.fits','*.fts','*.fit'],$
+        /read,title='Please select a reference .sav or FITS file',/must_exist)
+        goto, refdatapath_select
+      end
+    'refdatapath_dir_select':begin
+        refdatapath=dialog_pickfile(/dir,path=curdir(),$
+        title='Please select a directory of reference .sav and/or FITS files',/must_exist)
       refdatapath_select:
       if widget_valid(self.wIDBase) then begin
         w_extra=widget_info(self.wIDBase,find_by_uname='_extra')
@@ -1360,38 +1784,32 @@ function gxchmp::HandleEvent, event
         endif
       endif
       default,_extra,''
-      _extra=strcompress(', '+_extra[0],/rem)
-      if _extra eq ',' then _extra=''
-      is_spectrum=(strpos(strlowcase(_extra),'search_mode') ge 0) and (strpos(strlowcase(_extra),'spectrum') ge 0)
-      if is_spectrum then begin
-        dummy=execute('ref=gx_ref2chmp(refdatapath'+_extra+')')
-        valid=size(ref,/tname) eq 'OBJREF'
-        if valid then valid=obj_valid(ref[0])
+      _extra_kw=_extra[0]
+      refpath = (size(refdatapath, /tname) eq 'STRING') ? refdatapath[0] : string(refdatapath)
+      if strtrim(refpath, 2) ne '' then begin
+        em = ''
+        ref = gxchmp_load_refs(refpath, _extra=_extra_kw, err_msg=em, /quiet)
+        valid = (size(ref, /tname) eq 'OBJREF') and obj_valid(ref[0])
+        if valid then valid = valid_map(ref[0])
+        search_mode = 'image'
+        st = gxchmp_extra_to_struct(_extra_kw, err_msg=em2)
+        if size(st, /tname) eq 'STRUCT' and tag_exist(st, 'search_mode') then $
+          search_mode = strlowcase(strcompress(string(st.search_mode), /rem))
         if valid then begin
-          self.refdatapath=refdatapath
-          a_beam=ref[0]->get(/a_beam)
-          b_beam=ref[0]->get(/b_beam)
-          phi_beam=ref[0]->get(/phi_beam)
-          corr_beam=ref[0]->get(/corr_beam)
-          widget_control,widget_info(self.wbase,find_by_uname='psf_info'),set_value=$
-            strcompress(string(n_elements(ref),format="('spectrum refs: ',i0,' | ')")+$
-            string([a_beam,b_beam,phi_beam,corr_beam], $
-            format="('a_beam= ',g0,', b_beam= ',g0,', phi_beam= ',g0,', corr_beam= ',g0)"))
-        endif else answ=dialog_message('Not a valid spectrum reference set!')
-      endif else begin
-        dummy=execute('ref=gx_ref2chmp(refdatapath'+_extra+')')
-        if valid_map(ref) eq 1 then begin
-          self.refdatapath=refdatapath 
-          a_beam=ref->get(/a_beam)
-          b_beam=ref->get(/b_beam)
-          phi_beam=ref->get(/phi_beam)
-          corr_beam=ref->get(/corr_beam)
-          widget_control,widget_info(self.wbase,find_by_uname='psf_info'),set_value=$
-            strcompress(string([a_beam,b_beam,phi_beam,corr_beam], $
-            format="('a_beam= ',g0,', b_beam= ',g0,', phi_beam= ',g0,', corr_beam= ',g0)"))
-        endif else answ=dialog_message('Not a valid path or a valid data referance file!')
-      endelse
+          self.refdatapath = refpath
+          widget_control, widget_info(self.wbase, find_by_uname='psf_info'), set_value=$
+            gxchmp_ref_psf_label(ref, search_mode=search_mode)
+          self->ApplyDefaultExtraToWidget
+        endif else begin
+          if em ne '' then msg = em else begin
+            if search_mode eq 'spectrum' then msg = 'Not a valid spectrum reference set!' $
+            else msg = 'Not a valid path or a valid data reference file!'
+          endelse
+          answ = dialog_message(msg, /error)
+        endelse
+      endif
       widget_control,widget_info(self.wBase,find_by_uname='refdatapath'),set_value=self.refdatapath
+      self->UpdateScriptPreview
     end
     'rendererpath':begin
                      widget_control,event.id,get_value=renderer
@@ -1473,9 +1891,9 @@ function gxchmp::HandleEvent, event
                     end                
      '_extra': begin
                 widget_control,event.id,get_value=_extra,get_uvalue=old_extra
-                err=~(execute('test=self->valid_extra(_extra=_extra)'))
-                if keyword_set(err) then begin
-                  answ=dialog_message('Invalid _extra keyword syntax!',/error)
+                ok = self->valid_extra(_extra=_extra, err_msg=em)
+                if ~keyword_set(ok) then begin
+                  answ=dialog_message((em ne '' ? em : 'Invalid _extra keywords!'),/error)
                   widget_control,event.id,set_value=old_extra
                 endif else begin
                   widget_control,event.id,set_uvalue=_extra
@@ -1507,10 +1925,12 @@ function gxchmp::HandleEvent, event
                         FREE_LUN, lun
                         if n_elements(freqlist) gt 1 then freqlist=float(freqlist)
                         freqlist='freqlist=['+strcompress(str_replace(arr2str(freqlist[sort(freqlist)],/trim_str,/compress),',',', '))+']'
-                        if execute('test=self->valid_extra('+freqlist+')') then begin
+                        ok = self->valid_extra(_extra=freqlist, err_msg=em)
+                        if keyword_set(ok) then begin
                           widget_control,widget_info(self.wbase,find_by_uname='_extra'),set_value=freqlist
                           self.keywords=freqlist
-                        endif
+                        endif else $
+                          answ=dialog_message((em ne '' ? em : 'Invalid freqlist _extra!'),/error)
                       endif
                     end                                    
      'open':begin
@@ -1549,15 +1969,33 @@ function gxchmp::HandleEvent, event
                 if tag_exist(result,'refdatapath') then begin
                   refdatapath=result[0].refdatapath
                   if self->valid_path(refdatapath) then begin
-                    if file_exist(refdatapath) then begin
-                      restore,refdatapath
-                      if size(ref,/tname) eq 'STRUCT' then begin
-                        if tag_exist(ref,'a_beam') then valid=1
-                      endif else valid=0
-                    endif else valid=0
-                    if valid eq 1 then begin
+                    is_spectrum=0b
+                    if tag_exist(result,'search_mode') then $
+                      is_spectrum=strlowcase(strcompress(result[0].search_mode,/rem)) eq 'spectrum'
+                    w_extra=widget_info(self.wIDBase,find_by_uname='_extra')
+                    _extra_kw=''
+                    if widget_valid(w_extra) then begin
+                      widget_control,w_extra,get_value=_extra_kw
+                      _extra_kw=strcompress(', '+_extra_kw[0],/rem)
+                      if _extra_kw eq ',' then _extra_kw=''
+                    endif
+                    valid=0
+                    if file_test(refdatapath,/directory) or is_spectrum or $
+                       file_test(refdatapath, /regular) then begin
+                      ref = gxchmp_load_refs(refdatapath, _extra=_extra_kw, err_msg=em, /quiet)
+                      if size(ref,/tname) eq 'OBJREF' and obj_valid(ref[0]) and valid_map(ref[0]) then begin
+                        valid = 1
+                        smode = is_spectrum ? 'spectrum' : 'image'
+                        widget_control, widget_info(self.wbase, find_by_uname='psf_info'), set_value=$
+                          gxchmp_ref_psf_label(ref, search_mode=smode)
+                      endif
+                    endif
+                    ; Record the path even if beam tags could not be re-derived; the
+                    ; solution maps themselves are enough to display.
+                    if valid or file_test(refdatapath) then begin
                       self.refdatapath=refdatapath
                       widget_control,widget_info(self.wBase,find_by_uname='refdatapath'),set_value=self.refdatapath
+                      self->ApplyDefaultExtraToWidget
                     endif
                   endif
                 endif else result=add_tag(result,self.refdatapath,'refdatapath')
@@ -1576,8 +2014,12 @@ function gxchmp::HandleEvent, event
                     widget_control,widget_info(self.wBase,find_by_uname='GXMpath'),set_value=self.GXMpath
                   endif
                 endif else result=add_tag(result,self.gxmpath,'gxmpath')
-                if tag_exist(result,'res_best_metrics') then begin
+                if tag_exist(result,'res2_best_metrics') then begin
+                  fovmap=result[0].res2_best_metrics
+                endif else if tag_exist(result,'res_best_metrics') then begin
                   fovmap=result[0].res_best_metrics
+                endif
+                if n_elements(fovmap) gt 0 then begin
                   renderer=gx_findfile(fovmap->get(/renderer),folder='')
                   info_renderer=gx_rendererinfo(renderer)
                   valid=size(info_renderer,/tname) eq 'STRUCT'
@@ -1691,7 +2133,10 @@ function gxchmp::HandleEvent, event
              endelse
            end 
      'fov_import': begin
-                   file=dialog_pickfile(title='Please select a file containing an IDL map structure or object to import its FOV',filter=['*.sav','*.map'],path=gx_findfile(folder='demo'),/must_exist)
+                   ; Motif/macOS Filter box uses only the first pattern; space-separated
+                   ; wildcards match both .sav and .map in the file list.
+                   file=dialog_pickfile(title='Please select a file containing an IDL map structure or object to import its FOV',$
+                     filter=['*.sav *.map','*.sav','*.map'],path=curdir(),/must_exist)
                    if file eq '' then return,self->Rewrite(event)
                    osav=obj_new('idl_savefile',file)
                    names=osav->names()
@@ -1743,7 +2188,8 @@ function gxchmp::HandleEvent, event
              endelse
            end 
      'res_import': begin
-             file=dialog_pickfile(title='Please select a file containing an IDL map structure or object to import its resolution',filter=['*.sav','*.map'],path=gx_findfile(folder='demo'),/must_exist)
+             file=dialog_pickfile(title='Please select a file containing an IDL map structure or object to import its resolution',$
+               filter=['*.sav *.map','*.sav','*.map'],path=curdir(),/must_exist)
              if file eq '' then return,self->Rewrite(event)
              osav=obj_new('idl_savefile',file)
              names=osav->names()
@@ -1784,14 +2230,9 @@ function gxchmp::HandleEvent, event
                    widget_control,widget_info(self.wIDBase,find_by_uname='console'),set_value=''
                  end 
      'Queue': begin
-               if self.tasks->Count() gt 0 then begin
-                 if event.sel_top  ge 0 and event.sel_bottom eq event.sel_top and event.sel_left eq 0 and event.sel_right eq 4 then begin
-                    if widget_valid(self.wIDBase) then begin
-                      wScript=widget_info(self.wIDBase,find_by_uname='script')
-                      if widget_valid(wScript) then widget_control,wScript,set_value=strreplace(self->GetScript(task_id=event.sel_top ),'result',strcompress(string(event.sel_top,format="('result',i0)"),/rem))
-                    end  
-                 endif
-               end
+               if event.sel_top ge 0 and event.sel_bottom eq event.sel_top and $
+                  event.sel_left eq 0 and event.sel_right eq 4 then $
+                 self->UpdateScriptPreview, task_id=event.sel_top
               end             
                  
      'add_tasks':self->EditTasks,0  
@@ -1815,8 +2256,8 @@ function gxchmp::HandleEvent, event
 end
 
 
-function cw_gxchmp,Base,_extra=_extra
-  obj=obj_new('gxchmp',Base,_extra=_extra)
+function cw_gxchmp,Base,fresh=fresh,_extra=_extra
+  obj=obj_new('gxchmp',Base,fresh=fresh,_extra=_extra)
   obj->GetProperty,widget_id=widget_id
   return,widget_id
 end

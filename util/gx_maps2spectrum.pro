@@ -20,6 +20,16 @@
 ; :Returns:
 ;    Structure:
 ;      n, axis, is_chan, S_obs, S_mod, S_sdev, has_sdev, refs
+;
+;    Per channel, pixels outside the ROI are zeroed, then gx_fov_integral_map
+;    is called. For EUV/CHAN (no FREQ):
+;      S_obs  = total(I_obs) * dx * dy
+;      S_sdev = sqrt(total(sdev^2)) * dx * dy   ; independent-pixel assumption
+;    Microwave with FREQ uses the same quadrature sum, with the Tb->sfu scale
+;    (or no extra scale if the map is already sfu).
+;    has_sdev is 0 and S_sdev is NaN if that channel has no valid sdev map.
+;    If gx_ref2chmp found no real sdev, the intensity map is the placeholder,
+;    so S_sdev / S_obs = sqrt(total(I_obs^2)) / total(I_obs) and is not 1.
 ;-
 forward_function gx_fov_integral_map, gx_psf, gx_metrics_image, gx_rebin_map
 

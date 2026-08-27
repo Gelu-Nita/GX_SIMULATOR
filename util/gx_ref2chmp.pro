@@ -9,6 +9,10 @@
 ;        objarr(n) of map objects sorted by FREQ then CHAN
 ;      - Directory with exactly one convertible file → one map object
 ;
+;    If an item has no sdev map and no rms tag, the intensity map is copied as
+;    a placeholder SDEV (WARNING is issued). That placeholder is not a real
+;    uncertainty; spectrum-mode S_sdev is then the ROI quadrature sum of I_obs.
+;
 ; :Keywords:
 ;    freq, chan, a_beam, b_beam, phi_beam, corr_beam - optional overrides
 ;    data, sdev - optional outputs (single-ref path only)

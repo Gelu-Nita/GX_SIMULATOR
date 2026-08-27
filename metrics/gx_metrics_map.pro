@@ -54,7 +54,7 @@
 ; :Author: Sergey Anfinopgentov (anfinogentov@iszf.irk.ru)
   ;  Modification history:
   ;  07/08/20-Gelu Nita (gnita@njit.edu) Redefined metrics and addded the option of using SDEV maps
-
+;-
 function gx_metrics_map, map, reference, sdev,no_align=no_align,metrics=metrics,_extra=_extra
   ;align map
   if not keyword_set(no_align) then begin

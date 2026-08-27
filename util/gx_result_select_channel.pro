@@ -70,31 +70,37 @@ function gx_result_select_channel, result, index=index, freq=freq, chan=chan, $
     return, !null
   endif
 
-  ; Resolve channel index
-  ich = -1L
+  sam0 = *result[0].spec_allmetrics
+  axis_cim = spec_axis
+  if n_elements(sam0) gt 0 then if tag_exist(sam0, 'spec_axis_all') then $
+    if n_elements(sam0[0].channel_image_metrics) eq n_elements(sam0[0].spec_axis_all) then $
+      axis_cim = sam0[0].spec_axis_all
+
+  ; Resolve the requested axis value, then match it onto the stored CIM axis
+  ; (spec_axis_all after all-channel storage; spec_axis on older savs).
   if n_elements(index) gt 0 then begin
     ich = long(index[0])
+    if (ich lt 0) or (ich ge n_chan) then begin
+      err_msg = string(ich, n_chan, format="('gx_result_select_channel: channel index ',i0,' out of range [0..',i0,']')")
+      message, err_msg, /info
+      return, !null
+    endif
+    want = spec_axis[ich]
   endif else if n_elements(freq) gt 0 then begin
-    d = abs(double(spec_axis) - double(freq[0]))
-    ich = (where(d eq min(d)))[0]
+    d = abs(double(axis_cim) - double(freq[0]))
+    want = axis_cim[(where(d eq min(d)))[0]]
   endif else if n_elements(chan) gt 0 then begin
-    d = abs(double(spec_axis) - double(chan[0]))
-    ich = (where(d eq min(d)))[0]
+    d = abs(double(axis_cim) - double(chan[0]))
+    want = axis_cim[(where(d eq min(d)))[0]]
   endif else begin
     err_msg = 'gx_result_select_channel: set index=, freq=, or chan='
     message, err_msg, /info
     return, !null
   endelse
 
-  if (ich lt 0) or (ich ge n_chan) then begin
-    err_msg = string(ich, n_chan, format="('gx_result_select_channel: channel index ',i0,' out of range [0..',i0,']')")
-    message, err_msg, /info
-    return, !null
-  endif
-
-  axis_value = spec_axis[ich]
+  axis_value = want
   if ~keyword_set(quiet) then $
-    message, string(ich, axis_value, format="('Selecting spectrum channel index ',i0,' (spec_axis=',g0,')')"), /info
+    message, string(axis_value, format="('Selecting spectrum channel spec_axis=',g0)"), /info
 
   n = n_elements(result)
   out = !null
@@ -123,6 +129,10 @@ function gx_result_select_channel, result, index=index, freq=freq, chan=chan, $
 
     cim_r = sam[jr].channel_image_metrics
     cim_c = sam[jc].channel_image_metrics
+    ax = spec_axis
+    if tag_exist(sam, 'spec_axis_all') then $
+      if n_elements(cim_r) eq n_elements(sam[jr].spec_axis_all) then ax = sam[jr].spec_axis_all
+    void = min(abs(double(ax) - double(want)), ich)
 
     if n_elements(cim_r) le ich or n_elements(cim_c) le ich then begin
       err_msg = string(i, format="('gx_result_select_channel: channel_image_metrics too short at result[',i0,']')")

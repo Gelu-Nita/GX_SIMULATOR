@@ -100,4 +100,8 @@ print, gx_libpath('grid')
 /Users/#your name#/gx_binaries/RenderIrregular.so
 ```
 
- 
+## CHMP EBTEL heating-parameter search
+
+Interactive GUI: `gx_chmp`. Batch API: `gx_search4bestq`.
+
+Documentation for image vs spectrum modes, `spec_weights=`, reference FITS/directories, GUI `_extra` validation, and workdir/`gxchmp.ini` defaults: [doc/CHMP_search.md](doc/CHMP_search.md).

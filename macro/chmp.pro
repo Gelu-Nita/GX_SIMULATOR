@@ -30,11 +30,12 @@ pro chmp_self
     if alist eq '' then alist='1.0'
     if blist eq '' then blist='0.75'
     self.WinOS=(!version.os_family eq 'Windows')
-    default,modDir,curdir()+path_sep()+'moddir'
+    work = curdir()
+    default,modDir,work+path_sep()+'modDir'
+    default,psDir,work+path_sep()+'psDir'
+    default,tmpDir,work+path_sep()+'tmpDir'
     self.modDir=modDir
-    default,psDir,curdir()+path_sep()+'psdir'
     self.psDir=psDir
-    default,tmpDir,curdir()+path_sep()+'tmpdir'
     self.tmpDir=TmpDir
     default,refdatapath,''
     self.refdatapath=refdatapath
@@ -599,7 +600,8 @@ pro chmp, nthreads,fresh=fresh, _extra=_extra
       fov=self.fov
       res=self.res
       ebtelpath=self.ebtelpath
-      save,GXMpath,RefDataPath,modDir,psDir,alist,blist,qlist,levels,renderer,fov,res,ebtelpath,file='gxchmp.ini'
+      save,GXMpath,RefDataPath,modDir,psDir,tmpDir,alist,blist,qlist,levels,renderer,fov,res,ebtelpath,$
+        file=curdir()+path_sep()+'gxchmp.ini'
       obj_destroy,self.tasks
       obj_destroy,self.bridges
       obj_destroy,self.solution

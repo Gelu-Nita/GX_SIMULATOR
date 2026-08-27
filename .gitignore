@@ -1,0 +1,6 @@
+# macOS
+.DS_Store
+
+# Cursor / VS Code multi-root workspaces (keep outside this repo)
+*.code-workspace
+.cursor/

@@ -1,5 +1,7 @@
 ;+
 ; Build one CHMP map object (Data/SDEV/BEAM) from a non-path refdata item.
+; If no sdev map is present: use data.rms if that tag exists, otherwise copy
+; the intensity map as a placeholder SDEV and set err_msg to a WARNING.
 ;-
 forward_function gx_fwhm2sigma, gx_psf
 

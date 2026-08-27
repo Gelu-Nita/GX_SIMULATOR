@@ -1,3 +1,15 @@
+;+
+; NAME:
+;   gx_chmp
+; PURPOSE:
+;   Launch the EBTEL Coronal Heating Model Parameter Automatic Search GUI
+;   (cw_gxchmp). See doc/CHMP_search.md for search modes, _extra keywords,
+;   reference paths, and gxchmp.ini / curdir() repository defaults.
+; CALLING SEQUENCE:
+;   gx_chmp
+;   gx_chmp, /fresh          ; ignore ./gxchmp.ini
+;   gx_chmp, font=font
+;-
 pro gx_chmp_event,event
   IF TAG_NAMES(event, /STRUCTURE_NAME) EQ 'WIDGET_KILL_REQUEST' THEN BEGIN
     widget_control,event.top,get_uvalue=wgxchmp
@@ -27,16 +39,17 @@ pro gx_chmp,wgxchmp,fresh=fresh,font=font,_extra=_extra
   tlb=widget_base(title='EBTEL Coronal Heating Model Parameter Automatic Search Interface',/column,$
     mbar=mbar, /tlb_size_events, $
     /tlb_kill_request_events,uname='gx_chmp')
+  inifile = curdir() + path_sep() + 'gxchmp.ini'
   if n_elements(_extra) eq 0 then begin
-    if file_exist('gxchmp.ini') then begin
-     if ~keyword_set(fresh) then restore,'gxchmp.ini'
-      wgxchmp=cw_gxchmp(tlb,GXMpath=GXMpath,RefDataPath=RefDataPath,modDir=modDir,psDir=psDir,tmpDir=tmpDir,$
+    if file_exist(inifile) and ~keyword_set(fresh) then begin
+      restore, inifile
+      wgxchmp=cw_gxchmp(tlb,fresh=fresh,GXMpath=GXMpath,RefDataPath=RefDataPath,modDir=modDir,psDir=psDir,tmpDir=tmpDir,$
                        RefDataStruct=RefDataStruct,alist=alist,blist=blist,qlist=qlist,$
                        levels=levels,solution=solution, renderer=renderer,$
                        fov=fov,res=res,nBridges=nBridges,EBTELpath=EBTELpath,keywords=keywords)
     endif
   endif
-  if n_elements(wgxchmp) eq 0 then wgxchmp=cw_gxchmp(tlb,_extra=_extra)
+  if n_elements(wgxchmp) eq 0 then wgxchmp=cw_gxchmp(tlb,fresh=fresh,_extra=_extra)
   widget_control,tlb,set_uvalue=wgxchmp
   widget_control,tlb,/realize
   XMANAGER, 'gx_chmp',tlb ,/no_block
