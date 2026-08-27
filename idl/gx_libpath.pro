@@ -13,7 +13,7 @@ function gx_libpath,root,update=update,unix=unix
     lib_path=file_search(root_path,(!version.arch eq 'x86_64')?'*64*.dll':'*32*.dll')
     lib_path=(lib_path ne '')?lib_path:file_search(root_path,'*.dll')  
   endif else begin
-    tmpdir=keyword_set(unix)?curdir():getenv('HOME')
+    tmpdir=(keyword_set(unix) ? curdir() : getenv('HOME'))
     binary_path=filepath('gx_binaries',root=tmpdir)
     log=filepath(root+'.log',root=binary_path)
     if ~file_test(filepath('gx_binaries',root=tmpdir)) then file_mkdir,binary_path
@@ -81,5 +81,5 @@ function gx_libpath,root,update=update,unix=unix
     endelse
     if file_test(make_root) then spawn,('rm -r '+make_root)
   endelse
-  return,file_test(lib_path[0])?lib_path:!null
+  return,(file_test(lib_path[0]) ? lib_path : !null)
 end
