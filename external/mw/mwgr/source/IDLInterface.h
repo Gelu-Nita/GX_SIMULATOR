@@ -1,1 +1,0 @@
-extern "C" __declspec(dllexport) int GET_MW(int argc, void **argv);

@@ -1,1 +1,0 @@
-extern "C" double RFactorKappaApprox(double tau, double k);
