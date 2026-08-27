@@ -16,15 +16,15 @@
 ; :Keywords:
 ;    charsize
 ;    levels - percentile contours on the channel-map pages (same default and
-;             meaning as gx_plotbestmwmodels_ebtel)
+;             meaning as gx_plotbestchmpmodels_ebtel)
 ;    _extra - /ylog to gx_plot_chmp_spectrum; /log to channel-map images
 ;             (passed as plot_map LOG_SCALE)
 ;
 ; :Example:
 ;    restore, tmpDir + path_sep() + 'result_3x3_aia_spectrum.sav'
 ;    gx_replot_chmp_finalps, result, psDir          ; finals only
-;    gx_plotbestmwmodels_ebtel, result, psDir       ; Best of Bests only
-;    gx_plotbestmwmodels_ebtel, result, psDir, /replot_final  ; both
+;    gx_plotbestchmpmodels_ebtel, result, psDir       ; Best of Bests only
+;    gx_plotbestchmpmodels_ebtel, result, psDir, /replot_final  ; both
 ;-
 pro gx_replot_chmp_finalps, result, psDir, charsize=charsize, levels=levels, $
   refs_all=refs_all, _extra=_extra

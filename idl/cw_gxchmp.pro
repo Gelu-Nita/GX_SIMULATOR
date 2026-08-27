@@ -140,7 +140,7 @@ pro gxchmp::Solution2PS
   tvlct,rgb_curr,/get
   widget_control,widget_info(self.wBase,find_by_uname='color_table'),get_uvalue=rgb
   if n_elements(rgb) gt 0 then tvlct,rgb
-  gx_plotbestmwmodels_ebtel, self.solution->ToArray(), self.psDir,levels=self->str2arr(self.levels)
+  gx_plotbestchmpmodels_ebtel, self.solution->ToArray(), self.psDir,levels=self->str2arr(self.levels)
   tvlct,rgb_curr
 end
 

@@ -55,7 +55,7 @@
 ;      Use gx_result_select_channel(result, index=k) or freq=/chan= to build a
 ;      temporary result with RES2_BEST_METRICS / CHI2_BEST_METRICS swapped to
 ;      that channel's image metrics (at the spectral q_*_best Qs), then pass
-;      it to gx_plotbestmwmodels_ebtel / gx_chmp2grid / the CHMP GUI unchanged.
+;      it to gx_plotbestchmpmodels_ebtel / gx_chmp2grid / the CHMP GUI unchanged.
 ;      Manual extract (same logic as the wrapper):
 ;      sam = *result[i].spec_allmetrics
 ;      jr = where(abs(sam.q - result[i].q_res2_best) eq min(abs(sam.q - result[i].q_res2_best)), /null)

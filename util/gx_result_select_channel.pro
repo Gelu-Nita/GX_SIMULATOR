@@ -1,7 +1,7 @@
 ;+
 ; :Description:
 ;    Build a temporary CHMP search-result array suitable for legacy display
-;    routines (gx_plotbestmwmodels_ebtel, gx_chmp2grid, GUI) by replacing
+;    routines (gx_plotbestchmpmodels_ebtel, gx_chmp2grid, GUI) by replacing
 ;    RES2_BEST_METRICS / CHI2_BEST_METRICS with the image-metric objects for
 ;    one spectrum channel extracted from SPEC_ALLMETRICS.
 ;
@@ -28,7 +28,7 @@
 ; :Example:
 ;    restore, 'mysolution.sav'   ; -> result
 ;    r94 = gx_result_select_channel(result, chan=94)
-;    gx_plotbestmwmodels_ebtel, r94, psDir, /plot_res, /plot_chi
+;    gx_plotbestchmpmodels_ebtel, r94, psDir, /plot_res, /plot_chi
 ;    ; or feed r94 into the CHMP GUI / gx_chmp2grid
 ;-
 function gx_result_select_channel, result, index=index, freq=freq, chan=chan, $

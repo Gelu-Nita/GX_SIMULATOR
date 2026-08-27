@@ -111,5 +111,5 @@ r1 = gx_result_select_channel(result, chan=171)   ; or index=/freq=
 | `gx_ref_select_axis` | Select / sort by FREQ or CHAN |
 | `gx_processmodels_ebtel` | Q search + metrics for one `(a,b)` |
 | `gx_metrics_spectrum` | Spectral RES² / CHI² (`weights=` optional) |
-| `gx_plotbestmwmodels_ebtel` | Best of Bests (+ optional `/replot_final`) |
+| `gx_plotbestchmpmodels_ebtel` | Best of Bests (+ optional `/replot_final`); old name `gx_plotbestmwmodels_ebtel` still works as a deprecated alias |
 | `gx_plot_chmp_spectrum` / `gx_plot_chmp_chanmaps` / `gx_plot_chmp_qsearch` | Spectrum-mode PS helpers |
