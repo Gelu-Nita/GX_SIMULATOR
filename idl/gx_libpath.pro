@@ -6,25 +6,18 @@ function gx_libpath_select_so,candidates
   if ngood eq 0 then return,''
   candidates=candidates[good]
   if n_elements(candidates) eq 1 then return,candidates[0]
-  linux_lib=(arm_lib=(x86_lib=''))
   arm_idx=where(strmatch(candidates,'*arm*',/fold_case) eq 1,arm_count)
-  if arm_count then arm_lib=candidates[arm_idx]
   x86_idx=where(strmatch(candidates,'*x86*',/fold_case) eq 1,x86_count)
-  if x86_count then x86_lib=candidates[x86_idx]
   linux_idx=where((strmatch(candidates,'*x86*',/fold_case) eq 0) and $
                   (strmatch(candidates,'*arm*',/fold_case) eq 0),linux_count)
-  if linux_count then linux_lib=candidates[linux_idx]
   if !version.os eq 'darwin' then begin
-    if !version.arch eq 'x86_64' then begin
-      if size(x86_lib,/type) eq 7 then return,(n_elements(x86_lib) gt 1)?x86_lib[0]:x86_lib
-    endif else begin
-      if size(arm_lib,/type) eq 7 then return,(n_elements(arm_lib) gt 1)?arm_lib[0]:arm_lib
-    endelse
+    if (!version.arch eq 'x86_64') and (x86_count gt 0) then return,candidates[x86_idx[0]]
+    if (!version.arch ne 'x86_64') and (arm_count gt 0) then return,candidates[arm_idx[0]]
     ; Fall back to a generic .so name if no arch-tagged binary exists.
-    if size(linux_lib,/type) eq 7 then return,(n_elements(linux_lib) gt 1)?linux_lib[0]:linux_lib
+    if linux_count gt 0 then return,candidates[linux_idx[0]]
     return,candidates[0]
   endif
-  if size(linux_lib,/type) eq 7 then return,(n_elements(linux_lib) gt 1)?linux_lib[0]:linux_lib
+  if linux_count gt 0 then return,candidates[linux_idx[0]]
   return,candidates[0]
 end
 
