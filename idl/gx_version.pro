@@ -19,15 +19,19 @@
 function gx_version, verbose=verbose
   compile_opt idl2
   ver = 'unknown'
-  version_file = gx_findfile('VERSION')
-  if isa(version_file, /string) && file_test(version_file, /regular) then begin
-    openr, lun, version_file, /get_lun
-    line = ''
-    if ~eof(lun) then readf, lun, line
-    free_lun, lun
-    line = strtrim(line, 2)
-    if strlen(line) gt 0 then ver = line
-  endif
+  ; Resolve package root from this routine's location (idl/../VERSION) so
+  ; /version works without SSW helpers such as which/default/gx_findfile.
+  this = routine_filepath('gx_version', /either)
+  if strlen(this) eq 0 then goto, done
+  version_file = filepath('VERSION', root=file_dirname(file_dirname(this)))
+  if ~file_test(version_file, /regular) then goto, done
+  openr, lun, version_file, /get_lun
+  line = ''
+  if ~eof(lun) then readf, lun, line
+  free_lun, lun
+  line = strtrim(line, 2)
+  if strlen(line) gt 0 then ver = line
+  done:
   if keyword_set(verbose) then return, 'GX Simulator ' + ver
   return, ver
 end
