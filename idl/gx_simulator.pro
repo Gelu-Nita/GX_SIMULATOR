@@ -388,10 +388,13 @@ state.sun=OBJ_NEW('gxSUN',grid=10)
 state.view->Add,state.sun
 
 
-;main_base= WIDGET_BASE(Title =keyword_set(expert)?'GX SIMULATOR (Expert Version)':'GX SIMULATOR',/column,UNAME='gx_simulator',/TLB_KILL_REQUEST_EVENTS,TLB_FRAME_ATTR=0,$
-;  x_scroll_size=0.95*scr[0],y_scroll_size=scr[1]*0.90,/scroll)
+; Use x/y_scroll_size for the viewport only. Do not set scr_xsize/xsize on the
+; TLB or Right_Base/ControlTab: scr_xsize forces the left|right row to fit the
+; screen and freezes ControlTab's width, while vertically the tab still grows
+; with new children. With a scroll viewport alone, ControlTab can expand
+; horizontally with its pages the same way; the canvas tracks that content.
 main_base= WIDGET_BASE(Title =keyword_set(expert)?'GX SIMULATOR (Expert Version)':'GX SIMULATOR',/column,UNAME='gx_simulator',/TLB_KILL_REQUEST_EVENTS,TLB_FRAME_ATTR=0,$
-    scr_xsize=0.95*scr[0],scr_ysize=scr[1]*0.90,/scroll)
+  x_scroll_size=0.95*scr[0],y_scroll_size=scr[1]*0.90,/scroll)
 
 state_base=widget_base(main_base, /column,UNAME='STATEBASE')
 upper_base=WIDGET_BASE(state_base,/row)
