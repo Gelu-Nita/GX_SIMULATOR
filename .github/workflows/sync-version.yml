@@ -1,0 +1,53 @@
+name: Sync VERSION from tag
+
+# After each release tag (vX.Y.Z), update the committed VERSION file on master
+# so About / gx_simulator,/version stay aligned with the latest release.
+# Preferred release practice: bump VERSION in the same commit you tag, so the
+# tagged tree itself already carries the matching version for SSW checkouts.
+
+on:
+  push:
+    tags:
+      - 'v*'
+      - 'V*'
+
+permissions:
+  contents: write
+
+jobs:
+  sync-version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout default branch
+        uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Write VERSION from tag
+        id: version
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          VER="${TAG#v}"
+          VER="${VER#V}"
+          if [[ ! "$VER" =~ ^[0-9]+(\.[0-9]+)*([.-].*)?$ ]]; then
+            echo "Refusing to sync VERSION from unexpected tag: ${TAG}"
+            exit 1
+          fi
+          printf '%s\n' "$VER" > VERSION
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${VER}" >> "$GITHUB_OUTPUT"
+          echo "Synced VERSION -> ${VER} (from ${TAG})"
+
+      - name: Commit and push VERSION
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add VERSION
+          if git diff --staged --quiet; then
+            echo "VERSION already matches ${{ steps.version.outputs.version }}; nothing to commit."
+            exit 0
+          fi
+          git commit -m "chore: sync VERSION to ${{ steps.version.outputs.version }} (${{ steps.version.outputs.tag }})"
+          git push origin HEAD:master

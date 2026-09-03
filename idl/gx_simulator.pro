@@ -10,9 +10,12 @@
 ;
 ; CALLING SEQUENCE:
 ;   gx_simulator, nthreads
+;   gx_simulator, /version
 ;
 ; INPUTS:
 ;  
+; KEYWORDS:
+;   VERSION - if set, print the package version from the VERSION file and return
 ;
 ; OUTPUTS:
 ;   nthreads: number of parallel threads to be used, default 4.
@@ -201,7 +204,7 @@ pro gx_simulator_event,event
  ENDCASE
 
  case event.id of
- state.wAbout:answ=dialog_message('GX Simulator (May 2024)'+string(10b)+$
+ state.wAbout:answ=dialog_message(gx_version(/verbose)+string(10b)+$
                                   'Gelu M. Nita (gnita@njit.edu)'+string(10b)+$
                                   'Center for Solar-Terrestrial Research'+string(10b)+$
                                   'New Jersey Institute of Technology'+string(10b)+$
@@ -362,7 +365,11 @@ pro gx_simulator_event,event
 end
 
 
-pro gx_simulator,nthreads_or_model,main_base=main_base,expert=expert,xsize=xsize,ysize=ysize,_extra=_extra
+pro gx_simulator,nthreads_or_model,main_base=main_base,expert=expert,xsize=xsize,ysize=ysize,version=version,_extra=_extra
+if keyword_set(version) then begin
+  print, gx_version(/verbose)
+  return
+endif
 if (XREGISTERED('gx_simulator') ne 0) then begin
   answ=dialog_message('Only one instance of GX Simulator may run in the same IDL session!')
   return
