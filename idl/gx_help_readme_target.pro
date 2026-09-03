@@ -13,6 +13,21 @@
 ; OUTPUTS:
 ;   URL or local filesystem path string. Empty string if nothing found.
 ;-
+
+; Return 1 if URL is reachable via sock_check; 0 on any failure/missing helper.
+function gx_help_readme_url_ok, url
+  compile_opt idl2, hidden
+  ok = 0
+  catch, err
+  if err ne 0 then begin
+    catch, /cancel
+    return, 0
+  endif
+  ok = sock_check(url)
+  catch, /cancel
+  return, keyword_set(ok)
+end
+
 function gx_help_readme_target
   compile_opt idl2
   blob = 'https://github.com/Gelu-Nita/GX_SIMULATOR/blob/'
@@ -33,10 +48,10 @@ function gx_help_readme_target
     if ver ne 'unknown' then begin
       tag = 'v' + ver
       raw = 'https://raw.githubusercontent.com/Gelu-Nita/GX_SIMULATOR/' + tag + '/README.md'
-      if sock_check(raw) then return, blob + tag + '/README.md'
+      if gx_help_readme_url_ok(raw) then return, blob + tag + '/README.md'
     endif
     raw_master = 'https://raw.githubusercontent.com/Gelu-Nita/GX_SIMULATOR/master/README.md'
-    if sock_check(raw_master) then return, master_url
+    if gx_help_readme_url_ok(raw_master) then return, master_url
   endif
 
   readme = gx_findfile('README.md')
