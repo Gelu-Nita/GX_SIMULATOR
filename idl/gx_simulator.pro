@@ -400,7 +400,9 @@ state.view->Add,state.sun
 ; screen and freezes ControlTab's width, while vertically the tab still grows
 ; with new children. With a scroll viewport alone, ControlTab can expand
 ; horizontally with its pages the same way; the canvas tracks that content.
-main_base= WIDGET_BASE(Title =keyword_set(expert)?'GX SIMULATOR (Expert Version)':'GX SIMULATOR',/column,UNAME='gx_simulator',/TLB_KILL_REQUEST_EVENTS,TLB_FRAME_ATTR=0,$
+tlb_title = 'GX SIMULATOR ' + gx_version()
+if keyword_set(expert) then tlb_title += ' (Expert)'
+main_base= WIDGET_BASE(Title=tlb_title,/column,UNAME='gx_simulator',/TLB_KILL_REQUEST_EVENTS,TLB_FRAME_ATTR=0,$
   x_scroll_size=0.95*scr[0],y_scroll_size=scr[1]*0.90,/scroll)
 
 state_base=widget_base(main_base, /column,UNAME='STATEBASE')
