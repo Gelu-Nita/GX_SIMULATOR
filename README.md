@@ -1,6 +1,14 @@
 # GX_SIMULATOR
 GX_Simulator is an interactive IDL widget application intended to provide a flexible tool that allows the user to generate spatially resolved radio and/or X-ray spectra. The object-based architecture of this application provides full interaction with local 3D magnetic field extrapolation models that may be embedded in a global coronal model. By the use of various mouse tools provided, the user is allowed to explore the magnetic connectivity of the model by generating magnetic field lines originating in user-specified volume voxels. Such lines may be selected to create magnetic flux tubes, which are further populated with user-defined analytical thermal/non thermal particle distribution models. By default, the application integrates IDL callable DLL and Shared libraries containing fast GS emission codes developed in FORTRAN and C++ based on the newly developed Fleishman–Kuznetsov approximation, and IDL X-ray codes developed by Eduard Kontar. However, the interactive interface allows interchanging these default libraries with any user-defined IDL or external callable codes designed to solve the radiation transfer equation in the same or other wavelength ranges of interest.
 
+## Documentation and citation
+
+For a full description of GX Simulator methods and capabilities, please see the open-access ApJS paper:
+
+[Nita et al. 2023, ApJS, 267, 6](https://iopscience.iop.org/article/10.3847/1538-4365/acd343)
+
+The GUI **Help** button opens the GitHub-rendered README for the installed release tag (`v` + [`VERSION`](VERSION)), falling back to `master`, then to the local `README.md` file if you are offline. Installation, version checks, and developer notes continue below.
+
 ## Software prerequisites needed to ensure full GX Simulator functionaliy:
 - [ ] All OS platforms: IDL 8.2 or later
 - [ ] All OS platforms: SSWIDL installed from https://www.lmsal.com/solarsoft/ with the following list of required instruments included: ontology vso sdo aia hessi chianti hxt spex xray norh gx_simulator
@@ -65,6 +73,25 @@ bash tools/update-submodules-and-commit.sh --dry-run
 
 Dry-run mode still runs `git submodule update --init --recursive --remote`, then reports the commits and pushes it would make without creating commits or pushing. The helper refuses to commit in a detached-HEAD submodule and refuses to create parent commits that point to submodule commits not available from a remote branch unless `--push` is used.
 
+##### Developer/maintainer version bump and release
+
+The displayed version is read from the committed [`VERSION`](VERSION) file (not from a live GitHub query). For a tagged checkout and for About / title bar / `gx_simulator,/version` to match the release, bump `VERSION` in the **same commit you tag**.
+
+```bash
+# From the gx_simulator repo root, on an up-to-date master branch:
+echo 4.2.0 > VERSION
+git add VERSION
+git commit -m "Release 4.2.0"
+git tag v4.2.0
+git push origin master --tags
+```
+
+Notes:
+
+- Use a SemVer-style string in `VERSION` **without** a leading `v` (e.g. `4.2.0`). The git tag should be `v` plus that same string (e.g. `v4.2.0`).
+- After a `v*` tag is pushed, [`.github/workflows/sync-version.yml`](.github/workflows/sync-version.yml) updates `VERSION` on `master` if it does not already match the tag. That keeps `master` aligned, but SSW users who check out the tag itself still need `VERSION` correct **on the tagged commit** — hence bump-before-tag above.
+- Do not rely on editing the About dialog text by hand; it calls `gx_version()`.
+
 #### Add GX_SIMULATOR to your SSW_INSTR list by editig the appropriate SSWIDL script
 
 ## Additional actions required on Mac systems
@@ -98,6 +125,19 @@ print, gx_libpath('grid')
 
 ```idl
 /Users/#your name#/gx_binaries/RenderIrregular.so
+```
+
+## Checking the installed version
+
+The package version is stored in the top-level [`VERSION`](VERSION) file and is shown in several places:
+
+- **Window title bar** — e.g. `GX SIMULATOR 4.1.0` or `GX SIMULATOR 4.1.0 (Expert)`
+- **About dialog** — toolbar About button
+- **IDL command line** — from an `sswidl` session:
+
+```idl
+gx_simulator, /version
+print, gx_version()
 ```
 
 ## CHMP EBTEL heating-parameter search

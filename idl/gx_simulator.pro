@@ -210,8 +210,13 @@ pro gx_simulator_event,event
                                   'New Jersey Institute of Technology'+string(10b)+$
                                   'Newark, NJ, 07102, U.S.A.',/info,title='About GX_Simulator')
  state.wHelp: begin
-               help='https://iopscience.iop.org/article/10.3847/1538-4365/acd343'
-               if !version.os_family eq 'Windows' then spawn,'start /max '+help else answ=dialog_message(' For help, please open ' +help+' in your preferred browser.')
+               target = gx_help_readme_target()
+               if strlen(target) gt 0 then begin
+                 gx_open_browser, target
+               endif else begin
+                 answ = dialog_message(['Could not open GX Simulator Help.', $
+                   'No network README and local README.md not found.'], /error)
+               endelse
               end                             
  state.wFOV:begin
               state.scanbox->ComputeFOV,/auto
@@ -466,7 +471,7 @@ state.oObjviewWid = obj_new('gxObjviewWid', $
   wToolbarMenuBase= widget_base(status_base, /row,/toolbar,/frame)
   state.wHelp=widget_button( wToolbarMenuBase, $
     value=gx_bitmap(filepath('help.bmp', subdirectory=subdirectory)), $
-    /bitmap,tooltip='GX Simulator Help')
+    /bitmap,tooltip='Open GX Simulator README (GitHub) in your browser')
   state.wAbout=widget_button( wToolbarMenuBase, $
     value=gx_bitmap(filepath('button.bmp', subdirectory=subdirectory)), $
     /bitmap,tooltip='About GX Simulator')  
