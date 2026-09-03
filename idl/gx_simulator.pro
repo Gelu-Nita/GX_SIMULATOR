@@ -10,9 +10,12 @@
 ;
 ; CALLING SEQUENCE:
 ;   gx_simulator, nthreads
+;   gx_simulator, /version
 ;
 ; INPUTS:
 ;  
+; KEYWORDS:
+;   VERSION - if set, print the package version from the VERSION file and return
 ;
 ; OUTPUTS:
 ;   nthreads: number of parallel threads to be used, default 4.
@@ -201,14 +204,19 @@ pro gx_simulator_event,event
  ENDCASE
 
  case event.id of
- state.wAbout:answ=dialog_message('GX Simulator (May 2024)'+string(10b)+$
+ state.wAbout:answ=dialog_message(gx_version(/verbose)+string(10b)+$
                                   'Gelu M. Nita (gnita@njit.edu)'+string(10b)+$
                                   'Center for Solar-Terrestrial Research'+string(10b)+$
                                   'New Jersey Institute of Technology'+string(10b)+$
                                   'Newark, NJ, 07102, U.S.A.',/info,title='About GX_Simulator')
  state.wHelp: begin
-               help='https://iopscience.iop.org/article/10.3847/1538-4365/acd343'
-               if !version.os_family eq 'Windows' then spawn,'start /max '+help else answ=dialog_message(' For help, please open ' +help+' in your preferred browser.')
+               target = gx_help_readme_target()
+               if strlen(target) gt 0 then begin
+                 gx_open_browser, target
+               endif else begin
+                 answ = dialog_message(['Could not open GX Simulator Help.', $
+                   'No network README and local README.md not found.'], /error)
+               endelse
               end                             
  state.wFOV:begin
               state.scanbox->ComputeFOV,/auto
@@ -362,7 +370,11 @@ pro gx_simulator_event,event
 end
 
 
-pro gx_simulator,nthreads_or_model,main_base=main_base,expert=expert,xsize=xsize,ysize=ysize,_extra=_extra
+pro gx_simulator,nthreads_or_model,main_base=main_base,expert=expert,xsize=xsize,ysize=ysize,version=version,_extra=_extra
+if keyword_set(version) then begin
+  print, gx_version(/verbose)
+  return
+endif
 if (XREGISTERED('gx_simulator') ne 0) then begin
   answ=dialog_message('Only one instance of GX Simulator may run in the same IDL session!')
   return
@@ -388,10 +400,15 @@ state.sun=OBJ_NEW('gxSUN',grid=10)
 state.view->Add,state.sun
 
 
-;main_base= WIDGET_BASE(Title =keyword_set(expert)?'GX SIMULATOR (Expert Version)':'GX SIMULATOR',/column,UNAME='gx_simulator',/TLB_KILL_REQUEST_EVENTS,TLB_FRAME_ATTR=0,$
-;  x_scroll_size=0.95*scr[0],y_scroll_size=scr[1]*0.90,/scroll)
-main_base= WIDGET_BASE(Title =keyword_set(expert)?'GX SIMULATOR (Expert Version)':'GX SIMULATOR',/column,UNAME='gx_simulator',/TLB_KILL_REQUEST_EVENTS,TLB_FRAME_ATTR=0,$
-    scr_xsize=0.95*scr[0],scr_ysize=scr[1]*0.90,/scroll)
+; Use x/y_scroll_size for the viewport only. Do not set scr_xsize/xsize on the
+; TLB or Right_Base/ControlTab: scr_xsize forces the left|right row to fit the
+; screen and freezes ControlTab's width, while vertically the tab still grows
+; with new children. With a scroll viewport alone, ControlTab can expand
+; horizontally with its pages the same way; the canvas tracks that content.
+tlb_title = 'GX SIMULATOR ' + gx_version()
+if keyword_set(expert) then tlb_title += ' (Expert)'
+main_base= WIDGET_BASE(Title=tlb_title,/column,UNAME='gx_simulator',/TLB_KILL_REQUEST_EVENTS,TLB_FRAME_ATTR=0,$
+  x_scroll_size=0.95*scr[0],y_scroll_size=scr[1]*0.90,/scroll)
 
 state_base=widget_base(main_base, /column,UNAME='STATEBASE')
 upper_base=WIDGET_BASE(state_base,/row)
@@ -454,7 +471,7 @@ state.oObjviewWid = obj_new('gxObjviewWid', $
   wToolbarMenuBase= widget_base(status_base, /row,/toolbar,/frame)
   state.wHelp=widget_button( wToolbarMenuBase, $
     value=gx_bitmap(filepath('help.bmp', subdirectory=subdirectory)), $
-    /bitmap,tooltip='GX Simulator Help')
+    /bitmap,tooltip='Open GX Simulator README (GitHub) in your browser')
   state.wAbout=widget_button( wToolbarMenuBase, $
     value=gx_bitmap(filepath('button.bmp', subdirectory=subdirectory)), $
     /bitmap,tooltip='About GX Simulator')  
