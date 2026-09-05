@@ -6,8 +6,9 @@
 ;
 ;    Page 1: Q vs RES2 / CHI2 from ALLMETRICS.
 ;    Page 2: ROI spectra with 1-sigma S_sdev bars (gx_plot_chmp_spectrum).
-;    Page 3+: per-channel model I maps (obs contours, ROI mask) at each
-;    winning Q, 2x3 layout. Titles say (in search) / (not in search).
+;    Page 3+: per-channel Data/Model/residual maps at each winning Q,
+;    !p.multi=[0,3,3,0,0] (one channel per column). Residual is (D-M)/(D+M)
+;    in [-1, 1]. Colorbar is drawn after plot_map (not /cbar; SSW PS bug).
 ;
 ; :Params:
 ;    result - array of structs restored from the search .sav
@@ -37,7 +38,9 @@ pro gx_replot_chmp_finalps, result, psDir, charsize=charsize, levels=levels, $
   if ~tag_exist(result, 'spec_axis') then return
 
   default, charsize, !p.charsize
-  default, levels, [12, 20, 30, 50, 80]
+  if n_elements(levels) eq 0 and isa(_extra, 'STRUCT') then $
+    if tag_exist(_extra, 'levels') then levels = _extra.levels
+  default, levels, [20, 50, 80]
   if n_elements(refs_all) eq 0 and isa(_extra, 'STRUCT') then $
     if tag_exist(_extra, 'refs_all') then refs_all = _extra.refs_all
   if n_elements(psDir) eq 0 then begin
@@ -62,8 +65,8 @@ pro gx_replot_chmp_finalps, result, psDir, charsize=charsize, levels=levels, $
 
     ; FSC_PSConfig Filepath() prepends the IDL cwd if FILENAME is a full
     ; path, so pass a basename here after cd into psDir.
-    psObject = obj_new('FSC_PSConfig', /color, /times, /bold, filename=psname, $
-      directory=psDir, xoffset=0.5, yoffset=0.25, xsize=6.4, ysize=9.5, $
+    psObject = obj_new('FSC_PSConfig', /color, /times, filename=psname, $
+      directory=psDir, xoffset=0.4, yoffset=0.25, xsize=7.5, ysize=9.5, $
       landscape=0, bits=8)
     psKeys = psObject->GetKeywords()
     obj_destroy, psObject
@@ -74,14 +77,16 @@ pro gx_replot_chmp_finalps, result, psDir, charsize=charsize, levels=levels, $
     ax0 = min(spec_axis, max=ax1)
     if is_chan then $
       metrics_title = string(n_elements(spec_axis), ax0, ax1, $
-        format="('ROI spectrum, ',i0,' channels (',g0,'–',g0,' A)')") $
+        format="('ROI spectrum, ',i0,' channels (',g0,'-',g0,' A)')") $
     else $
       metrics_title = string(n_elements(spec_axis), ax0, ax1, $
-        format="('ROI spectrum, ',i0,' frequencies (',g0,'–',g0,' GHz)')")
+        format="('ROI spectrum, ',i0,' frequencies (',g0,'-',g0,' GHz)')")
+    if tag_exist(ri, 'sdev_method') then $
+      metrics_title = metrics_title + '  ' + gx_chmp_sdev_label(ri.sdev_method[0])
 
     ;----- page 1: Q search curves -----
     !p.multi = [0, 1, 2]
-    !p.font = 2
+    !p.font = -1
     if ptr_valid(ri.allmetrics) then begin
       am = *ri.allmetrics
       q = am.q
@@ -95,11 +100,9 @@ pro gx_replot_chmp_finalps, result, psDir, charsize=charsize, levels=levels, $
         linesty=ri.res2_done ? 0 : 2
       oplot, ri.q_res2_range[[0, 0]], !y.crange, color=250, thick=3, linesty=1
       oplot, ri.q_res2_range[[1, 1]], !y.crange, color=250, thick=3, linesty=1
-      gx_plot_label, 0.01, 0.9, string(ri.a, ri.b, format="('a=',f5.2,'; ','b=',f5.2)"), $
-        charsize=charsize
-      gx_plot_label, 0.01, 0.2, string(ri.res2_best, format="('RES!S!U2!N!R!Dnorm!N = ',g0)"), $
-        charsize=charsize
+      gx_chmp_qmetric_legend, ri, 'res2', charsize=charsize
 
+      !p.font = -1
       yrange = [0, max(chi2, /nan)]
       plot, q, chi2, psym=-4, xstyle=0, ystyle=1, xticks=4, yrange=yrange, $
         xtitle='!18Q!3', ytitle='!17 Chi!U2!N!3', thick=2, $
@@ -108,10 +111,7 @@ pro gx_replot_chmp_finalps, result, psDir, charsize=charsize, levels=levels, $
         linesty=ri.chi2_done ? 0 : 2
       oplot, ri.q_chi2_range[[0, 0]], !y.crange, color=250, thick=3, linesty=1
       oplot, ri.q_chi2_range[[1, 1]], !y.crange, color=250, thick=3, linesty=1
-      gx_plot_label, 0.01, 0.9, string(ri.a, ri.b, format="('a=',f5.2,'; ','b=',f5.2)"), $
-        charsize=charsize
-      gx_plot_label, 0.01, 0.2, string(ri.chi2_best, format="('Chi!U2!N=',g0)"), $
-        charsize=charsize
+      gx_chmp_qmetric_legend, ri, 'chi2', charsize=charsize
     endif
     !p.font = -1
 

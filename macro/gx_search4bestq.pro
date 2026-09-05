@@ -33,7 +33,9 @@ function gx_search4bestq, gxmpath=gxmpath,a_arr=a_arr,b_arr=b_arr,q_start=q_star
     return, result
   endif
   ;+++++++++++++++++++++++++++++++++++++++++++
-  default,levels,[12,20,30,50,80]
+  if n_elements(levels) eq 0 and isa(_extra,'STRUCT') then $
+    if tag_exist(_extra,'levels') then levels=_extra.levels
+  default,levels,[20,50,80]
   ; Best of Bests after the search unless off (does not rewrite cell finals)
   default,plot_best,1
   ;default,resize,100

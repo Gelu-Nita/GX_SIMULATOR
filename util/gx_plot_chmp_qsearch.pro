@@ -10,7 +10,7 @@ pro gx_plot_chmp_qsearch, ri, charsize=charsize, header=header
   if ~isa(ri, 'STRUCT') then return
   if ~ptr_valid(ri.allmetrics) then begin
     plot, [0, 1], [0, 1], /nodata, title=header, charsize=charsize
-    gx_plot_label, 0.1, 0.5, 'No allmetrics', charsize=charsize
+    gx_chmp_al_legend, 'No allmetrics', /center, charsize=charsize, box=1
     plot, [0, 1], [0, 1], /nodata, charsize=charsize
     return
   endif
@@ -33,10 +33,7 @@ pro gx_plot_chmp_qsearch, ri, charsize=charsize, header=header
     linesty=ri.res2_done ? 0 : 2
   oplot, ri.q_res2_range[[0, 0]], !y.crange, color=250, thick=3, linesty=1
   oplot, ri.q_res2_range[[1, 1]], !y.crange, color=250, thick=3, linesty=1
-  gx_plot_label, 0.02, 0.90, string(ri.res2_best, format="('RES!S!U2!N=',g0)"), $
-    charsize=charsize
-  gx_plot_label, 0.02, 0.78, string(ri.q_res2_best, format="('Q!Dres2!N=',g0)"), $
-    charsize=charsize
+  gx_chmp_qmetric_legend, ri, 'res2', charsize=charsize
 
   yrange = [0, max(chi2, /nan)]
   plot, q, chi2, psym=-4, xstyle=0, ystyle=1, xticks=4, yrange=yrange, $
@@ -46,8 +43,5 @@ pro gx_plot_chmp_qsearch, ri, charsize=charsize, header=header
     linesty=ri.chi2_done ? 0 : 2
   oplot, ri.q_chi2_range[[0, 0]], !y.crange, color=250, thick=3, linesty=1
   oplot, ri.q_chi2_range[[1, 1]], !y.crange, color=250, thick=3, linesty=1
-  gx_plot_label, 0.02, 0.90, string(ri.chi2_best, format="('Chi!U2!N=',g0)"), $
-    charsize=charsize
-  gx_plot_label, 0.02, 0.78, string(ri.q_chi2_best, format="('Q!Dchi2!N=',g0)"), $
-    charsize=charsize
+  gx_chmp_qmetric_legend, ri, 'chi2', charsize=charsize
 end

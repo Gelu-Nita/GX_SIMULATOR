@@ -18,10 +18,12 @@ compile_opt idl2
 resolve_routine, 'gx_plot_chmp_chanmaps', /compile_full_file, /either
 default,charsize,!p.charsize
 default,psDir,curdir()+path_sep()+'psDir'
-default,levels,[12,20,30,50,80]
 if not file_test(psDir) then file_mkdir,psDir
 ; Keep caller extras (e.g. /ylog, /log). FSC_PSConfig GetKeywords later overwrites _extra.
 if n_elements(_extra) gt 0 then user_extra=_extra else user_extra=!null
+if n_elements(levels) eq 0 and isa(user_extra,'STRUCT') then $
+  if tag_exist(user_extra,'levels') then levels=user_extra.levels
+default,levels,[20,50,80]
 want_log=0b
 if isa(user_extra,'STRUCT') then begin
   if tag_exist(user_extra,'log_scale') then want_log=keyword_set(user_extra.log_scale) $
@@ -60,7 +62,7 @@ if arg_present(maps_best) then return_best_maps=1
    chi=chi2
    if psPlotsArr[k] then begin
      ; Portrait: IDL landscape PS is 270-rotated and shows upside-down in Preview
-     psObject = Obj_New("FSC_PSConfig", /Color, /Times, /Bold, Filename=psFilesArr[k],xoffset=0.5,yoffset=0.25,xsize=6.4,ysize=9.5,landscape=0,bits=8)
+     psObject = Obj_New("FSC_PSConfig", /Color, /Times, Filename=psFilesArr[k],xoffset=0.5,yoffset=0.25,xsize=6.4,ysize=9.5,landscape=0,bits=8)
      psKeys=psObject->GetKeywords()
      psKeys.filename=psFilesArr[k]
      Device, _Extra= psKeys
@@ -183,9 +185,9 @@ if arg_present(maps_best) then return_best_maps=1
     idx_res2=array_indices(res2_img[*,*,k],imin_res2)
     plots,a[idx_res2[0]],min_res2,psym=2,color=250,symsize=symsize,thick=3
     minres2=min(res2,imin)
-    gx_plot_label,0.1,1.5,string(minres2,format="('RES!U2!N=',g0)"),charsize=charsize
-    gx_plot_label,0.1,1.3,string(a[idx_res2[0]],b[idx_res2[1]],format="('a=',f5.2,'; b=',f5.2)"),charsize=charsize
-    gx_plot_label,0.1,1.1,string(q0[imin],format="('q=',g0)"),charsize=charsize
+    gx_chmp_al_legend, [string(minres2,format="('RES!U2!N=',g0)"), $
+      string(a[idx_res2[0]],b[idx_res2[1]],format="('a=',f5.2,'; b=',f5.2)"), $
+      string(q0[imin],format="('q=',g0)")], /top, /left, charsize=charsize, box=1
   
     plot,a,chi2_img[*,0,k],psym=-1,charsize=charsize,xtitle='a',ytitle='Chi!U2!N',yrange=minmax(chi2_img),/xsty, xmargin=xmargin,ymargin=ymargin
     for l=0,n_elements(b)-1 do oplot,a,chi2_img[*,l,k],psym=-1,color=50+l*30,thick=2
@@ -193,9 +195,9 @@ if arg_present(maps_best) then return_best_maps=1
     idx_chi2=array_indices(chi2_img[*,*,k],imin_chi2)
     plots,a[idx_chi2[0]],min_chi2,psym=2,color=250,symsize=symsize,thick=3
     minchi2=min(chi2,imin)
-    gx_plot_label,0.1,1.5,string(minchi2,format="('Chi!U2!N=',g0)"),charsize=charsize
-    gx_plot_label,0.1,1.3,string(a[idx_chi2[0]],b[idx_chi2[1]],format="('a=',f5.2,'; b=',f5.2)"),charsize=charsize
-    gx_plot_label,0.1,1.1,string(q0[imin],format="('q=',g0)"),charsize=charsize
+    gx_chmp_al_legend, [string(minchi2,format="('Chi!U2!N=',g0)"), $
+      string(a[idx_chi2[0]],b[idx_chi2[1]],format="('a=',f5.2,'; b=',f5.2)"), $
+      string(q0[imin],format="('q=',g0)")], /top, /left, charsize=charsize, box=1
   
     plot,a,res_img[*,0,k],psym=-1,charsize=charsize,xtitle='a',ytitle='RES',yrange=max(abs(minmax(res_img)))*[-1,1],/xsty, xmargin=xmargin,ymargin=ymargin
     for l=0,n_elements(b)-1 do oplot,a,res_img[*,l,k],psym=-1,color=50+l*30,thick=2
@@ -283,7 +285,7 @@ if arg_present(maps_best) then return_best_maps=1
  end
  filename=psDir+path_sep()+'Best of Bests.ps'
  ; Portrait: IDL landscape PS is 270-rotated and shows upside-down in Preview
- psObject = Obj_New("FSC_PSConfig", /Color, /Times, /Bold, Filename=Filename,xoffset=0.5,yoffset=0.25,xsize=6.4,ysize=9.5,landscape=0,bits=8)
+ psObject = Obj_New("FSC_PSConfig", /Color, /Times, Filename=Filename,xoffset=0.4,yoffset=0.25,xsize=7.5,ysize=9.5,landscape=0,bits=8)
  _Extra=psObject->GetKeywords()
  _Extra.filename=psDir+path_sep()+'Best of Bests.ps'
  Device, _Extra=_Extra
@@ -354,8 +356,9 @@ if arg_present(maps_best) then return_best_maps=1
  plots,a[idx_chi2[[0,0]]],!y.crange,linesty=1,color=250,thick=3
  plots,a[idx_res2[0]],b[idx_res2[1]],psym=2,color=50,symsize=symsize,thick=3
  plots,a[idx_chi2[0]],b[idx_chi2[1]],psym=2,color=250,symsize=symsize,thick=3
- gx_plot_label,0.05,0.9,strcompress(string(best_res2,a[idx_res2[0]],b[idx_res2[1]],format="('RES!U2!N=',f0.3,'; a= ',f0.2,'; b= ',f0.2)")),charsize=1,color=50
- gx_plot_label,0.05,0.8,strcompress(string(best_chi2,a[idx_chi2[0]],b[idx_chi2[1]],format="('CHI!U2!N=',f0.3,'; a= ',f0.2,'; b= ',f0.2)")),charsize=1,color=250
+ gx_chmp_al_legend, [strcompress(string(best_res2,a[idx_res2[0]],b[idx_res2[1]],format="('RES!U2!N=',f0.3,'; a= ',f0.2,'; b= ',f0.2)")), $
+   strcompress(string(best_chi2,a[idx_chi2[0]],b[idx_chi2[1]],format="('CHI!U2!N=',f0.3,'; a= ',f0.2,'; b= ',f0.2)"))], $
+   /top, /left, charsize=1, textcolors=byte([50, 250]), box=1
  
  ymargin=[2,6]
  plot,a,res2_min,charsize=charsize,ymargin=ymargin,/xsty,title='Best of Bests (RES!U2!N, CHI!U2!N)',color=0,/noerase,ysty=9,xtitle='a',ytitle='RES!U2!N'
@@ -363,8 +366,9 @@ if arg_present(maps_best) then return_best_maps=1
  plot,a,chi2_min,charsize=charsize,ymargin=ymargin,/xsty,color=0,ysty=5
  oplot,a,chi2_min,color=250,thick=3
  axis,yaxis=1,ytitle='CHI!U2!N',/ysty,charsize=charsize,ymargin=ymargin
- gx_plot_label,0.05,0.9,string(best_res2,best_res2_q,format="('RES!U2!N=',f0.3,' Q!D0!N=',g0)"),charsize=1,color=50
- gx_plot_label,0.05,0.8,string(best_chi2,best_chi2_q,format="('CHI!U2!N=',f0.3,' Q!D0!N=',g0)"),charsize=1,color=250
+ gx_chmp_al_legend, [string(best_res2,best_res2_q,format="('RES!U2!N=',f0.3,' Q!D0!N=',g0)"), $
+   string(best_chi2,best_chi2_q,format="('CHI!U2!N=',f0.3,' Q!D0!N=',g0)")], $
+   /top, /left, charsize=1, textcolors=byte([50, 250]), box=1
 
  i_res=(where(a0 eq a[idx_res2[0]] and b0 eq b[idx_res2[1]],n_res))[0]
  i_chi=(where(a0 eq a[idx_chi2[0]] and b0 eq b[idx_chi2[1]],n_chi))[0]
@@ -385,7 +389,7 @@ if arg_present(maps_best) then return_best_maps=1
   for ibob=0,1 do begin
     ri = result[bob_idx[ibob]]
     !p.multi = [0, 1, 2]
-    !p.font = 2
+    !p.font = -1
     tit0 = bob_hdr[ibob] + '  ' + string(ri.a, ri.b, format="('a=',f0.2,', b=',f0.2)")
     ytit_r2 = keyword_set(spectrum_mode) ? '!17 RES!S!U2!N!R!Dnorm!N!3' : '!17 RES!U2!N!3'
     if ptr_valid(ri.allmetrics) then begin
@@ -400,10 +404,7 @@ if arg_present(maps_best) then return_best_maps=1
         linesty=ri.res2_done ? 0 : 2
       oplot, ri.q_res2_range[[0, 0]], !y.crange, color=250, thick=3, linesty=1
       oplot, ri.q_res2_range[[1, 1]], !y.crange, color=250, thick=3, linesty=1
-      gx_plot_label, 0.02, 0.90, string(ri.res2_best, format="('RES!S!U2!N=',g0)"), $
-        charsize=charsize
-      gx_plot_label, 0.02, 0.78, string(ri.q_res2_best, format="('Q!Dres2!N=',g0)"), $
-        charsize=charsize
+      gx_chmp_qmetric_legend, ri, 'res2', charsize=charsize
       yrange = [0, max(c2, /nan)]
       plot, qq, c2, psym=-4, xstyle=0, ystyle=1, xticks=4, yrange=yrange, $
         xtitle='!18Q!3', ytitle='!17 Chi!U2!N!3', thick=2, charsize=1.2*charsize, title=tit0
@@ -411,13 +412,10 @@ if arg_present(maps_best) then return_best_maps=1
         linesty=ri.chi2_done ? 0 : 2
       oplot, ri.q_chi2_range[[0, 0]], !y.crange, color=250, thick=3, linesty=1
       oplot, ri.q_chi2_range[[1, 1]], !y.crange, color=250, thick=3, linesty=1
-      gx_plot_label, 0.02, 0.90, string(ri.chi2_best, format="('Chi!U2!N=',g0)"), $
-        charsize=charsize
-      gx_plot_label, 0.02, 0.78, string(ri.q_chi2_best, format="('Q!Dchi2!N=',g0)"), $
-        charsize=charsize
+      gx_chmp_qmetric_legend, ri, 'chi2', charsize=charsize
     endif else begin
       plot, [0, 1], [0, 1], /nodata, title=tit0, charsize=charsize
-      gx_plot_label, 0.1, 0.5, 'No allmetrics', charsize=charsize
+      gx_chmp_al_legend, 'No allmetrics', /center, charsize=charsize, box=1
       plot, [0, 1], [0, 1], /nodata, charsize=charsize
     endelse
   endfor
