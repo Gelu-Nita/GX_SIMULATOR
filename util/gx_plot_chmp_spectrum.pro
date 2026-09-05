@@ -124,7 +124,7 @@ pro gx_plot_chmp_spectrum, spec_axis, $
   S_obs_chi2, S_sdev_chi2, S_mod_chi2, $
   aval=aval, bval=bval, q_res2_best=q_res2_best, res2_best=res2_best, $
   q_chi2_best=q_chi2_best, chi2_best=chi2_best, $
-  is_chan=is_chan, charsize=charsize, ylog=ylog, $
+  is_chan=is_chan, charsize=charsize, ylog=ylog, sdev_method=sdev_method, $
   best_of_bests=best_of_bests, cell_res2=cell_res2, cell_chi2=cell_chi2, $
   samp_res2=samp_res2, samp_chi2=samp_chi2, refs_all=refs_all, _extra=_extra
 
@@ -132,6 +132,8 @@ pro gx_plot_chmp_spectrum, spec_axis, $
   if isa(_extra, 'STRUCT') then begin
     if tag_exist(_extra, 'ylog') then ylog = keyword_set(_extra.ylog)
   endif
+  if n_elements(sdev_method) eq 0 and isa(cell_res2, 'STRUCT') then $
+    if tag_exist(cell_res2, 'sdev_method') then sdev_method = cell_res2.sdev_method
   default, charsize, !p.charsize
   if isa(cell_res2, 'STRUCT') then begin
     gx_chmp_result_spectra, cell_res2, spec_axis, $
@@ -320,6 +322,8 @@ pro gx_plot_chmp_spectrum, spec_axis, $
       if keyword_set(best_of_bests) then $
         tit = string(aa, bb, format="('Best of Bests CHI!U2!N (a=',f0.2,', b=',f0.2,')')")
     endelse
+    if n_elements(sdev_method) gt 0 then $
+      tit = tit + '  sdev=' + strtrim(string(sdev_method[0]), 2)
     gx_chmp_axis_selmask, axis_all, spec_axis, sel
     srt = sort(axis_all)
     xa = axis_all[srt]
@@ -350,6 +354,13 @@ pro gx_plot_chmp_spectrum, spec_axis, $
     endif
     gx_plot_chmp_spec_legend, ni gt 0, charsize=charsize
     gx_plot_label, 0.01, 0.20, abq_line, charsize=charsize, ylog=keyword_set(ylog)
+    rel = !values.d_nan
+    okrel = where(finite(yo) and (yo ne 0) and finite(ys) and (ys gt 0), nrel)
+    if nrel gt 0 then rel = median(ys[okrel] / yo[okrel])
+    if finite(rel) then $
+      gx_plot_label, 0.01, 0.28, string(100d * rel, $
+        format="('median \sigma/S = ',g0,' %')"), charsize=charsize, $
+        ylog=keyword_set(ylog)
     if keyword_set(best_of_bests) then begin
       if ip eq 0 then $
         gx_plot_label, 0.01, 0.12, res2_line, charsize=charsize, ylog=keyword_set(ylog) $

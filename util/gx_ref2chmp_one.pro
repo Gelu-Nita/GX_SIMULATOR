@@ -41,7 +41,17 @@ function gx_ref2chmp_one, refdata, freq=freq, chan=chan, $
     'STRUCT': begin
       if valid_map(ref) then begin
         data = ref[0]
-        if n_elements(ref) gt 1 then sdev = ref[1]
+        if n_elements(ref) gt 1 then begin
+          ; Never treat a time series as Data + SDEV (frame 1 is another I map)
+          if ~gx_ref_is_sdev_map(ref[1]) and $
+             (n_elements(ref) ge 3 or gx_ref2chmp_item_is_cube(ref)) then begin
+            err_msg = ['Time-series map array passed as Data/SDEV pair.', $
+              'Point gx_ref2chmp at the cube (RMAPS) so it can attach a time cube;', $
+              'do not use rmaps[1] as SDEV.']
+            goto, exit_fail
+          endif
+          sdev = ref[1]
+        endif
       endif else begin
         if tag_exist(ref, 'maps') then begin
           if valid_map(ref.maps) then begin

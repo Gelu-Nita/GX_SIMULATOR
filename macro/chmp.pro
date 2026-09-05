@@ -6,7 +6,7 @@ pro chmp_help
   print,'% IDL-> chmp, /fov; to print the current FOV settings
   print,'% IDL-> chmp, /res; to print the current map resolution settings
   print,'% IDL-> chmp, /refdatapath; to print the current reference data path
-  print,'% IDL-> chmp, keywords="search_mode=''spectrum'', a_beam=1.5, b_beam=1.5, phi_beam=0" ; spectrum (all refs; optional spec_weights=)'
+  print,'% IDL-> chmp, keywords="search_mode=''spectrum'', a_beam=1.5, b_beam=1.5, phi_beam=0" ; spectrum (all refs; optional spec_weights=, sdev_method=)'
   print,'% IDL-> chmp, keywords="chan=94, a_beam=1.5, b_beam=1.5, phi_beam=0" ; EUV image (scalar chan=)'
   print,'% IDL-> chmp, keywords="freq=5.0, a_beam=..., b_beam=..., phi_beam=..." ; MW image (scalar freq=)'
   print,'% IDL-> chmp, /gxmpath; to print the current GX model data path

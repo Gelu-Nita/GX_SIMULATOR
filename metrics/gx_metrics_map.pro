@@ -56,6 +56,8 @@
   ;  07/08/20-Gelu Nita (gnita@njit.edu) Redefined metrics and addded the option of using SDEV maps
 ;-
 function gx_metrics_map, map, reference, sdev,no_align=no_align,metrics=metrics,_extra=_extra
+  compile_opt idl2
+  forward_function gx_ref_has_cube, gx_ref_cube_remap
   ;align map
   if not keyword_set(no_align) then begin
     gx_align_map, map, reference,_extra=_extra
@@ -63,7 +65,16 @@ function gx_metrics_map, map, reference, sdev,no_align=no_align,metrics=metrics,
   
   ;Interpolate reference map (which is assumed to have broader FOV than the synthetic image)
   map_ref = inter_map(reference, map)
-  if valid_map(sdev) then begin
+  map_sdev = !null
+  if gx_ref_has_cube(reference) then begin
+    ; Image Method B: sample σ on the remapped cube (M-1), not inter_map of native SDEV
+    void = gx_ref_cube_remap(reference, map, sdev_map=map_sdev, err_msg=emc)
+    if valid_map(map_sdev) then data_sdev = map_sdev.data $
+    else if valid_map(sdev) then begin
+      map_sdev = inter_map(sdev, map)
+      data_sdev = map_sdev.data
+    endif
+  endif else if valid_map(sdev) then begin
   ;If provided, interpolate sdev map (which is assumed to have broader FOV than the synthetic image)
     map_sdev = inter_map(sdev, map)
     data_sdev=map_sdev.data

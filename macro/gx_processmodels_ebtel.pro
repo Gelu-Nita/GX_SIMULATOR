@@ -12,9 +12,11 @@
 ;    Both modes run independent golden-section searches of RES2 and CHI2.
 ;    Spectrum mode uses gx_metrics_spectrum: RES2 = res2_norm (relative),
 ;    CHI2 = mean(((S_mod-S_obs)/S_sdev)^2). S_sdev is the ROI-integrated
-;    reference uncertainty from gx_fov_integral_map (independent pixels:
-;    S_sdev = sqrt(total(sdev^2)) * per-pixel scale). If gx_ref2chmp found no
-;    real sdev, the intensity map is the placeholder, so S_sdev is not S_obs.
+;    reference uncertainty. Without a time cube this is Method B
+;    (gx_fov_integral_map quadrature). With a cube, spectrum mode defaults
+;    to Method A (s_F on the live ROI); override with sdev_method='A'|'B'.
+;    If gx_ref2chmp found no real sdev, the intensity map is the placeholder,
+;    so S_sdev is not S_obs.
 ;
 ;    RESULT (per a,b): shares the legacy image-search tags (a,b,q_*_best,
 ;    *_best_file, *_best_metrics, allmetrics, ...). In spectrum mode those
@@ -65,30 +67,6 @@
 ;
 ; :Author: Gelu Nita (gnita@njit.edu)
 ;-
-function q_sigma,x,y
-  ; Fit the data to a parabolic curve y = a*x^2 + b*x + c
-  fit = POLY_FIT(x, y, 2,yfit=yfit)
-  a = fit[2]
-  b = fit[1]
-  c = fit[0]
-
-  ; Calculate the vertex (minimum) of the parabola
-  ; The vertex x-coordinate is at x = -b / (2*a)
-  estimated_param = -b / (2*a)
-
-  ; Calculate the second derivative of the parabola at the vertex
-  ; The second derivative is 2*a
-  second_derivative = 2*a
-
-  ; Estimate the uncertainty using the curvature
-  ; Assuming that the uncertainty in y (dy) is uniform and given by the standard deviation of y
-  dy = STDDEV(y)
-
-  ; The uncertainty in the estimated parameter can be approximated by
-  ; uncertainty = dy / sqrt(2*a)
-  return, dy / SQRT(second_derivative)
-end
-
 function metrics_min,Qgrid,metrics,acc=acc,done=done
  chi2=metrics;call it chi2 for convenience
  default, acc,1d-1
@@ -101,7 +79,7 @@ function metrics_min,Qgrid,metrics,acc=acc,done=done
    return,{acc:acc,q_best:Qgrid[0],q_range:minmax(double(Qgrid)),$
      metrics_best:!values.d_nan,done:1,metrics_best_idx:0,tol:!values.d_nan}
  endif
- chi2_b=min(chi2,ib)
+ chi2_b=min(chi2,ib,/nan)
   case ib of
   0: begin
       Qa=Qgrid[0]/G 
@@ -130,9 +108,10 @@ function metrics_min,Qgrid,metrics,acc=acc,done=done
             q_best=((Qc-Qb) gt (Qb-Qa)) ? Qb+(Qc-Qb)*(1d0-1d0/G) : Qb-(Qb-Qa)*(1d0-1d0/G)
             done=0 or keyword_set(done)
           endelse
-;          q_range=[Qa,Qc] 
-          sigma=q_sigma(Qgrid,chi2)
-          q_range=[(Qb-sigma)<Qa,(Qb+sigma)>Qc]
+          ; Discrete-search interval: nearest inspected Q on each side of the
+          ; minimum. Wider curvature/noise formulas are not used — they can
+          ; exceed the sampled grid (CHI2) while RES2 already sits on [Qa,Qc].
+          q_range=[Qa,Qc]
         end  
  endcase
   return,{acc:acc,q_best:q_best,q_range:q_range,metrics_best:chi2_b,done:done,metrics_best_idx:ib,tol:(Qc-Qa)/(Qc+Qa)}
@@ -145,7 +124,7 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
                        file_arr=file_arr,q_arr=q_arr,corr_beam=corr_beam,$
                        apply2=apply2,charsize=charsize,counter=counter,$
                        search_mode=search_mode,all_refs=all_refs,$
-                       spec_weights=spec_weights,_extra=_extra
+                       spec_weights=spec_weights,sdev_method=sdev_method,_extra=_extra
  ;check validity of input data
  default,search_mode,'image'
  search_mode=strlowcase(strcompress(search_mode,/rem))
@@ -155,6 +134,9 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
    if tag_exist(_extra,'spec_weights') then spec_weights=_extra.spec_weights
  if n_elements(spec_weights) eq 0 and isa(_extra,'STRUCT') then $
    if tag_exist(_extra,'weights') then spec_weights=_extra.weights
+ if n_elements(sdev_method) eq 0 and isa(_extra,'STRUCT') then $
+   if tag_exist(_extra,'sdev_method') then sdev_method=_extra.sdev_method
+ default, sdev_method, 'auto'
  resolve_routine, 'gx_plot_chmp_chanmaps', /compile_full_file, /either
  resolve_routine, 'gx_chmp_refs_on_map', /compile_full_file, /either
  resolve_routine, 'gx_chmp_axis_selmask', /compile_full_file, /either
@@ -232,6 +214,8 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
      ref_chan=!null
    endelse
    corr_beam=~is_number(corr_beam)?ref0->get(0,/corr_beam):1
+   cube_any=0b
+   for ir=0,nref-1 do if gx_ref_has_cube(spec_refs[ir]) then cube_any=1b
  endif else begin
    if ~valid_map(ref) then begin
     invalid_ref:
@@ -260,7 +244,27 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
      message,'Required FREQ or CHAN reference data are missing!',/info
      goto,invalid_ref
    endif
+   cube_any=gx_ref_has_cube(ref)
  endelse
+ sdev_method_used=gx_chmp_sdev_method(sdev_method=sdev_method,search_mode=search_mode,$
+   has_cube=cube_any,err_msg=em_sdev)
+ if sdev_method_used eq '' then begin
+   message,em_sdev,/info
+   return, !null
+ endif
+ sm_in=strupcase(strcompress(string((n_elements(sdev_method) gt 0)?sdev_method[0]:'auto'), /rem))
+ if (sm_in eq 'AUTO' or sm_in eq '') and (sdev_method_used eq 'B') and ~keyword_set(cube_any) then $
+   message,"WARNING: sdev_method='auto' selected B because no time cube is attached to the refs. "+$
+     "For all_rotated RMAPS pass sdev_method='A' (that errors if the cube is missing).",/info
+ nframe_ref=0L
+ if keyword_set(cube_any) then begin
+   src=spectrum_mode ? spec_refs : ref
+   for ir=0L, n_elements(src)-1 do begin
+     if ~gx_ref_has_cube(src[ir]) then continue
+     dd=src[ir]->get(0,/map)
+     if tag_exist(dd,'nframe') then nframe_ref=nframe_ref>long(dd.nframe)
+   endfor
+ endif
  ;+++++++++++++++++++++++++++++++++++
  default,counter,0l
  counter+=1
@@ -369,7 +373,7 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
         continue
       endif
       spec=gx_maps2spectrum(map,refs_use,mask=mask,apply2=apply2,resize=resize,$
-        corr_beam=corr_beam,err_msg=em,mod_maps=mod_maps)
+        corr_beam=corr_beam,err_msg=em,mod_maps=mod_maps,sdev_method=sdev_method)
       obj_destroy,map
       if ~isa(spec,'STRUCT') then begin
         message,'Spectrum build failed for '+modFiles[good[i]]+': '+em,/info
@@ -408,6 +412,10 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
       S_obs=S_obs_sel
       S_sdev=S_sdev_sel
       spec_sdev_ok=total(spec.has_sdev[isel]) eq nsel
+      if tag_exist(spec,'sdev_method') then begin
+        um=spec.sdev_method[uniq(spec.sdev_method,sort(spec.sdev_method))]
+        sdev_method_used=strjoin(strtrim(um,2),',')
+      endif
       if keyword_set(spec_sdev_ok) then $
         smetrics=gx_metrics_spectrum(spec.S_mod,spec.S_obs,spec.S_sdev,weights=w_metric) $
       else smetrics=gx_metrics_spectrum(spec.S_mod,spec.S_obs,weights=w_metric)
@@ -430,7 +438,7 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
         modI=mod_maps[kk]->get(0,/map)
         obsI=refs_use[kk]->get(0,/map)
         obsIsdev=refs_use[kk]->get(1,/map)
-        if keyword_set(spec_is_chan) then begin
+        if keyword_set(spec_is_chan) and ~gx_ref_has_cube(obsI) then begin
           sub_map,obsI,obsI,ref=modI
           sub_map,obsIsdev,obsIsdev,ref=modI
           sz=size(modI.data)
@@ -507,7 +515,8 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
       
       ;here handle the _obsI and _obsIsdev maps if tey are EUV maps, to conserve flux
       ; Fresh copy from the uncropped reference each Q (never sub_map in place).
-      if n_elements(ref_chan) gt 0 then begin
+      ; Cube refs: skip /total rebin so gx_metrics_map remaps the native cube.
+      if n_elements(ref_chan) gt 0 and ~gx_ref_has_cube(obsI_ref) then begin
         _obsI=obsI_ref
         _obsIsdev=obsIsdev_ref
         sub_map,_obsI,_obsI,ref=modI
@@ -577,16 +586,20 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
      else $
        metrics_title=string(n_elements(spec_axis),ax0,ax1,$
          format="('ROI spectrum, ',i0,' frequencies (',g0,'–',g0,' GHz)')")
+     metrics_title=metrics_title+'  sdev='+sdev_method_used
    endif else metrics_title=_obsI.ID
 ;   xrange=minmax(q[[res2_range_idx,chi2_range_idx]])*[1/G,G]
 ;   yrange=minmax([0,res2[res2_range_idx],2*res2[res2_range_idx[0]]])
    yrange=[0,max(res2,/nan)]
+   xq=minmax(double(Q[sort_idx]), /nan)
+   if ~finite(xq[0]) or ~finite(xq[1]) or (xq[0] eq xq[1]) then xrange=xq else $
+     xrange=xq*[1d/G, G]
    plot, Q[sort_idx], res2[sort_idx], psym=-4, xlog=xlog, xstyle=0, ystyle=1, xticks=4,$
      xrange=xrange, yrange=yrange, $
      xtitle='!18Q!3', ytitle='!17 RES!S!U2!N!R!Dnorm!N!3', thick=2,charsize=1.2*charsize,title=metrics_title
    oplot,q_res2_best[[0,0]],!y.crange,color=250,thick=3,linesty=res2_done?0:2
-   oplot,q_res2_range[[0,0]],!y.crange,color=250,thick=3,linesty=1
-   oplot,q_res2_range[[1,1]],!y.crange,color=250,thick=3,linesty=1
+   if finite(q_res2_range[0]) then oplot,q_res2_range[[0,0]],!y.crange,color=250,thick=3,linesty=1
+   if finite(q_res2_range[1]) then oplot,q_res2_range[[1,1]],!y.crange,color=250,thick=3,linesty=1
    gx_plot_label,0.01,0.9,xlog=xlog, string(a[0],b[0],format="('a=',f5.2,'; ','b=',f5.2)"),charsize=charsize
    gx_plot_label,0.01,0.8, 'PROJECTED SOLUTION:',xlog=xlog,charsize=charsize
    gx_plot_label,0.01,0.7, string([q_res2_best,q_res2_range-q_res2_best], format="('Q!Dres2_best!N = ',g0,'!S!D',g0,'!R!U+',g0)") ,xlog=xlog,charsize=charsize
@@ -605,8 +618,8 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
      xrange=xrange, yrange=yrange, $
      xtitle='!18Q!3', ytitle='!17 Chi!U2!N!3', thick=2,charsize=1.2*charsize,title=metrics_title
    oplot,q_chi2_best[[0,0]],!y.crange,color=250,thick=3,linesty=chi2_done?0:2
-   oplot,q_chi2_range[[0,0]],!y.crange,color=250,thick=3,linesty=1
-   oplot,q_chi2_range[[1,1]],!y.crange,color=250,thick=3,linesty=1
+   if finite(q_chi2_range[0]) then oplot,q_chi2_range[[0,0]],!y.crange,color=250,thick=3,linesty=1
+   if finite(q_chi2_range[1]) then oplot,q_chi2_range[[1,1]],!y.crange,color=250,thick=3,linesty=1
    !p.font=2
    gx_plot_label,0.01,0.9,xlog=xlog, string(a[0],b[0],format="('a=',f5.2,'; ','b=',f5.2)"),charsize=charsize
    gx_plot_label,0.01,0.8, 'PROJECTED SOLUTION:',xlog=xlog,charsize=charsize
@@ -632,7 +645,7 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
        (*spec_diag)[sort_idx[ib_chi2]].S_mod, $
        aval=a[0], bval=b[0], q_res2_best=q_res2_best, res2_best=res2_best, $
        q_chi2_best=q_chi2_best, chi2_best=chi2_best, $
-       is_chan=spec_is_chan, charsize=charsize, $
+       is_chan=spec_is_chan, charsize=charsize, sdev_method=sdev_method_used, $
        samp_res2=(*spec_diag)[sort_idx[ib_res2]], $
        samp_chi2=(*spec_diag)[sort_idx[ib_chi2]], _extra=_extra
      samp_r=(*spec_diag)[sort_idx[ib_res2]]
@@ -741,7 +754,7 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
   S_mod_res2_best:double(S_mod_res2_best),S_mod_chi2_best:double(S_mod_chi2_best),$
   spec_axis_all:double(spec_axis_all),S_obs_all:double(S_obs_all),S_sdev_all:double(S_sdev_all),$
   S_mod_res2_best_all:double(S_mod_res2_best_all),S_mod_chi2_best_all:double(S_mod_chi2_best_all),$
-  spec_allmetrics:spec_all}]
+  spec_allmetrics:spec_all,sdev_method:sdev_method_used,has_cube:byte(cube_any),nframe:nframe_ref}]
 
  if ptr_valid(spec_diag) then ptr_free,spec_diag
  obj_destroy,obj_metrics_arr

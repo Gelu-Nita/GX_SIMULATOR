@@ -21,7 +21,8 @@
 ;    quiet - suppress box_message
 ;    help - print accepted formats
 ;-
-forward_function gx_ref2chmp_list_ref_files, gx_ref2chmp_one
+forward_function gx_ref2chmp_list_ref_files, gx_ref2chmp_one, gx_ref2chmp_promote_cube, $
+  gx_ref2chmp_item_is_cube, gx_ref_has_cube
 
 function gx_ref2chmp, refdata, freq=freq, chan=chan, $
   a_beam=a_beam, b_beam=b_beam, phi_beam=phi_beam, corr_beam=corr_beam, $
@@ -56,7 +57,14 @@ function gx_ref2chmp, refdata, freq=freq, chan=chan, $
       '4) STRING path inputs:', $
       '   a) One .sav file (as above) or one FITS file (via gx_fits2map)', $
       '   b) Directory of .sav and/or FITS files → objarr of CHMP refs (sorted)', $
-      '   c) String array of .sav/FITS paths → same as (b) when 2+ files']
+      '   c) String array of .sav/FITS paths → same as (b) when 2+ files', $
+      '5) Time-series cubes (Method A capable):', $
+      '   a) .sav with RMAPS (or a map array / 3-D .data, M>=2 frames)', $
+      '   b) Directory of 2-D maps sharing CHAN/FREQ at different times', $
+      '      (grouped into one cube ref per axis)', $
+      '   Cubes store time-mean + sample SDEV (M-1) in maps 0/1, plus the', $
+      '   native cube on Data. Format-3 {MAPS:[mean,sdev]} is never a cube.', $
+      '   Do not point refdatapath at lev1 JSOC trees (no aia_prep here).']
     goto, exit_fail
   endif
   if n_elements(refdata) eq 0 then begin
@@ -115,6 +123,25 @@ function gx_ref2chmp, refdata, freq=freq, chan=chan, $
       goto, exit_fail
     endif
 
+    ; Promote RMAPS / 3-D cubes; group same-axis 2-D time series
+    promoted = list()
+    for i = 0L, nitem - 1 do begin
+      it = gx_ref2chmp_promote_cube(items[i], err_msg=em)
+      if ~isa(it) then begin
+        err_msg = (size(em, /tname) eq 'STRING' && em[0] ne '') ? em : $
+          'Failed to promote time-series cube at item ' + strtrim(i, 2)
+        goto, exit_fail
+      endif
+      promoted.add, it
+    endfor
+    items = promoted
+    gx_ref2chmp_group_timeseries, items, err_msg=em
+    if size(em, /tname) eq 'STRING' then if em[0] ne '' then begin
+      err_msg = em
+      goto, exit_fail
+    endif
+    nitem = items.count()
+
     refs = objarr(nitem)
     axis = dblarr(nitem)
     is_chan_vec = bytarr(nitem)
@@ -126,6 +153,11 @@ function gx_ref2chmp, refdata, freq=freq, chan=chan, $
       if ~obj_valid(r) then begin
         err_msg = 'Failed to build CHMP reference from an input item: ' + $
           (size(em, /tname) eq 'STRING' ? strjoin(em, ' ') : 'unknown error')
+        goto, exit_fail
+      endif
+      gx_ref_cube_bind_ref, r, items[i]
+      if gx_ref2chmp_item_is_cube(items[i]) and ~gx_ref_has_cube(r) then begin
+        err_msg = 'gx_ref2chmp: time-series item did not attach a cube onto the CHMP map object'
         goto, exit_fail
       endif
       rf = r->get(0, /freq)
@@ -163,14 +195,47 @@ function gx_ref2chmp, refdata, freq=freq, chan=chan, $
     ; Sort by axis value (all FREQ or all CHAN)
     ord = sort(axis)
     refs = refs[ord]
+    ncube = 0L
+    nfr = 0L
+    for ic = 0L, n_ok - 1 do begin
+      if gx_ref_has_cube(refs[ic]) then begin
+        ncube++
+        dd = refs[ic]->get(0, /map)
+        if tag_exist(dd, 'nframe') then nfr = nfr > long(dd.nframe)
+      endif
+    endfor
+    if ncube gt 0 then $
+      message, string(ncube, n_ok, nfr, $
+        format="('gx_ref2chmp: ',i0,'/',i0,' refs have time cubes (M=',i0,')')"), /info $
+    else $
+      message, string(n_ok, $
+        format="('gx_ref2chmp: ',i0,' refs loaded; none have a time cube (Method A unavailable)')"), /info
+    catch, /cancel
     if n_ok eq 1 then return, refs[0]
     return, refs
   endif
 
   ;---------- Non-string: single-ref path ----------
-  return, gx_ref2chmp_one(refdata, freq=freq, chan=chan, $
+  item = gx_ref2chmp_promote_cube(refdata, err_msg=em)
+  if ~isa(item) then begin
+    err_msg = (size(em, /tname) eq 'STRING' && em[0] ne '') ? em : $
+      'Failed to promote time-series cube'
+    goto, exit_fail
+  endif
+  r = gx_ref2chmp_one(item, freq=freq, chan=chan, $
     a_beam=a_beam, b_beam=b_beam, phi_beam=phi_beam, corr_beam=corr_beam, $
     data=data, sdev=sdev, err_msg=err_msg, quiet=quiet, _extra=_extra)
+  if obj_valid(r) then gx_ref_cube_bind_ref, r, item
+  if obj_valid(r) then begin
+    if gx_ref2chmp_item_is_cube(item) and ~gx_ref_has_cube(r) then begin
+      err_msg = 'gx_ref2chmp: time-series item did not attach a cube onto the CHMP map object'
+      goto, exit_fail
+    endif
+  endif
+  if obj_valid(r) and arg_present(data) then data = r->get(0, /map)
+  if obj_valid(r) and arg_present(sdev) then sdev = r->get(1, /map)
+  catch, /cancel
+  return, r
 
   exit_fail:
   if ~keyword_set(quiet) then begin

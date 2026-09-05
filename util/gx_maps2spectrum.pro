@@ -24,17 +24,27 @@
 ;    Per channel, pixels outside the ROI are zeroed, then gx_fov_integral_map
 ;    is called. For EUV/CHAN (no FREQ):
 ;      S_obs  = total(I_obs) * dx * dy
-;      S_sdev = sqrt(total(sdev^2)) * dx * dy   ; independent-pixel assumption
+;      Method B (default without a cube):
+;        S_sdev = sqrt(total(sdev^2)) * dx * dy   ; independent-pixel assumption
+;      Method A (spectrum + time cube, sdev_method auto/A):
+;        S_sdev = s_F, sample stddev of F_k = dΩ Σ I_k under the live ROI (M-1)
 ;    Microwave with FREQ uses the same quadrature sum, with the Tb->sfu scale
 ;    (or no extra scale if the map is already sfu).
 ;    has_sdev is 0 and S_sdev is NaN if that channel has no valid sdev map.
 ;    If gx_ref2chmp found no real sdev, the intensity map is the placeholder,
 ;    so S_sdev / S_obs = sqrt(total(I_obs^2)) / total(I_obs) and is not 1.
+;
+;    sdev_method = 'auto'|'A'|'B' (default auto). auto → A in spectrum when a
+;    cube is present, else B. A requires a cube. Image-mode A is refused
+;    upstream; this routine is spectrum-only.
 ;-
-forward_function gx_fov_integral_map, gx_psf, gx_metrics_image, gx_rebin_map
+forward_function gx_fov_integral_map, gx_psf, gx_metrics_image, gx_rebin_map, $
+  gx_chmp_sdev_method, gx_ref_has_cube, gx_ref_cube_remap, gx_ref_cube_sf, $
+  gx_map_is_sfu
 
 function gx_maps2spectrum, mapobj, refs, mask=mask, apply2=apply2, $
-  resize=resize, corr_beam=corr_beam, tol=tol, err_msg=err_msg, mod_maps=mod_maps
+  resize=resize, corr_beam=corr_beam, tol=tol, err_msg=err_msg, mod_maps=mod_maps, $
+  sdev_method=sdev_method
 
   default, tol, 1d-3
   default, corr_beam, 1d0
@@ -110,6 +120,9 @@ function gx_maps2spectrum, mapobj, refs, mask=mask, apply2=apply2, $
   S_mod = dblarr(n)
   S_sdev = dblarr(n)
   has_sdev = bytarr(n)
+  has_cube = bytarr(n)
+  nframe = lonarr(n)
+  method_used = strarr(n)
   mod_maps = objarr(n)
 
   for k = 0L, n - 1 do begin
@@ -170,7 +183,63 @@ function gx_maps2spectrum, mapobj, refs, mask=mask, apply2=apply2, $
       obs_m.data[bad] = 0
     endif
     S_mod[k] = gx_fov_integral_map(mod_m)
-    if valid_map(map_sdev) then begin
+
+    has_cube[k] = gx_ref_has_cube(refs[k])
+    meth = gx_chmp_sdev_method(sdev_method=sdev_method, search_mode='spectrum', $
+      has_cube=has_cube[k], err_msg=emeth)
+    if meth eq '' then begin
+      err_msg = emeth
+      return, !null
+    endif
+    method_used[k] = meth
+    if has_cube[k] then begin
+      d0 = refs[k]->get(0, /map)
+      if tag_exist(d0, 'nframe') then nframe[k] = long(d0.nframe)
+    endif
+
+    if meth eq 'A' then begin
+      cube_r = gx_ref_cube_remap(refs[k], modI, err_msg=emc)
+      if n_elements(cube_r) eq 0 then begin
+        err_msg = emc
+        return, !null
+      endif
+      S_obs[k] = gx_fov_integral_map(obs_m)
+      dOmega = double(obs_m.dx) * double(obs_m.dy)
+      scale = dOmega
+      if tag_exist(obs_m, 'freq') then begin
+        freqk = obs_m.freq
+        if is_number(freqk) then if freqk gt 0 then begin
+          if gx_map_is_sfu(obs_m) then scale = 1d else begin
+            if tag_exist(obs_m, 'rsun') then scale = gx_tb2sfu(dOmega, freqk, R=obs_m.rsun) $
+            else scale = gx_tb2sfu(dOmega, freqk)
+          endelse
+        endif
+      endif
+      ss = gx_ref_cube_sf(cube_r, img_mask, scale)
+      if finite(ss) then begin
+        S_sdev[k] = ss
+        has_sdev[k] = 1b
+      endif else begin
+        S_sdev[k] = !values.d_nan
+        has_sdev[k] = 0b
+      endelse
+    endif else if has_cube[k] then begin
+      ; Method B on remapped-cube sample σ (not inter_map of native SDEV)
+      cube_r = gx_ref_cube_remap(refs[k], modI, sdev_map=sd_r, err_msg=emc)
+      if n_elements(cube_r) eq 0 then begin
+        err_msg = emc
+        return, !null
+      endif
+      if nbad gt 0 then sd_r.data[bad] = 0
+      S_obs[k] = gx_fov_integral_map(obs_m, sdev=sd_r, s_sdev=ss)
+      if finite(ss) then begin
+        S_sdev[k] = ss
+        has_sdev[k] = 1b
+      endif else begin
+        S_sdev[k] = !values.d_nan
+        has_sdev[k] = 0b
+      endelse
+    endif else if valid_map(map_sdev) then begin
       sd_m = map_sdev
       if nbad gt 0 then sd_m.data[bad] = 0
       S_obs[k] = gx_fov_integral_map(obs_m, sdev=sd_m, s_sdev=ss)
@@ -193,5 +262,6 @@ function gx_maps2spectrum, mapobj, refs, mask=mask, apply2=apply2, $
   endfor
 
   return, {n:n, axis:axis, is_chan:is_chan, S_obs:S_obs, S_mod:S_mod, $
-    S_sdev:S_sdev, has_sdev:has_sdev, refs:refs}
+    S_sdev:S_sdev, has_sdev:has_sdev, refs:refs, $
+    sdev_method:method_used, has_cube:has_cube, nframe:nframe}
 end

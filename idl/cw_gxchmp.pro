@@ -1552,8 +1552,14 @@ function gxchmp_ref_psf_label, ref, search_mode=search_mode
     format="('a_beam= ',g0,', b_beam= ',g0,', phi_beam= ',g0,', corr_beam= ',g0)")
   default, search_mode, 'image'
   if (nref gt 1) or (strlowcase(strcompress(search_mode, /rem)) eq 'spectrum') then $
-    return, strcompress(string(nref, format="('refs: ',i0,' | ')") + beamstr)
-  return, strcompress(beamstr)
+    lab = strcompress(string(nref, format="('refs: ',i0,' | ')") + beamstr) $
+  else lab = strcompress(beamstr)
+  if gx_ref_has_cube(ref) then begin
+    d0 = ref[0]->get(0, /map)
+    nf = tag_exist(d0, 'nframe') ? long(d0.nframe) : 0L
+    lab = lab + strcompress(string(nf, format="(' | cube M=',i0)"))
+  endif
+  return, lab
 end
 
 ; Validate CHMP _extra keywords against gx_search4bestq mode rules.
@@ -1578,6 +1584,14 @@ function gxchmp::valid_extra, err_msg=err_msg, _extra=_extra
   search_mode = 'image'
   if tag_exist(st, 'search_mode') then $
     search_mode = strlowcase(strcompress(string(st.search_mode), /rem))
+
+  if tag_exist(st, 'sdev_method') then begin
+    smu = strupcase(strcompress(string(st.sdev_method[0]), /rem))
+    if (smu eq 'A' or smu eq 'METHODA' or smu eq '1') and search_mode eq 'image' then begin
+      err_msg = "sdev_method='A' is not valid for search_mode='image'"
+      return, 0b
+    endif
+  endif
 
   has_chan = tag_exist(st, 'chan')
   has_freq = tag_exist(st, 'freq')

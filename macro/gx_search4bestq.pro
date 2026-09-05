@@ -23,7 +23,7 @@ function gx_search4bestq, gxmpath=gxmpath,a_arr=a_arr,b_arr=b_arr,q_start=q_star
                      save_result=save_result,plot_best=plot_best,freq=freq,chan=chan,$
                      search_mode=search_mode,spec_freq=spec_freq,spec_chan=spec_chan,$
                      chmp_ref=chmp_ref,nobackground=nobackground,spec_weights=spec_weights,$
-                     _extra=_extra
+                     sdev_method=sdev_method,_extra=_extra
   final_result=[]
   catch, error_status
   if error_status ne 0 then begin
@@ -61,6 +61,8 @@ function gx_search4bestq, gxmpath=gxmpath,a_arr=a_arr,b_arr=b_arr,q_start=q_star
   default,search_mode,'image'
   search_mode=strlowcase(strcompress(search_mode,/rem))
   spectrum_mode=search_mode eq 'spectrum'
+  if n_elements(sdev_method) eq 0 and isa(_extra,'STRUCT') then $
+    if tag_exist(_extra,'sdev_method') then sdev_method=_extra.sdev_method
   all_refs=!null
   ;
 ; Frequency / channel / weight roles (mutually exclusive by mode):
@@ -281,6 +283,7 @@ function gx_search4bestq, gxmpath=gxmpath,a_arr=a_arr,b_arr=b_arr,q_start=q_star
           levels=levels,mask=mask,resize=resize,$
           file_arr=file_arr,apply2=apply2,done=force_done,$
           search_mode=search_mode,spec_weights=spec_weights,$
+          sdev_method=sdev_method,$
           refdatapath=refdatapath,gxmpath=gxmpath,q_start=q_start,counter=counter,_extra=_extra)
         if size(result,/tname) eq 'STRUCT' then begin
           add_q=(apply2 eq 1)?((result.res2_done eq 0) and (result.chi2_done  eq 0)):((result.res2_done eq 0) or (result.chi2_done  eq 0))
