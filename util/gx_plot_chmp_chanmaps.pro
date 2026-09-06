@@ -287,11 +287,13 @@ end
 
 ; Per-channel Data | Model | normalized residual. Same percentile contours
 ; on Data and Model; residual is (D-M)/(D+M) in [-1, 1] with a magenta-white-
-; green table. 3 columns x 3 rows, column-major (!p.multi 5th element 0):
-; each column is one channel (Data, Model, Residual top to bottom).
-; Short titles (Data/Model/Residual + channel + in-search). Top-left legend:
-; Q, minimized metric, then the other metric at this Q in parentheses
-; (header= is ignored). /min_chi2 marks a CHI2-minimized page.
+; green table. Up to 3 channels per page on a 3x3 grid.
+; Several channels: column-major — each column is one channel (Data, Model,
+; Residual top to bottom). One channel: row-major — Data | Model | Residual
+; on the first row (two rows empty). Short titles (Data/Model/Residual +
+; channel + in-search). Top-left legend: Q, minimized metric, then the other
+; metric at this Q in parentheses (header= is ignored). /min_chi2 marks a
+; CHI2-minimized page.
 pro gx_plot_chmp_chanmaps, cim, axis_all, spec_axis, $
   header=header, levels=levels, charsize=charsize, is_chan=is_chan, $
   q=q, res2=res2, chi2=chi2, min_chi2=min_chi2, _extra=_extra
@@ -331,9 +333,15 @@ pro gx_plot_chmp_chanmaps, cim, axis_all, spec_axis, $
     sel = sel[good]
     n = ng
   endif
-  !p.multi = [0, 3, 3, 0, 0]
   !p.font = -1
-  for kk = 0, n - 1 do begin
+  ip = 0L
+  while ip lt n do begin
+    nthis = (n - ip) < 3
+    ; One channel: fill the first row. Several: one channel per column.
+    if nthis eq 1 then !p.multi = [0, 3, 3, 0, 1] $
+    else !p.multi = [0, 3, 3, 0, 0]
+    for jthis = 0, nthis - 1 do begin
+    kk = ip + jthis
     objm = cim[kk]
     if ~obj_valid(objm) then continue
     modI = objm->get(0, /map)
@@ -374,6 +382,8 @@ pro gx_plot_chmp_chanmaps, cim, axis_all, spec_axis, $
     endif else begin
       plot, [0, 1], [0, 1], /nodata, title=rtitle, charsize=charsize
     endelse
-  endfor
+    endfor
+    ip += nthis
+  endwhile
 end
 

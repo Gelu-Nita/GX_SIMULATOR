@@ -112,8 +112,18 @@ Task scripts include `_extra` keywords. Preview requires at least one row in the
 
 - Image: per-pixel map metrics (`gx_metrics_image` / `gx_metrics_map`).
 - Spectrum: ROI-integrated `S_obs` / `S_mod` / `S_sdev` via `gx_maps2spectrum` and `gx_metrics_spectrum` (`weights=` optional; used by CHMP as `spec_weights`).
-- After a successful search, **Best of Bests.ps** is written by default (`plot_best=1`).
-- Per-cell `set_a*b*_final.ps` are written during the search; Best of Bests does **not** rewrite them unless `/replot_final` (or `gx_replot_chmp_finalps`).
+- After a successful search, **Best of Bests.ps** is written by default (`plot_best=1`) without rewriting cell PS (`/bob_only`).
+- Per-cell `set_a*b*_final.ps` are written during the search by the shared cell plotter (image and spectrum: Q metrics, optional spectrum page, then Data | Model | (D−M)/(D+M) maps). One channel fills the first row of the 3×3 page; several channels use one column per channel.
+- Replot everything from a saved result (create `psDir` if needed):
+
+```idl
+gx_plotbestchmpmodels_ebtel, result            ; all cells, then Best of Bests if n>1
+gx_plotbestchmpmodels_ebtel, result, /bob_only ; Best of Bests only (n>1)
+gx_plotbestchmpmodels_ebtel, result, plot_best=0
+gx_plotbestchmpmodels_ebtel, result, /overwrite, /debug  ; neighborhood Qs (best few)
+```
+
+`psDir` omitted uses `result.psDir`. `/overwrite` skips the confirm dialog. `/debug` adds the ~6 best RES² / CHI² Q samples (maps from `spec_allmetrics` or `modDir`; never fakes Method A `S_sdev` from the map SDEV layer).
 
 To show one spectrum channel with legacy map plotters / GUI:
 
@@ -130,5 +140,6 @@ r1 = gx_result_select_channel(result, chan=171)   ; or index=/freq=
 | `gx_ref_select_axis` | Select / sort by FREQ or CHAN |
 | `gx_processmodels_ebtel` | Q search + metrics for one `(a,b)` |
 | `gx_metrics_spectrum` | Spectral RES² / CHI² (`weights=` optional) |
-| `gx_plotbestchmpmodels_ebtel` | Best of Bests (+ optional `/replot_final`); old name `gx_plotbestmwmodels_ebtel` still works as a deprecated alias |
-| `gx_plot_chmp_spectrum` / `gx_plot_chmp_chanmaps` / `gx_plot_chmp_qsearch` | Spectrum-mode PS helpers |
+| `gx_plotbestchmpmodels_ebtel` | Top-level plot/replot: all cells, then Best of Bests if `n>1`. `/bob_only`, `plot_best=0`, `/overwrite`, `/debug`. Alias `gx_plotbestmwmodels_ebtel` |
+| `gx_plot_chmp_cell` | One cell PS (metrics, optional spectrum, 3×3 maps) |
+| `gx_plot_chmp_spectrum` / `gx_plot_chmp_chanmaps` / `gx_plot_chmp_qsearch` | Shared page helpers |

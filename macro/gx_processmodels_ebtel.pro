@@ -138,6 +138,7 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
    if tag_exist(_extra,'sdev_method') then sdev_method=_extra.sdev_method
  default, sdev_method, 'auto'
  resolve_routine, 'gx_plot_chmp_chanmaps', /compile_full_file, /either
+ resolve_routine, 'gx_plot_chmp_cell', /compile_full_file, /either
  resolve_routine, 'gx_chmp_refs_on_map', /compile_full_file, /either
  resolve_routine, 'gx_chmp_axis_selmask', /compile_full_file, /either
  if ~isa(modDir,'STRING') then begin
@@ -303,8 +304,6 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
  dx0=(dy0=(width0=0))
  thisDevice = !D.Name
  tvlct,rgb,/get
- loadct,39
- set_plot,'ps'
  map=obj_new()
  for i=0,nmod-1 do begin
   restore,modFiles[i]
@@ -334,13 +333,7 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
    setfiles=modFiles[good]
    formula=formula0[good]
    if (apply2 ne 3) then Filename=psDir+path_sep()+strcompress(string(a[0],b[0],format="('set_a',g0,'b',g0,'.ps')"),/rem) else Filename=psDir+path_sep()+strcompress(string(a[0],b[0],format="('set_a',g0,'b',g0,'_final.ps')"),/rem)
-   filename_copy=filename
    default,charsize,!p.charsize
-   psObject = Obj_New("FSC_PSConfig", /Color, /Times, Filename=Filename,xoffset=0.4,yoffset=0.25,xsize=7.5,ysize=9.5,landscape=0,bits=8)
-   psKeys=psObject->GetKeywords()
-   psKeys.filename=filename_copy
-   Device, _Extra= psKeys
-   !p.multi=[0,2,3,0,1]
    print,string(set,count,format="('Processing SET ',i2, ' file count=',i2)")
    print,string(a[0],b[0],format="('a= ',g0, ' b=',g0)")
 
@@ -576,132 +569,8 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
    res2_best_file=(setfiles[sort_idx])[res2_solution.metrics_best_idx]
    res2_best_metrics=obj_clone((obj_metrics_arr[sort_idx])[res2_solution.metrics_best_idx])
    res2_range_idx=sort(res2)
-   res2_range_idx=res2_range_idx[0:(n_elements(res2_range_idx)-1)<5]   
-   
-   !p.multi=[0,1,2]
-   !p.font=-1
-   if spectrum_mode then begin
-     ax0=min(spec_axis,max=ax1)
-     if keyword_set(spec_is_chan) then $
-       metrics_title=string(n_elements(spec_axis),ax0,ax1,$
-         format="('ROI spectrum, ',i0,' channels (',g0,'-',g0,' A)')") $
-     else $
-       metrics_title=string(n_elements(spec_axis),ax0,ax1,$
-         format="('ROI spectrum, ',i0,' frequencies (',g0,'-',g0,' GHz)')")
-     metrics_title=metrics_title+'  '+gx_chmp_sdev_label(sdev_method_used)
-   endif else metrics_title=_obsI.ID
-;   xrange=minmax(q[[res2_range_idx,chi2_range_idx]])*[1/G,G]
-;   yrange=minmax([0,res2[res2_range_idx],2*res2[res2_range_idx[0]]])
-   yrange=[0,max(res2,/nan)]
-   xq=minmax(double(Q[sort_idx]), /nan)
-   if ~finite(xq[0]) or ~finite(xq[1]) or (xq[0] eq xq[1]) then xrange=xq else $
-     xrange=xq*[1d/G, G]
-   plot, Q[sort_idx], res2[sort_idx], psym=-4, xlog=xlog, xstyle=0, ystyle=1, xticks=4,$
-     xrange=xrange, yrange=yrange, $
-     xtitle='!18Q!3', ytitle='!17 RES!S!U2!N!R!Dnorm!N!3', thick=2,charsize=1.2*charsize,title=metrics_title
-   oplot,q_res2_best[[0,0]],!y.crange,color=250,thick=3,linesty=res2_done?0:2
-   if finite(q_res2_range[0]) then oplot,q_res2_range[[0,0]],!y.crange,color=250,thick=3,linesty=1
-   if finite(q_res2_range[1]) then oplot,q_res2_range[[1,1]],!y.crange,color=250,thick=3,linesty=1
-   gx_chmp_qmetric_legend, {a:a[0], b:b[0], q_res2_best:q_res2_best, $
-     q_res2_range:q_res2_range, res2_best:res2_best, res2_done:res2_done, $
-     q_chi2_best:q_chi2_best, q_chi2_range:q_chi2_range, chi2_best:chi2_best, $
-     chi2_done:chi2_done, counter:counter}, 'res2', charsize=charsize
+   res2_range_idx=res2_range_idx[0:(n_elements(res2_range_idx)-1)<5]
 
-;   xrange=minmax(q[chi2_range_idx])*[1/G,G]
-;   yrange=minmax([0,chi2[chi2_range_idx],2*chi2[chi2_range_idx[0]]])
-   yrange=[0,max(chi2,/nan)]
-   !p.font=-1
-   plot, q[sort_idx], chi2[sort_idx], psym=-4, xlog=xlog,  xstyle=0, ystyle=1, xticks=4,$
-     xrange=xrange, yrange=yrange, $
-     xtitle='!18Q!3', ytitle='!17 Chi!U2!N!3', thick=2,charsize=1.2*charsize,title=metrics_title
-   oplot,q_chi2_best[[0,0]],!y.crange,color=250,thick=3,linesty=chi2_done?0:2
-   if finite(q_chi2_range[0]) then oplot,q_chi2_range[[0,0]],!y.crange,color=250,thick=3,linesty=1
-   if finite(q_chi2_range[1]) then oplot,q_chi2_range[[1,1]],!y.crange,color=250,thick=3,linesty=1
-   !p.font=-1
-   gx_chmp_qmetric_legend, {a:a[0], b:b[0], q_res2_best:q_res2_best, $
-     q_res2_range:q_res2_range, res2_best:res2_best, res2_done:res2_done, $
-     q_chi2_best:q_chi2_best, q_chi2_range:q_chi2_range, chi2_best:chi2_best, $
-     chi2_done:chi2_done, counter:counter}, 'chi2', charsize=charsize
-   !p.font=-1
-
-   if spectrum_mode and ptr_valid(spec_diag) then begin
-     ; ROI-integrated spectrum comparison for the current best Q samples
-     !p.multi=[0,1,2]
-     ib_res2=res2_solution.metrics_best_idx
-     ib_chi2=chi2_solution.metrics_best_idx
-     gx_plot_chmp_spectrum, spec_axis, $
-       (*spec_diag)[sort_idx[ib_res2]].S_obs, (*spec_diag)[sort_idx[ib_res2]].S_sdev, $
-       (*spec_diag)[sort_idx[ib_res2]].S_mod, $
-       (*spec_diag)[sort_idx[ib_chi2]].S_obs, (*spec_diag)[sort_idx[ib_chi2]].S_sdev, $
-       (*spec_diag)[sort_idx[ib_chi2]].S_mod, $
-       aval=a[0], bval=b[0], q_res2_best=q_res2_best, res2_best=res2_best, $
-       q_chi2_best=q_chi2_best, chi2_best=chi2_best, $
-       is_chan=spec_is_chan, charsize=charsize, sdev_method=sdev_method_used, $
-       samp_res2=(*spec_diag)[sort_idx[ib_res2]], $
-       samp_chi2=(*spec_diag)[sort_idx[ib_chi2]], _extra=_extra
-     samp_r=(*spec_diag)[sort_idx[ib_res2]]
-     samp_c=(*spec_diag)[sort_idx[ib_chi2]]
-     r2a=res2_best & c2a=!values.d_nan
-     r2c=!values.d_nan & c2c=chi2_best
-     if tag_exist(samp_r,'smetrics') then begin
-       if tag_exist(samp_r.smetrics,'res2_norm') then r2a=samp_r.smetrics.res2_norm
-       if tag_exist(samp_r.smetrics,'chi2') then c2a=samp_r.smetrics.chi2
-     endif
-     if tag_exist(samp_c,'smetrics') then begin
-       if tag_exist(samp_c.smetrics,'res2_norm') then r2c=samp_c.smetrics.res2_norm
-       if tag_exist(samp_c.smetrics,'chi2') then c2c=samp_c.smetrics.chi2
-     endif
-     gx_plot_chmp_chanmaps, samp_r.channel_image_metrics, samp_r.spec_axis_all, spec_axis, $
-       q=q_res2_best, res2=r2a, chi2=c2a, $
-       levels=levels, charsize=charsize, is_chan=spec_is_chan, _extra=_extra
-     gx_plot_chmp_chanmaps, samp_c.channel_image_metrics, samp_c.spec_axis_all, spec_axis, $
-       q=q_chi2_best, res2=r2c, chi2=c2c, /min_chi2, $
-       levels=levels, charsize=charsize, is_chan=spec_is_chan, _extra=_extra
-   endif
- endif
- 
- if ~spectrum_mode then begin
- range_idx=[chi2_range_idx,res2_range_idx]
- range_idx=range_idx[uniq(range_idx,sort(range_idx))]
- 
- !p.multi=[0,2,3,0,1]
- for k=0,n_elements(range_idx)-1 do begin
-   obj_metrics=obj_metrics_arr[range_idx[k]]
-   if ~obj_valid(obj_metrics) then continue
-   modI=obj_metrics->get(0,/map)
-   modI.id=strmid(modI.id,strpos(modI.id,'GX'))
-   obsI=obj_metrics->get(1,/map)
-   dx=tag_exist(obsI,'orig_xc')?(obsI.xc-obsI.orig_xc):0.0
-   dy=tag_exist(obsI,'orig_yc')?(obsI.yc-obsI.orig_yc):0.0
-   obsIsdev=obj_metrics->get(2,/map)
-   want_log=0b
-   if isa(_extra,'STRUCT') then begin
-     if tag_exist(_extra,'log_scale') then want_log=keyword_set(_extra.log_scale) $
-     else if tag_exist(_extra,'log') then want_log=keyword_set(_extra.log)
-   endif
-   plot_map,modI,charsize=charsize,title=modI.id,log_scale=want_log
-   plot_map,modI,/over,levels=levels,/perc,color=0,thick=3
-   plot_map,obsI,/over,levels=levels,/perc,color=200,thick=3
-   drew_mask=0b
-   if n_elements(mask) eq n_elements(modI.data) then begin
-    mask_map=modI
-    mask_map.data=mask
-    plot_map,mask_map,/over,levels=1,color=100,thick=4
-    drew_mask=1b
-   endif
-   gx_plot_chmp_contour_legend, charsize=charsize, mask=drew_mask
-   get_map_coord,modI,x,y
-   sz=size(modI.data)
-   sx=sz[1]/100.
-   sy=sz[2]/100.
-   xyouts,x[10*sx,90*sy],y[10*sx,90*sy],string(dx,dy,format="('!4D!3x=',f7.3,' !4D!3y=',f7.3)"),charsize=charsize,color=255
-   xyouts,x[10*sx,90*sy],y[10*sx,80*sy],string(q[range_idx[k]],format="('q=',g0)"),charsize=charsize,color=255
-   xyouts,x[10*sx,90*sy],y[10*sx,20*sy],string(res2[range_idx[k]],format="(' Res!U2!N=',g0)")+(obj_metrics->get(7,/roi_metrics) eq res2_best?' BEST':''),charsize=charsize,color=255
-   xyouts,x[10*sx,90*sy],y[10*sx,10*sy],string(chi2[range_idx[k]],format="(' Chi!U2!N=',g0)")+(obj_metrics->get(9,/roi_metrics) eq chi2_best?' BEST':''),charsize=charsize,color=255
- end
- endif
-  
- device,/close
  file_arr=setfiles[[res2_idx,chi2_idx]]
  q_arr=q[[res2_idx,chi2_idx]]
  idx=uniq(file_arr,sort(file_arr))
@@ -757,8 +626,14 @@ function gx_processmodels_ebtel,ab=ab,ref=ref,$
   S_mod_res2_best_all:double(S_mod_res2_best_all),S_mod_chi2_best_all:double(S_mod_chi2_best_all),$
   spec_allmetrics:spec_all,sdev_method:sdev_method_used,has_cube:byte(cube_any),nframe:nframe_ref}]
 
+ want_debug=0b
+ if isa(_extra,'STRUCT') then if tag_exist(_extra,'debug') then want_debug=keyword_set(_extra.debug)
+ gx_plot_chmp_cell, result[n_elements(result)-1], psDir, /overwrite, $
+   levels=levels, charsize=charsize, debug=want_debug, _extra=_extra
+
  if ptr_valid(spec_diag) then ptr_free,spec_diag
  obj_destroy,obj_metrics_arr
+ endif
  if ncomp gt 1 then begin
   a0=a0[comp]
   b0=b0[comp]

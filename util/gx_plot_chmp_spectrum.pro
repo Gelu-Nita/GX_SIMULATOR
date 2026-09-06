@@ -148,11 +148,14 @@ pro gx_plot_chmp_spectrum, spec_axis, $
   q_chi2_best=q_chi2_best, chi2_best=chi2_best, $
   is_chan=is_chan, charsize=charsize, ylog=ylog, sdev_method=sdev_method, $
   best_of_bests=best_of_bests, cell_res2=cell_res2, cell_chi2=cell_chi2, $
-  samp_res2=samp_res2, samp_chi2=samp_chi2, refs_all=refs_all, _extra=_extra
+  samp_res2=samp_res2, samp_chi2=samp_chi2, refs_all=refs_all, debug_sam=debug_sam, $
+  _extra=_extra
 
   compile_opt idl2
   if isa(_extra, 'STRUCT') then begin
     if tag_exist(_extra, 'ylog') then ylog = keyword_set(_extra.ylog)
+    if n_elements(debug_sam) eq 0 then $
+      if tag_exist(_extra, 'debug_sam') then debug_sam = _extra.debug_sam
   endif
   if n_elements(sdev_method) eq 0 and isa(cell_res2, 'STRUCT') then $
     if tag_exist(cell_res2, 'sdev_method') then sdev_method = cell_res2.sdev_method
@@ -369,6 +372,18 @@ pro gx_plot_chmp_spectrum, spec_axis, $
       oplot, xa[i_sel], yo[i_sel], psym=-4, color=0, thick=2, symsize=1.4
       gx_plot_chmp_ebars, xa[i_sel], yo[i_sel], ys[i_sel], color=0, thick=3
       oplot, xa[i_sel], ym[i_sel], psym=-5, color=250, thick=2, symsize=1.4
+    endif
+    ; /debug neighborhood: extra S_mod only (do not rebuild Method A S_sdev).
+    ndbg = n_elements(debug_sam)
+    if ndbg gt 0 then begin
+      for jd = 0L, ndbg - 1 do begin
+        if ~tag_exist(debug_sam, 'S_mod_all') then continue
+        xa2 = debug_sam[jd].spec_axis_all
+        ym2 = debug_sam[jd].S_mod_all
+        if n_elements(xa2) eq 0 then continue
+        s2 = sort(xa2)
+        oplot, xa2[s2], ym2[s2], color=100, thick=1
+      endfor
     endif
     qleg = [abq_line]
     rel = !values.d_nan
