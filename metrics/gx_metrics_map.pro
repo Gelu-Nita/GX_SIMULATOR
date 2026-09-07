@@ -66,6 +66,7 @@ function gx_metrics_map, map, reference, sdev,no_align=no_align,metrics=metrics,
   ;Interpolate reference map (which is assumed to have broader FOV than the synthetic image)
   map_ref = inter_map(reference, map)
   map_sdev = !null
+  data_sdev = !null
   if gx_ref_has_cube(reference) then begin
     ; Image Method B: sample σ on the remapped cube (M-1), not inter_map of native SDEV
     void = gx_ref_cube_remap(reference, map, sdev_map=map_sdev, err_msg=emc)

@@ -1,7 +1,8 @@
 ;+
 ; :Description:
 ;    Build a format-3-like CHMP ref struct from a time series of maps:
-;    MAPS=[mean, sample-SDEV] plus HAS_CUBE payload on the mean map.
+;    MAPS=[mean, sample-SDEV] (no cube tags on those two maps) plus HAS_CUBE
+;    payload on the wrapper (TIME_CUBE pointer, TIME_TEMPLATE, NFRAME).
 ;
 ;    MAPS_IN: map array, or one map with 3-D .data (time in dim 3).
 ;    Wrapper tags (A_BEAM, CHAN, …) are copied from WRAP if provided.
