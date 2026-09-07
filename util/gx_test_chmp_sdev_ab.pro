@@ -149,6 +149,69 @@ pro gx_test_chmp_sdev_ab, hisfm_root=hisfm_root, failed=nfail
     obj_destroy, r
   endelse
 
+  ;----- plot intent: default is historical Best of Bests only -----
+  resolve_routine, 'gx_plot_chmp_cell', /compile_full_file, /either
+  i = gx_chmp_plot_intent(5)
+  if (i.do_cells ne 0) or (i.do_bob ne 1) then begin
+    print, 'FAIL: default n=5 should be cells off, BoB on'
+    nfail++
+  endif else npass++
+  i = gx_chmp_plot_intent(5, /plot_all)
+  if (i.do_cells ne 1) or (i.do_bob ne 1) then begin
+    print, 'FAIL: /plot_all n=5 should rewrite cells then BoB'
+    nfail++
+  endif else npass++
+  i = gx_chmp_plot_intent(5, /plot_all, plot_best=0)
+  if (i.do_cells ne 1) or (i.do_bob ne 0) then begin
+    print, 'FAIL: /plot_all, plot_best=0 should be cells only'
+    nfail++
+  endif else npass++
+  i = gx_chmp_plot_intent(1)
+  if (i.do_cells ne 0) or (i.do_bob ne 0) then begin
+    print, 'FAIL: default n=1 should write nothing extra'
+    nfail++
+  endif else npass++
+  i = gx_chmp_plot_intent(1, /plot_all)
+  if (i.do_cells ne 1) or (i.do_bob ne 0) then begin
+    print, 'FAIL: /plot_all n=1 should rewrite the cell only'
+    nfail++
+  endif else npass++
+  i = gx_chmp_plot_intent(5, /plot_all, /bob_only)
+  if (i.do_cells ne 0) or (i.do_bob ne 1) then begin
+    print, 'FAIL: /bob_only should override /plot_all'
+    nfail++
+  endif else npass++
+  i = gx_chmp_plot_intent(5, /replot_final)
+  if (i.do_cells ne 1) or (i.do_bob ne 1) then begin
+    print, 'FAIL: /replot_final should alias /plot_all'
+    nfail++
+  endif else npass++
+  i = gx_chmp_plot_intent(5, plot_best=0)
+  if (i.do_cells ne 0) or (i.do_bob ne 0) then begin
+    print, 'FAIL: plot_best=0 without /plot_all should write nothing'
+    nfail++
+  endif else npass++
+
+  ;----- remap cache: map structs share hid=0; cubes must not collide -----
+  void = gx_ref_cube_remap(/clear_cache)
+  tgt = make_map(replicate(1d, nx, ny), dx=1.0, dy=1.0, xc=0.0, yc=0.0, id='tgt')
+  add_prop, tgt, chan=94.0, /replace
+  m1 = tgt
+  m2 = tgt
+  gx_ref_cube_attach, m1, replicate(1d, nx, ny, nf), m1
+  gx_ref_cube_attach, m2, replicate(100d, nx, ny, nf), m2
+  c1 = gx_ref_cube_remap(m1, tgt, err_msg=em1)
+  c2 = gx_ref_cube_remap(m2, tgt, err_msg=em2)
+  if ~isa(c1, /array) or ~isa(c2, /array) then begin
+    print, 'FAIL: remap collision setup: ', em1, ' ', em2
+    nfail++
+  endif else if abs(mean(c1) - mean(c2)) lt 50d then begin
+    print, 'FAIL: remap cache collision (same cube for distinct map structs): ', $
+      mean(c1), mean(c2)
+    nfail++
+  endif else npass++
+  void = gx_ref_cube_remap(/clear_cache)
+
   ;----- optional HISFM -----
   if n_elements(hisfm_root) eq 1 then begin
     cdir = hisfm_root + path_sep() + 'all_rotated'

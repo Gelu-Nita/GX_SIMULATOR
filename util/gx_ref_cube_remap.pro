@@ -3,13 +3,16 @@
 ;    Remap a CHMP ref's native time cube onto TARGET (model FOV map) with
 ;    inter_map, matching gx_maps2spectrum.
 ;
-;    Cache is a session HASH keyed by the unaligned model FOV (orig_xc/orig_yc
-;    if gx_align_map already shifted TARGET). Do not put the cache on the map
+;    Cache is a session HASH keyed by the cube pointer (and CHAN/FREQ) plus
+;    the unaligned model FOV (orig_xc/orig_yc if gx_align_map already shifted
+;    TARGET). Map structs have heap id 0, so the cube pointer must be in the
+;    key or multi-channel remaps collide. Do not put the cache on the map
 ;    object: SSW setmap drops TIME_CUBE pointers.
 ;
 ;    gx_align_map changes xc/yc every Q, so a cache keyed on the aligned
 ;    target would miss and re-run M native-grid inter_map calls per Q.
 ;    Native frames are cropped to the FOV before inter_map.
+;    /clear_cache empties the session HASH (optional remap still runs).
 ;
 ; :Params:
 ;    ref    - CHMP map object, or Data map struct with TIME_CUBE
@@ -18,13 +21,19 @@
 ; :Keywords:
 ;    sdev_map - out, sample per-pixel σ (M-1) on the target grid
 ;    err_msg
+;    clear_cache - empty the session remap cache
 ;-
-function gx_ref_cube_remap, ref, target, sdev_map=sdev_map, err_msg=err_msg
+function gx_ref_cube_remap, ref, target, sdev_map=sdev_map, err_msg=err_msg, $
+  clear_cache=clear_cache
   compile_opt idl2
   common gx_ref_cube_rmap_cache, cache
   forward_function inter_map
   err_msg = ''
   sdev_map = !null
+  if keyword_set(clear_cache) then begin
+    cache = hash()
+    if n_elements(ref) eq 0 then return, !null
+  endif
   is_obj = (size(ref, /tname) eq 'OBJREF') && obj_valid(ref[0])
   if is_obj then dmap = ref[0]->get(0, /map) $
   else if valid_map(ref) then dmap = ref[0] $
@@ -49,9 +58,19 @@ function gx_ref_cube_remap, ref, target, sdev_map=sdev_map, err_msg=err_msg
   yc0 = double(target.yc)
   if tag_exist(target, 'orig_xc') then xc0 = double(target.orig_xc)
   if tag_exist(target, 'orig_yc') then yc0 = double(target.orig_yc)
-  hid = 0L
+  hid = 0LL
   if is_obj then hid = obj_valid(ref[0], /get_heap_identifier)
+  cid = 0LL
+  if tag_exist(dmap, 'time_cube') then if ptr_valid(dmap.time_cube) then $
+    cid = ptr_valid(dmap.time_cube, /get_heap_identifier)
+  ax = 0d
+  if tag_exist(dmap, 'chan') then if n_elements(dmap.chan) gt 0 then $
+    if finite(dmap.chan[0]) then ax = double(dmap.chan[0])
+  if ax eq 0d then if tag_exist(dmap, 'freq') then if n_elements(dmap.freq) gt 0 then $
+    if finite(dmap.freq[0]) then ax = double(dmap.freq[0])
   ckey = strtrim(string(hid, format='(i0)'), 2) + ':' + $
+    strtrim(string(cid, format='(i0)'), 2) + ':' + $
+    strtrim(string(ax, format='(g16.8)'), 2) + ':' + $
     strjoin(string([xc0, yc0, double(target.dx), double(target.dy), $
     double(nx), double(ny)], format='(g16.8)'), ',')
 

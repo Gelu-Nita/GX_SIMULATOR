@@ -10,6 +10,19 @@ function gx_chmp_spectrum_mode, ri
   return, strlowcase(strcompress(ri.search_mode, /rem)) eq 'spectrum'
 end
 
+; Default is Best of Bests only (historical). /plot_all or /replot_final
+; rewrite cell PS. /bob_only is a deprecated explicit skip of cells.
+function gx_chmp_plot_intent, n_cells, plot_all=plot_all, replot_final=replot_final, $
+  bob_only=bob_only, plot_best=plot_best
+  compile_opt idl2
+  n = (n_elements(n_cells) gt 0) ? long(n_cells[0]) : 0L
+  do_cells = keyword_set(plot_all) or keyword_set(replot_final)
+  if keyword_set(bob_only) then do_cells = 0b
+  do_bob = n gt 1
+  if n_elements(plot_best) gt 0 then do_bob = do_bob and keyword_set(plot_best)
+  return, {do_cells: byte(do_cells), do_bob: byte(do_bob)}
+end
+
 function gx_chmp_cell_psname, ri
   compile_opt idl2
   if isa(ri, 'STRUCT') then if tag_exist(ri, 'psfile') then begin
@@ -108,7 +121,12 @@ pro gx_chmp_confirm_overwrite, files, overwrite=overwrite
   endif
   answ = dialog_message(msg, /question)
   catch, /cancel
-  overwrite = strupcase(strtrim(answ, 2)) eq 'YES'
+  yes = 0b
+  if size(answ, /tname) eq 'STRING' then begin
+    a = strupcase(strtrim(answ, 2))
+    yes = (a eq 'YES') or (a eq 'Y')
+  endif else yes = keyword_set(answ)
+  overwrite = yes
 end
 
 ; Channel/freq label for map pages (image placeholder spec_axis=0 uses the obs map).
@@ -204,14 +222,16 @@ pro gx_chmp_debug_restore_image, ri, qtarget, cim, ax
   endif
   modidx = 0
   nlay = map->get(/count)
+  have_layer = 0b
   if valid_map(obsI) and (nlay gt 1) then begin
     if tag_exist(obsI, 'chan') then if n_elements(obsI.chan) gt 0 then $
-      if finite(obsI.chan[0]) then begin
+      if finite(obsI.chan[0]) and (obsI.chan[0] ge 50) then begin
         chans = dblarr(nlay)
         for k = 0L, nlay - 1 do chans[k] = map->get(k, /chan)
         void = min(abs(chans - obsI.chan[0]), modidx)
+        have_layer = 1b
       endif
-    if tag_exist(obsI, 'freq') then if n_elements(obsI.freq) gt 0 then $
+    if ~have_layer then if tag_exist(obsI, 'freq') then if n_elements(obsI.freq) gt 0 then $
       if finite(obsI.freq[0]) then begin
         freqs = dblarr(nlay)
         for k = 0L, nlay - 1 do freqs[k] = map->get(k, /freq)

@@ -1,17 +1,18 @@
 ;+
 ; Top-level CHMP plot / replot.
 ;
-; Default: write every cell's set_a*b*_final.ps, then Best of Bests.ps if
-; more than one cell was plotted (plot_best=0 inhibits that last step).
-; One cell: those pages are Best of Bests; no separate Best of Bests.ps.
+; Default (historical): write Best of Bests.ps when result has more than one
+; cell. Cell set_a*b*_final.ps are not rewritten unless /plot_all (or the
+; older alias /replot_final). plot_best=0 skips Best of Bests.
+; One cell: default writes nothing extra (the cell PS from the search is
+; Best of Bests); /plot_all rewrites that cell file.
 ;
-; /bob_only: skip cell files; only Best of Bests (no-op if a single cell).
 ; /overwrite: replace existing PS without asking. Else one confirm dialog
 ; if any target already exists.
 ; psDir omitted → result.psDir (created if needed; cwd/psDir if mkdir fails).
 ; result may be a struct array or a .sav path that contains RESULT.
 ; /debug: extra neighborhood Q maps/spectra (best few); see gx_plot_chmp_cell.
-; /replot_final: historical alias that forces the cell pass (overrides /bob_only).
+; /bob_only: deprecated; same as the default (do not rewrite cells).
 ;
 ; gx_plot_chmp_bestofbests (same file) writes only Best of Bests.ps.
 ;-
@@ -19,7 +20,7 @@ pro gx_plotbestchmpmodels_ebtel, result, psDir, res2_best=res2_best, chi2_best=c
   q_res2_best=q_res2_best, q_chi2_best=q_chi2_best, a=a, b=b, levels=levels, $
   renorm_q=renorm_q, charsize=charsize, maps_best=maps_best, plot_chi=plot_chi, $
   plot_res=plot_res, replot_final=replot_final, bob_only=bob_only, overwrite=overwrite, $
-  plot_best=plot_best, debug=debug, refs_all=refs_all, _extra=_extra
+  plot_best=plot_best, plot_all=plot_all, debug=debug, refs_all=refs_all, _extra=_extra
 
   compile_opt idl2
   resolve_routine, 'gx_plot_chmp_cell', /compile_full_file, /either
@@ -38,6 +39,8 @@ pro gx_plotbestchmpmodels_ebtel, result, psDir, res2_best=res2_best, chi2_best=c
   if n_elements(_extra) gt 0 then user_extra = _extra else user_extra = !null
   if n_elements(bob_only) eq 0 and isa(user_extra, 'STRUCT') then $
     if tag_exist(user_extra, 'bob_only') then bob_only = keyword_set(user_extra.bob_only)
+  if n_elements(plot_all) eq 0 and isa(user_extra, 'STRUCT') then $
+    if tag_exist(user_extra, 'plot_all') then plot_all = keyword_set(user_extra.plot_all)
   if n_elements(overwrite) eq 0 and isa(user_extra, 'STRUCT') then $
     if tag_exist(user_extra, 'overwrite') then overwrite = keyword_set(user_extra.overwrite)
   if n_elements(debug) eq 0 and isa(user_extra, 'STRUCT') then $
@@ -52,12 +55,13 @@ pro gx_plotbestchmpmodels_ebtel, result, psDir, res2_best=res2_best, chi2_best=c
   default, charsize, !p.charsize
   gx_chmp_psdir_resolve, result, psDir
   n = n_elements(result)
-  do_cells = ~keyword_set(bob_only)
-  if keyword_set(replot_final) then do_cells = 1
-  do_bob = (n gt 1)
-  if n_elements(plot_best) gt 0 then do_bob = do_bob and keyword_set(plot_best)
-  if keyword_set(bob_only) and (n eq 1) then begin
-    message, 'One cell: Best of Bests is the cell PS; /bob_only writes nothing extra.', /info
+  intent = gx_chmp_plot_intent(n, plot_all=plot_all, replot_final=replot_final, $
+    bob_only=bob_only, plot_best=plot_best)
+  do_cells = intent.do_cells
+  do_bob = intent.do_bob
+  if ~do_cells and ~do_bob then begin
+    if n eq 1 then $
+      message, 'One cell: pass /plot_all to rewrite the cell PS.', /info
     return
   endif
   files = !null
