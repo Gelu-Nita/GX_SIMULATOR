@@ -149,6 +149,23 @@ pro gx_test_chmp_sdev_ab, hisfm_root=hisfm_root, failed=nfail
     obj_destroy, r
   endelse
 
+  ;----- NaN frames must not be treated as zeros in mean / sample σ -----
+  cnan = replicate(1d, nx, ny, nf)
+  cnan[0, 0, 0] = !values.d_nan
+  gx_ref_cube_stats, cnan, mn, sn
+  if abs(mn[0, 0] - 1d) gt 1d-12 then begin
+    print, 'FAIL: NaN frame biased the mean (got ', mn[0, 0], ', expected 1)'
+    nfail++
+  endif else npass++
+  if ~(finite(sn[0, 0]) and (abs(sn[0, 0]) le 1d-12)) then begin
+    print, 'FAIL: NaN-omitted sample σ should be 0 for identical finite frames, got ', sn[0, 0]
+    nfail++
+  endif else npass++
+  if abs(mn[1, 1] - 1d) gt 1d-12 then begin
+    print, 'FAIL: finite pixel mean changed: ', mn[1, 1]
+    nfail++
+  endif else npass++
+
   ;----- plot intent: default is historical Best of Bests only -----
   resolve_routine, 'gx_plot_chmp_cell', /compile_full_file, /either
   i = gx_chmp_plot_intent(5)

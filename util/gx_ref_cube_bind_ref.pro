@@ -27,7 +27,7 @@ pro gx_ref_cube_bind_ref, obj, src
     endif
   endif
   if n_elements(cube) eq 0 and gx_ref_has_cube(src) then begin
-    if size(src, /tname) eq 'OBJREF' then m = src->get(0, /map) else m = src[0]
+    if size(src, /tname) eq 'OBJREF' then m = src[0]->get(0, /map) else m = src[0]
     cube = *m.time_cube
     if tag_exist(m, 'time_template') then template = m.time_template
   endif
