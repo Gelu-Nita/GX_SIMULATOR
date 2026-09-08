@@ -27,16 +27,34 @@ Renderer / EBTEL table defaults come from `gx_findfile` under the GX Simulator p
 - one `.sav` or FITS (`.fits` / `.fts` / `.fit`) file, or
 - a **directory** of those files (multi-channel / multi-frequency set).
 
-GUI:
+Two snapshot formats stay on **Method B** (independent-pixel SDEV):
 
-- file picker: `*.sav`, `*.fits`, `*.fts`, `*.fit`
-- directory picker: folder of mixed `.sav` / FITS refs
+- Format-3 `{maps:[mean,sdev], a_beam, b_beam, ...}` (e.g. `prepare_ref` output)
+- A single 2-D FITS / map (placeholder SDEV if none is present)
 
-Loader: `gx_ref2chmp`. Averaged AIA FITS often lack `BMAJ`/`BMIN`; pass beam overrides in `_extra` (or they are applied when loading FITS/directories):
+**Time-series cubes** (new): if the path is `RMAPS` / a map array with \(M\ge 2\) frames, or a directory of 2-D maps that share `CHAN`/`FREQ` at different times, CHMP attaches the cube. Do **not** point `refdatapath` at lev1 JSOC trees (no `aia_prep` inside CHMP). Beam keywords are still required when headers lack `BMAJ`/`A_BEAM`:
 
 ```text
 a_beam=1.5, b_beam=1.5, phi_beam=0
 ```
+
+### `sdev_method` (uncertainty)
+
+| `sdev_method` | Spectrum + cube | Image + cube | Snapshot `[mean,sdev]` |
+|---------------|-----------------|--------------|------------------------|
+| `'auto'` (default) | Method A: \(s_F\) of the ROI light curve (\(M-1\), not SEM) | Method B: remapped per-pixel sample \(\sigma\) | Method B (unchanged quadrature) |
+| `'A'` | Force Method A | Refused | Error (no cube) |
+| `'B'` | Force Method B on remapped cube \(\sigma\) | Method B | Method B |
+
+Method A uses the **live** `mask=` / `apply2` ROI at each Q (default `apply2=3` can change with the model). `gx_fov_integral_map` Method B quadrature is unchanged.
+
+GUI:
+
+- file picker: `*.sav`, `*.fits`, `*.fts`, `*.fit`
+- directory picker: folder of mixed `.sav` / FITS refs
+- pass `sdev_method='A'` or `'B'` in `_extra` (no extra widget). The PSF/ref line shows `cube M=` when a cube is loaded.
+
+Loader: `gx_ref2chmp`. Averaged AIA FITS often lack `BMAJ`/`BMIN`; pass beam overrides in `_extra` (or they are applied when loading FITS/directories).
 
 FOV / resolution import dialogs accept `*.sav` and `*.map` (Motif filter: `*.sav *.map`).
 
@@ -81,8 +99,8 @@ Text is validated before search and when editing `_extra` (same rules as `gx_sea
 
 | Mode | Valid in `_extra` | Invalid |
 |------|-------------------|---------|
-| spectrum | `search_mode='spectrum'`, `spec_weights=[...]`, beam / `freqlist` / mask extras | `chan=`, `freq=` |
-| image (default) | scalar `chan=` or `freq=`, beam extras | `spec_weights=` |
+| spectrum | `search_mode='spectrum'`, `spec_weights=[...]`, `sdev_method=`, beam / `freqlist` / mask extras | `chan=`, `freq=` |
+| image (default) | scalar `chan=` or `freq=`, beam extras, `sdev_method='B'`/`'auto'` | `spec_weights=`, `sdev_method='A'` |
 
 The **Convolving PSF parameters** line is read-only: it displays beam tags after refs load. Beam **inputs** belong in `_extra` (or FITS headers).
 
@@ -94,8 +112,18 @@ Task scripts include `_extra` keywords. Preview requires at least one row in the
 
 - Image: per-pixel map metrics (`gx_metrics_image` / `gx_metrics_map`).
 - Spectrum: ROI-integrated `S_obs` / `S_mod` / `S_sdev` via `gx_maps2spectrum` and `gx_metrics_spectrum` (`weights=` optional; used by CHMP as `spec_weights`).
-- After a successful search, **Best of Bests.ps** is written by default (`plot_best=1`).
-- Per-cell `set_a*b*_final.ps` are written during the search; Best of Bests does **not** rewrite them unless `/replot_final` (or `gx_replot_chmp_finalps`).
+- After a successful search, **Best of Bests.ps** is written by default (`plot_best=1`). Cell PS are not rewritten (same as historical `gx_plotbestchmpmodels_ebtel`).
+- Per-cell `set_a*b*_final.ps` are written during the search by the shared cell plotter (image and spectrum: Q metrics, optional spectrum page, then Data | Model | (D−M)/(D+M) maps). One channel fills the first row of the 3×3 page; several channels use one column per channel.
+- Replot from a saved result (create `psDir` if needed):
+
+```idl
+gx_plotbestchmpmodels_ebtel, result              ; Best of Bests only (n>1)
+gx_plotbestchmpmodels_ebtel, result, /plot_all   ; all cells, then Best of Bests if n>1
+gx_plotbestchmpmodels_ebtel, result, /plot_all, plot_best=0  ; cells only
+gx_plotbestchmpmodels_ebtel, result, /plot_all, /overwrite, /debug
+```
+
+`psDir` omitted uses `result.psDir`. `/overwrite` skips the confirm dialog. `/debug` adds the ~6 best RES² / CHI² Q samples (maps from `spec_allmetrics` or `modDir`; never fakes Method A `S_sdev` from the map SDEV layer). `/replot_final` is an alias for `/plot_all`. Deprecated `/bob_only` still skips cells (same as the default).
 
 To show one spectrum channel with legacy map plotters / GUI:
 
@@ -107,9 +135,12 @@ r1 = gx_result_select_channel(result, chan=171)   ; or index=/freq=
 
 | Routine | Role |
 |---------|------|
-| `gx_ref2chmp` / `gx_ref2chmp_one` | Load CHMP refs |
+| `gx_ref2chmp` / `gx_ref2chmp_one` | Load CHMP refs (snapshots or time cubes) |
+| `gx_maps2spectrum` | ROI integrals; Method A/B via `sdev_method=` |
 | `gx_ref_select_axis` | Select / sort by FREQ or CHAN |
 | `gx_processmodels_ebtel` | Q search + metrics for one `(a,b)` |
 | `gx_metrics_spectrum` | Spectral RES² / CHI² (`weights=` optional) |
-| `gx_plotbestchmpmodels_ebtel` | Best of Bests (+ optional `/replot_final`); old name `gx_plotbestmwmodels_ebtel` still works as a deprecated alias |
-| `gx_plot_chmp_spectrum` / `gx_plot_chmp_chanmaps` / `gx_plot_chmp_qsearch` | Spectrum-mode PS helpers |
+| `gx_plotbestchmpmodels_ebtel` | Default: Best of Bests only. `/plot_all` rewrites cell PS too. `plot_best=0`, `/overwrite`, `/debug`. `/replot_final` aliases `/plot_all`. Alias `gx_plotbestmwmodels_ebtel` |
+| `gx_replot_chmp_finalps` | Wrapper: `/plot_all, plot_best=0` (cells only) |
+| `gx_plot_chmp_cell` | One cell PS (metrics, optional spectrum, 3×3 maps) |
+| `gx_plot_chmp_spectrum` / `gx_plot_chmp_chanmaps` / `gx_plot_chmp_qsearch` | Shared page helpers |

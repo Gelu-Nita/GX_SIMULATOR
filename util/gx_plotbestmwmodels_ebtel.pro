@@ -1,6 +1,5 @@
 ;+
-; Deprecated alias for gx_plotbestchmpmodels_ebtel (MW-era name; also handles EUV).
-; Prefer the new name in new code.
+; Deprecated alias for gx_plotbestchmpmodels_ebtel (the top-level CHMP plotter).
 ;-
 pro gx_plotbestmwmodels_ebtel, result, psDir, _ref_extra=extra
   compile_opt idl2

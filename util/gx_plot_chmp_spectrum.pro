@@ -84,38 +84,60 @@ pro gx_plot_chmp_ebars, x, y, sdev, color=color, thick=thick
   endfor
 end
 
-pro gx_plot_chmp_spec_legend, has_ignored, charsize=charsize
+pro gx_plot_chmp_spec_legend, has_ignored, extra_items, charsize=charsize
   compile_opt idl2
   default, charsize, 1.0
-  cs = 0.8 * ((charsize gt 0) ? charsize : 1.0)
-  xw = !x.window
-  yw = !y.window
-  x0 = xw[0] + 0.50 * (xw[1] - xw[0])
-  xl = x0 + 0.07 * (xw[1] - xw[0])
-  y = yw[0] + 0.90 * (yw[1] - yw[0])
-  dy = 0.065 * (yw[1] - yw[0])
-  xm = 0.5 * (x0 + xl)
+  items = ['obs (in search)', 'model (in search)']
+  psymi = [-4, -5]
+  lines = [0, 0]
+  cols = [0, 250]
   if keyword_set(has_ignored) then begin
-    plots, [x0, xl], [y, y], /normal, color=0, thick=1, linesty=1
-    xyouts, xl + 0.012, y, 'all channels', /normal, color=0, charsize=cs, align=0
-    y -= dy
+    items = ['all channels', 'obs (in search)', 'obs (not in search)', $
+      'model (in search)', 'model (not in search)']
+    psymi = [0, -4, 6, -5, 5]
+    lines = [1, 0, 0, 0, 0]
+    cols = [0, 0, 0, 250, 250]
   endif
-  plots, [x0, xl], [y, y], /normal, color=0, thick=2
-  plots, xm, y, psym=4, /normal, color=0, thick=2, symsize=1.1
-  xyouts, xl + 0.012, y, 'obs (in search)', /normal, color=0, charsize=cs, align=0
-  y -= dy
-  if keyword_set(has_ignored) then begin
-    plots, xm, y, psym=6, /normal, color=0, thick=2, symsize=1.1
-    xyouts, xl + 0.012, y, 'obs (not in search)', /normal, color=0, charsize=cs, align=0
-    y -= dy
+  if n_elements(extra_items) gt 0 then begin
+    nadd = n_elements(extra_items)
+    items = [items, extra_items]
+    psymi = [psymi, replicate(0, nadd)]
+    lines = [lines, replicate(-99, nadd)]
+    cols = [cols, replicate(0, nadd)]
   endif
-  plots, [x0, xl], [y, y], /normal, color=250, thick=2
-  plots, xm, y, psym=5, /normal, color=250, thick=2, symsize=1.1
-  xyouts, xl + 0.012, y, 'model (in search)', /normal, color=250, charsize=cs, align=0
-  y -= dy
-  if keyword_set(has_ignored) then begin
-    plots, xm, y, psym=5, /normal, color=250, thick=2, symsize=1.1
-    xyouts, xl + 0.012, y, 'model (not in search)', /normal, color=250, charsize=cs, align=0
+  gx_chmp_al_legend, items, /top, /right, charsize=charsize, box=1, $
+    psym=psymi, linestyle=lines, colors=byte(cols), textcolors=byte(cols)
+end
+
+pro gx_chmp_metrics_at_q, qwant, res2, chi2, cell=cell, samp=samp
+  compile_opt idl2, hidden
+  ; RES2 (res2_norm) and CHI2 at the Q of this spectrum panel.
+  res2 = !values.d_nan
+  chi2 = !values.d_nan
+  if isa(samp, 'STRUCT') then if tag_exist(samp, 'smetrics') then begin
+    sm = samp.smetrics
+    if tag_exist(sm, 'res2_norm') then res2 = sm.res2_norm
+    if tag_exist(sm, 'chi2') then chi2 = sm.chi2
+    return
+  endif
+  if ~isa(cell, 'STRUCT') then return
+  if ptr_valid(cell.spec_allmetrics) then begin
+    sam = *cell.spec_allmetrics
+    if tag_exist(sam, 'q') then begin
+      void = min(abs(double(sam.q) - double(qwant[0])), i)
+      if tag_exist(sam[i], 'smetrics') then begin
+        sm = sam[i].smetrics
+        if tag_exist(sm, 'res2_norm') then res2 = sm.res2_norm
+        if tag_exist(sm, 'chi2') then chi2 = sm.chi2
+        if finite(res2) or finite(chi2) then return
+      endif
+    endif
+  endif
+  if ptr_valid(cell.allmetrics) then begin
+    am = *cell.allmetrics
+    void = min(abs(double(am.q) - double(qwant[0])), i)
+    res2 = am.res2[i]
+    chi2 = am.chi2[i]
   endif
 end
 
@@ -124,14 +146,19 @@ pro gx_plot_chmp_spectrum, spec_axis, $
   S_obs_chi2, S_sdev_chi2, S_mod_chi2, $
   aval=aval, bval=bval, q_res2_best=q_res2_best, res2_best=res2_best, $
   q_chi2_best=q_chi2_best, chi2_best=chi2_best, $
-  is_chan=is_chan, charsize=charsize, ylog=ylog, $
+  is_chan=is_chan, charsize=charsize, ylog=ylog, sdev_method=sdev_method, $
   best_of_bests=best_of_bests, cell_res2=cell_res2, cell_chi2=cell_chi2, $
-  samp_res2=samp_res2, samp_chi2=samp_chi2, refs_all=refs_all, _extra=_extra
+  samp_res2=samp_res2, samp_chi2=samp_chi2, refs_all=refs_all, debug_sam=debug_sam, $
+  _extra=_extra
 
   compile_opt idl2
   if isa(_extra, 'STRUCT') then begin
     if tag_exist(_extra, 'ylog') then ylog = keyword_set(_extra.ylog)
+    if n_elements(debug_sam) eq 0 then $
+      if tag_exist(_extra, 'debug_sam') then debug_sam = _extra.debug_sam
   endif
+  if n_elements(sdev_method) eq 0 and isa(cell_res2, 'STRUCT') then $
+    if tag_exist(cell_res2, 'sdev_method') then sdev_method = cell_res2.sdev_method
   default, charsize, !p.charsize
   if isa(cell_res2, 'STRUCT') then begin
     gx_chmp_result_spectra, cell_res2, spec_axis, $
@@ -299,10 +326,6 @@ pro gx_plot_chmp_spectrum, spec_axis, $
     aa = (n_ab gt 0) ? aval[ia] : 0d
     bb = (n_elements(bval) gt ia) ? bval[ia] : ((n_elements(bval) gt 0) ? bval[0] : 0d)
     abq_line = string(aa, bb, format="('a=',f0.2,'  b=',f0.2)")
-    res2_line = string(q_res2_best, res2_best, $
-      format="('Q!Dres2!N=',g0,'  RES!S!U2!N=',g0)")
-    chi2_line = string(q_chi2_best, chi2_best, $
-      format="('Q!Dchi2!N=',g0,'  Chi!U2!N=',g0)")
     if ip eq 0 then begin
       axis_all = axis_all_r
       Sobs_all = S_obs_all_r
@@ -320,6 +343,8 @@ pro gx_plot_chmp_spectrum, spec_axis, $
       if keyword_set(best_of_bests) then $
         tit = string(aa, bb, format="('Best of Bests CHI!U2!N (a=',f0.2,', b=',f0.2,')')")
     endelse
+    if n_elements(sdev_method) gt 0 then $
+      tit = tit + '  ' + gx_chmp_sdev_label(sdev_method[0])
     gx_chmp_axis_selmask, axis_all, spec_axis, sel
     srt = sort(axis_all)
     xa = axis_all[srt]
@@ -348,16 +373,38 @@ pro gx_plot_chmp_spectrum, spec_axis, $
       gx_plot_chmp_ebars, xa[i_sel], yo[i_sel], ys[i_sel], color=0, thick=3
       oplot, xa[i_sel], ym[i_sel], psym=-5, color=250, thick=2, symsize=1.4
     endif
-    gx_plot_chmp_spec_legend, ni gt 0, charsize=charsize
-    gx_plot_label, 0.01, 0.20, abq_line, charsize=charsize, ylog=keyword_set(ylog)
-    if keyword_set(best_of_bests) then begin
-      if ip eq 0 then $
-        gx_plot_label, 0.01, 0.12, res2_line, charsize=charsize, ylog=keyword_set(ylog) $
-      else $
-        gx_plot_label, 0.01, 0.12, chi2_line, charsize=charsize, ylog=keyword_set(ylog)
+    ; /debug neighborhood: extra S_mod only (do not rebuild Method A S_sdev).
+    ndbg = n_elements(debug_sam)
+    if ndbg gt 0 then begin
+      for jd = 0L, ndbg - 1 do begin
+        if ~tag_exist(debug_sam, 'S_mod_all') then continue
+        xa2 = debug_sam[jd].spec_axis_all
+        ym2 = debug_sam[jd].S_mod_all
+        if n_elements(xa2) eq 0 then continue
+        s2 = sort(xa2)
+        oplot, xa2[s2], ym2[s2], color=100, thick=1
+      endfor
+    endif
+    qleg = [abq_line]
+    rel = !values.d_nan
+    okrel = where(finite(yo) and (yo ne 0) and finite(ys) and (ys gt 0), nrel)
+    if nrel gt 0 then rel = median(ys[okrel] / yo[okrel])
+    if finite(rel) then qleg = [qleg, string(100d * rel, $
+      format="('sdev = ',g0,' % of S_obs (channel median)')")]
+    if ip eq 0 then begin
+      gx_chmp_metrics_at_q, q_res2_best, r2q, c2q, cell=cell_res2, samp=samp_res2
+      if ~finite(r2q) then r2q = res2_best
+      qleg = [qleg, string(q_res2_best, format="('Q=',g0)")]
+      qleg = [qleg, string(r2q, format="('RES!S!U2!N=',g0)")]
+      if finite(c2q) then qleg = [qleg, string(c2q, format="('(Chi!U2!N=',g0,')')")]
     endif else begin
-      gx_plot_label, 0.01, 0.12, res2_line, charsize=charsize, ylog=keyword_set(ylog)
-      gx_plot_label, 0.01, 0.04, chi2_line, charsize=charsize, ylog=keyword_set(ylog)
+      cell_c = isa(cell_chi2, 'STRUCT') ? cell_chi2 : cell_res2
+      gx_chmp_metrics_at_q, q_chi2_best, r2q, c2q, cell=cell_c, samp=samp_chi2
+      if ~finite(c2q) then c2q = chi2_best
+      qleg = [qleg, string(q_chi2_best, format="('Q=',g0)")]
+      qleg = [qleg, string(c2q, format="('Chi!U2!N=',g0)")]
+      if finite(r2q) then qleg = [qleg, string(r2q, format="('(RES!S!U2!N=',g0,')')")]
     endelse
+    gx_plot_chmp_spec_legend, ni gt 0, qleg, charsize=charsize
   endfor
 end

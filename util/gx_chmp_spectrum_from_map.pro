@@ -66,8 +66,10 @@ pro gx_chmp_spectrum_from_map, ri, which, spec, refs_all=refs_all, $
   endif
 
   msk = tag_exist(ri, 'mask') ? ri.mask : 12
+  sdev_method = 'auto'
+  if tag_exist(ri, 'sdev_method') then sdev_method = ri.sdev_method
   spec = gx_maps2spectrum(map, refs_use, mask=msk, apply2=3, err_msg=em, $
-    mod_maps=mod_maps)
+    mod_maps=mod_maps, sdev_method=sdev_method)
   obj_destroy, map
   if ~isa(spec, 'STRUCT') then begin
     spec = !null

@@ -1,27 +1,107 @@
 ;+
-; Best of Bests.ps from a CHMP result array (MW or EUV). Formerly named
-; gx_plotbestmwmodels_ebtel. By default does NOT rewrite set_a*b*_final.ps
-; (those are written during the search by gx_processmodels_ebtel). Pass
-; /replot_final for a full spectrum-mode regeneration of every cell final
-; PS, or call gx_replot_chmp_finalps.
+; Top-level CHMP plot / replot.
+;
+; Default (historical): write Best of Bests.ps when result has more than one
+; cell. Cell set_a*b*_final.ps are not rewritten unless /plot_all (or the
+; older alias /replot_final). plot_best=0 skips Best of Bests.
+; One cell: default writes nothing extra (the cell PS from the search is
+; Best of Bests); /plot_all rewrites that cell file.
+;
+; /overwrite: replace existing PS without asking. Else one confirm dialog
+; if any target already exists.
+; psDir omitted → result.psDir (created if needed; cwd/psDir if mkdir fails).
+; result may be a struct array or a .sav path that contains RESULT.
+; /debug: extra neighborhood Q maps/spectra (best few); see gx_plot_chmp_cell.
+; /bob_only: deprecated; same as the default (do not rewrite cells).
+;
+; gx_plot_chmp_bestofbests (same file) writes only Best of Bests.ps.
 ;-
-pro gx_plotbestchmpmodels_ebtel, result, psDir,res2_best=res2_best,chi2_best=chi2_best,$
-q_res2_best=q_res2_best,q_chi2_best=q_chi2_best, a=a,b=b,levels=levels,$
-renorm_q=renorm_q,charsize=charsize,maps_best=maps_best,plot_chi=plot_chi,plot_res=plot_res, $
-replot_final=replot_final, _extra=_extra
-if ~isa(result) then begin
+pro gx_plotbestchmpmodels_ebtel, result, psDir, res2_best=res2_best, chi2_best=chi2_best, $
+  q_res2_best=q_res2_best, q_chi2_best=q_chi2_best, a=a, b=b, levels=levels, $
+  renorm_q=renorm_q, charsize=charsize, maps_best=maps_best, plot_chi=plot_chi, $
+  plot_res=plot_res, replot_final=replot_final, bob_only=bob_only, overwrite=overwrite, $
+  plot_best=plot_best, plot_all=plot_all, debug=debug, refs_all=refs_all, _extra=_extra
+
+  compile_opt idl2
+  resolve_routine, 'gx_plot_chmp_cell', /compile_full_file, /either
+  resolve_routine, 'gx_plot_chmp_chanmaps', /compile_full_file, /either
+  if size(result, /tname) eq 'STRING' then begin
+    if ~file_test(result) then begin
+      message, 'Cannot restore ' + result, /info
+      return
+    endif
+    restore, result
+  endif
+  if ~isa(result, 'STRUCT') then begin
+    message, 'No input structure provided!', /info
+    return
+  endif
+  if n_elements(_extra) gt 0 then user_extra = _extra else user_extra = !null
+  if n_elements(bob_only) eq 0 and isa(user_extra, 'STRUCT') then $
+    if tag_exist(user_extra, 'bob_only') then bob_only = keyword_set(user_extra.bob_only)
+  if n_elements(plot_all) eq 0 and isa(user_extra, 'STRUCT') then $
+    if tag_exist(user_extra, 'plot_all') then plot_all = keyword_set(user_extra.plot_all)
+  if n_elements(overwrite) eq 0 and isa(user_extra, 'STRUCT') then $
+    if tag_exist(user_extra, 'overwrite') then overwrite = keyword_set(user_extra.overwrite)
+  if n_elements(debug) eq 0 and isa(user_extra, 'STRUCT') then $
+    if tag_exist(user_extra, 'debug') then debug = keyword_set(user_extra.debug)
+  if n_elements(replot_final) eq 0 and isa(user_extra, 'STRUCT') then $
+    if tag_exist(user_extra, 'replot_final') then replot_final = keyword_set(user_extra.replot_final)
+  if n_elements(plot_best) eq 0 and isa(user_extra, 'STRUCT') then $
+    if tag_exist(user_extra, 'plot_best') then plot_best = keyword_set(user_extra.plot_best)
+  if n_elements(levels) eq 0 and isa(user_extra, 'STRUCT') then $
+    if tag_exist(user_extra, 'levels') then levels = user_extra.levels
+  default, levels, [20, 50, 80]
+  default, charsize, !p.charsize
+  gx_chmp_psdir_resolve, result, psDir
+  n = n_elements(result)
+  intent = gx_chmp_plot_intent(n, plot_all=plot_all, replot_final=replot_final, $
+    bob_only=bob_only, plot_best=plot_best)
+  do_cells = intent.do_cells
+  do_bob = intent.do_bob
+  if ~do_cells and ~do_bob then begin
+    if n eq 1 then $
+      message, 'One cell: pass /plot_all to rewrite the cell PS.', /info
+    return
+  endif
+  files = !null
+  if do_cells then for i = 0L, n - 1 do $
+    files = [files, psDir + path_sep() + gx_chmp_cell_psname(result[i])]
+  if do_bob then files = [files, psDir + path_sep() + 'Best of Bests.ps']
+  gx_chmp_confirm_overwrite, files, overwrite=overwrite
+  if ~keyword_set(overwrite) then begin
+    message, 'Plot cancelled (existing PS not overwritten).', /info
+    return
+  endif
+  if do_cells then for i = 0L, n - 1 do $
+    gx_plot_chmp_cell, result[i], psDir, /overwrite, charsize=charsize, $
+      levels=levels, debug=debug, refs_all=refs_all, _extra=user_extra
+  if do_bob then $
+    gx_plot_chmp_bestofbests, result, psDir, res2_best=res2_best, chi2_best=chi2_best, $
+      q_res2_best=q_res2_best, q_chi2_best=q_chi2_best, a=a, b=b, levels=levels, $
+      renorm_q=renorm_q, charsize=charsize, maps_best=maps_best, plot_chi=plot_chi, $
+      plot_res=plot_res, /overwrite, refs_all=refs_all, _extra=user_extra
+end
+
+; Write Best of Bests.ps only (comparison page + winning cell pages).
+pro gx_plot_chmp_bestofbests, result, psDir, res2_best=res2_best, chi2_best=chi2_best, $
+  q_res2_best=q_res2_best, q_chi2_best=q_chi2_best, a=a, b=b, levels=levels, $
+  renorm_q=renorm_q, charsize=charsize, maps_best=maps_best, plot_chi=plot_chi, $
+  plot_res=plot_res, overwrite=overwrite, refs_all=refs_all, _extra=_extra
+
+compile_opt idl2
+resolve_routine, 'gx_plot_chmp_chanmaps', /compile_full_file, /either
+resolve_routine, 'gx_plot_chmp_cell', /compile_full_file, /either
+if ~isa(result, 'STRUCT') then begin
   message,'No input structure provided!',/info
   return
 endif
-compile_opt idl2
-; Compiling this file also defines gx_plot_chmp_contour_legend (same .pro).
-resolve_routine, 'gx_plot_chmp_chanmaps', /compile_full_file, /either
 default,charsize,!p.charsize
-default,psDir,curdir()+path_sep()+'psDir'
-default,levels,[12,20,30,50,80]
-if not file_test(psDir) then file_mkdir,psDir
-; Keep caller extras (e.g. /ylog, /log). FSC_PSConfig GetKeywords later overwrites _extra.
+gx_chmp_psdir_resolve, result, psDir
 if n_elements(_extra) gt 0 then user_extra=_extra else user_extra=!null
+if n_elements(levels) eq 0 and isa(user_extra,'STRUCT') then $
+  if tag_exist(user_extra,'levels') then levels=user_extra.levels
+default,levels,[20,50,80]
 want_log=0b
 if isa(user_extra,'STRUCT') then begin
   if tag_exist(user_extra,'log_scale') then want_log=keyword_set(user_extra.log_scale) $
@@ -29,12 +109,6 @@ if isa(user_extra,'STRUCT') then begin
 endif
 spectrum_mode=tag_exist(result,'search_mode') && $
   strlowcase(strcompress(result[0].search_mode,/rem)) eq 'spectrum'
-; Optional full rewrite of set_a*b*_final.ps (spectrum mode only). Default off:
-; search already wrote finals; BoB should not redo that work.
-if n_elements(replot_final) eq 0 and isa(user_extra,'STRUCT') then $
-  if tag_exist(user_extra,'replot_final') then replot_final=keyword_set(user_extra.replot_final)
-if keyword_set(replot_final) then $
-  gx_replot_chmp_finalps, result, psDir, charsize=charsize, levels=levels, _extra=user_extra
 if arg_present(maps_best) then return_best_maps=1 
  ;----------------------------------------------------------------------------
  objMetricsArr=[[result.RES2_BEST_METRICS],[result.CHI2_BEST_METRICS]]
@@ -60,7 +134,7 @@ if arg_present(maps_best) then return_best_maps=1
    chi=chi2
    if psPlotsArr[k] then begin
      ; Portrait: IDL landscape PS is 270-rotated and shows upside-down in Preview
-     psObject = Obj_New("FSC_PSConfig", /Color, /Times, /Bold, Filename=psFilesArr[k],xoffset=0.5,yoffset=0.25,xsize=6.4,ysize=9.5,landscape=0,bits=8)
+     psObject = Obj_New("FSC_PSConfig", /Color, /Times, Filename=psFilesArr[k],xoffset=0.5,yoffset=0.25,xsize=6.4,ysize=9.5,landscape=0,bits=8)
      psKeys=psObject->GetKeywords()
      psKeys.filename=psFilesArr[k]
      Device, _Extra= psKeys
@@ -183,9 +257,9 @@ if arg_present(maps_best) then return_best_maps=1
     idx_res2=array_indices(res2_img[*,*,k],imin_res2)
     plots,a[idx_res2[0]],min_res2,psym=2,color=250,symsize=symsize,thick=3
     minres2=min(res2,imin)
-    gx_plot_label,0.1,1.5,string(minres2,format="('RES!U2!N=',g0)"),charsize=charsize
-    gx_plot_label,0.1,1.3,string(a[idx_res2[0]],b[idx_res2[1]],format="('a=',f5.2,'; b=',f5.2)"),charsize=charsize
-    gx_plot_label,0.1,1.1,string(q0[imin],format="('q=',g0)"),charsize=charsize
+    gx_chmp_al_legend, [string(minres2,format="('RES!U2!N=',g0)"), $
+      string(a[idx_res2[0]],b[idx_res2[1]],format="('a=',f5.2,'; b=',f5.2)"), $
+      string(q0[imin],format="('q=',g0)")], /top, /left, charsize=charsize, box=1
   
     plot,a,chi2_img[*,0,k],psym=-1,charsize=charsize,xtitle='a',ytitle='Chi!U2!N',yrange=minmax(chi2_img),/xsty, xmargin=xmargin,ymargin=ymargin
     for l=0,n_elements(b)-1 do oplot,a,chi2_img[*,l,k],psym=-1,color=50+l*30,thick=2
@@ -193,9 +267,9 @@ if arg_present(maps_best) then return_best_maps=1
     idx_chi2=array_indices(chi2_img[*,*,k],imin_chi2)
     plots,a[idx_chi2[0]],min_chi2,psym=2,color=250,symsize=symsize,thick=3
     minchi2=min(chi2,imin)
-    gx_plot_label,0.1,1.5,string(minchi2,format="('Chi!U2!N=',g0)"),charsize=charsize
-    gx_plot_label,0.1,1.3,string(a[idx_chi2[0]],b[idx_chi2[1]],format="('a=',f5.2,'; b=',f5.2)"),charsize=charsize
-    gx_plot_label,0.1,1.1,string(q0[imin],format="('q=',g0)"),charsize=charsize
+    gx_chmp_al_legend, [string(minchi2,format="('Chi!U2!N=',g0)"), $
+      string(a[idx_chi2[0]],b[idx_chi2[1]],format="('a=',f5.2,'; b=',f5.2)"), $
+      string(q0[imin],format="('q=',g0)")], /top, /left, charsize=charsize, box=1
   
     plot,a,res_img[*,0,k],psym=-1,charsize=charsize,xtitle='a',ytitle='RES',yrange=max(abs(minmax(res_img)))*[-1,1],/xsty, xmargin=xmargin,ymargin=ymargin
     for l=0,n_elements(b)-1 do oplot,a,res_img[*,l,k],psym=-1,color=50+l*30,thick=2
@@ -267,7 +341,6 @@ if arg_present(maps_best) then return_best_maps=1
  endif
  a_arr=a
  b_arr=b
- if n_elements(a) lt 2 or n_elements(b) lt 2 then return
  q_chi2_best=(q_res2_best=(chi2_best=(res2_best=(dblarr(n_elements(a),n_elements(b))))))
  obj_chi2_best=(obj_res2_best=objarr(n_elements(a),n_elements(b)))
  for i=0,n_elements(a)-1 do begin
@@ -283,11 +356,10 @@ if arg_present(maps_best) then return_best_maps=1
  end
  filename=psDir+path_sep()+'Best of Bests.ps'
  ; Portrait: IDL landscape PS is 270-rotated and shows upside-down in Preview
- psObject = Obj_New("FSC_PSConfig", /Color, /Times, /Bold, Filename=Filename,xoffset=0.5,yoffset=0.25,xsize=6.4,ysize=9.5,landscape=0,bits=8)
+ psObject = Obj_New("FSC_PSConfig", /Color, /Times, Filename=Filename,xoffset=0.4,yoffset=0.25,xsize=7.5,ysize=9.5,landscape=0,bits=8)
  _Extra=psObject->GetKeywords()
  _Extra.filename=psDir+path_sep()+'Best of Bests.ps'
  Device, _Extra=_Extra
- !p.multi=[0,2,3,0,0]
  default,symsize,2
  
  best_res2=min(res2_best,imin)
@@ -305,6 +377,9 @@ if arg_present(maps_best) then return_best_maps=1
   q_res2_best[bad]=max(q_res2_best,/nan)*1.01
   q_chi2_best[bad]=max(q_chi2_best,/nan)*1.01
  endif
+ have_grid = (n_elements(a) ge 2) and (n_elements(b) ge 2)
+ if have_grid then begin
+ !p.multi=[0,2,3,0,0]
  ymargin=[2,1]
  ; Right margin: vertical colorbar plus tick labels/title to its right.
  xmargin=[8,16]
@@ -354,8 +429,9 @@ if arg_present(maps_best) then return_best_maps=1
  plots,a[idx_chi2[[0,0]]],!y.crange,linesty=1,color=250,thick=3
  plots,a[idx_res2[0]],b[idx_res2[1]],psym=2,color=50,symsize=symsize,thick=3
  plots,a[idx_chi2[0]],b[idx_chi2[1]],psym=2,color=250,symsize=symsize,thick=3
- gx_plot_label,0.05,0.9,strcompress(string(best_res2,a[idx_res2[0]],b[idx_res2[1]],format="('RES!U2!N=',f0.3,'; a= ',f0.2,'; b= ',f0.2)")),charsize=1,color=50
- gx_plot_label,0.05,0.8,strcompress(string(best_chi2,a[idx_chi2[0]],b[idx_chi2[1]],format="('CHI!U2!N=',f0.3,'; a= ',f0.2,'; b= ',f0.2)")),charsize=1,color=250
+ gx_chmp_al_legend, [strcompress(string(best_res2,a[idx_res2[0]],b[idx_res2[1]],format="('RES!U2!N=',f0.3,'; a= ',f0.2,'; b= ',f0.2)")), $
+   strcompress(string(best_chi2,a[idx_chi2[0]],b[idx_chi2[1]],format="('CHI!U2!N=',f0.3,'; a= ',f0.2,'; b= ',f0.2)"))], $
+   /top, /left, charsize=1, textcolors=byte([50, 250]), box=1
  
  ymargin=[2,6]
  plot,a,res2_min,charsize=charsize,ymargin=ymargin,/xsty,title='Best of Bests (RES!U2!N, CHI!U2!N)',color=0,/noerase,ysty=9,xtitle='a',ytitle='RES!U2!N'
@@ -363,128 +439,46 @@ if arg_present(maps_best) then return_best_maps=1
  plot,a,chi2_min,charsize=charsize,ymargin=ymargin,/xsty,color=0,ysty=5
  oplot,a,chi2_min,color=250,thick=3
  axis,yaxis=1,ytitle='CHI!U2!N',/ysty,charsize=charsize,ymargin=ymargin
- gx_plot_label,0.05,0.9,string(best_res2,best_res2_q,format="('RES!U2!N=',f0.3,' Q!D0!N=',g0)"),charsize=1,color=50
- gx_plot_label,0.05,0.8,string(best_chi2,best_chi2_q,format="('CHI!U2!N=',f0.3,' Q!D0!N=',g0)"),charsize=1,color=250
+ gx_chmp_al_legend, [string(best_res2,best_res2_q,format="('RES!U2!N=',f0.3,' Q!D0!N=',g0)"), $
+   string(best_chi2,best_chi2_q,format="('CHI!U2!N=',f0.3,' Q!D0!N=',g0)")], $
+   /top, /left, charsize=1, textcolors=byte([50, 250]), box=1
+ endif
 
  i_res=(where(a0 eq a[idx_res2[0]] and b0 eq b[idx_res2[1]],n_res))[0]
  i_chi=(where(a0 eq a[idx_chi2[0]] and b0 eq b[idx_chi2[1]],n_chi))[0]
 
- if keyword_set(spectrum_mode) and tag_exist(result,'spec_axis') then begin
-  if n_res gt 0 and n_chi gt 0 then begin
-    !p.multi=[0,1,2]
-    !p.font=-1
-    gx_plot_chmp_spectrum, cell_res2=result[i_res], cell_chi2=result[i_chi], $
-      /best_of_bests, charsize=charsize, _extra=user_extra
- endif
- endif
-
- ; Q-search after spectra, before maps: one [0,1,2] page per Best of Bests winner.
- if n_res gt 0 and n_chi gt 0 then begin
-  bob_idx = [i_res, i_chi]
-  bob_hdr = ['Best of Bests RES!U2!N', 'Best of Bests CHI!U2!N']
-  for ibob=0,1 do begin
-    ri = result[bob_idx[ibob]]
-    !p.multi = [0, 1, 2]
-    !p.font = 2
-    tit0 = bob_hdr[ibob] + '  ' + string(ri.a, ri.b, format="('a=',f0.2,', b=',f0.2)")
-    ytit_r2 = keyword_set(spectrum_mode) ? '!17 RES!S!U2!N!R!Dnorm!N!3' : '!17 RES!U2!N!3'
-    if ptr_valid(ri.allmetrics) then begin
-      am = *ri.allmetrics
-      qq = am.q
-      r2 = am.res2
-      c2 = am.chi2
-      yrange = [0, max(r2, /nan)]
-      plot, qq, r2, psym=-4, xstyle=0, ystyle=1, xticks=4, yrange=yrange, $
-        xtitle='!18Q!3', ytitle=ytit_r2, thick=2, charsize=1.2*charsize, title=tit0
-      oplot, ri.q_res2_best[[0, 0]], !y.crange, color=250, thick=3, $
-        linesty=ri.res2_done ? 0 : 2
-      oplot, ri.q_res2_range[[0, 0]], !y.crange, color=250, thick=3, linesty=1
-      oplot, ri.q_res2_range[[1, 1]], !y.crange, color=250, thick=3, linesty=1
-      gx_plot_label, 0.02, 0.90, string(ri.res2_best, format="('RES!S!U2!N=',g0)"), $
-        charsize=charsize
-      gx_plot_label, 0.02, 0.78, string(ri.q_res2_best, format="('Q!Dres2!N=',g0)"), $
-        charsize=charsize
-      yrange = [0, max(c2, /nan)]
-      plot, qq, c2, psym=-4, xstyle=0, ystyle=1, xticks=4, yrange=yrange, $
-        xtitle='!18Q!3', ytitle='!17 Chi!U2!N!3', thick=2, charsize=1.2*charsize, title=tit0
-      oplot, ri.q_chi2_best[[0, 0]], !y.crange, color=250, thick=3, $
-        linesty=ri.chi2_done ? 0 : 2
-      oplot, ri.q_chi2_range[[0, 0]], !y.crange, color=250, thick=3, linesty=1
-      oplot, ri.q_chi2_range[[1, 1]], !y.crange, color=250, thick=3, linesty=1
-      gx_plot_label, 0.02, 0.90, string(ri.chi2_best, format="('Chi!U2!N=',g0)"), $
-        charsize=charsize
-      gx_plot_label, 0.02, 0.78, string(ri.q_chi2_best, format="('Q!Dchi2!N=',g0)"), $
-        charsize=charsize
-    endif else begin
-      plot, [0, 1], [0, 1], /nodata, title=tit0, charsize=charsize
-      gx_plot_label, 0.1, 0.5, 'No allmetrics', charsize=charsize
-      plot, [0, 1], [0, 1], /nodata, charsize=charsize
-    endelse
-  endfor
-  ; Per-channel AIA (or multi-freq) maps at each global winner — same pages
-  ; as set_a*b*_final.ps. Image-mode keeps the legacy single-channel 2x3 below.
-  if keyword_set(spectrum_mode) and tag_exist(result, 'spec_axis') then begin
-    is_chan = max(result[0].spec_axis) ge 50
-    for ibob = 0, 1 do $
-      gx_chmp_cell_chanmaps, result[bob_idx[ibob]], ibob, result[0].spec_axis, $
-        levels=levels, charsize=charsize, is_chan=is_chan, _extra=user_extra
-  endif
+ ; Winning cell pages (same layout as set_a*b*_final.ps). Same cell once.
+ if n_res gt 0 then begin
+   gx_plot_chmp_cell_pages, result[i_res], charsize=charsize, levels=levels, $
+     header='Best of Bests RES!U2!N', refs_all=refs_all, _extra=user_extra
+   if (n_chi gt 0) and (i_chi ne i_res) then $
+     gx_plot_chmp_cell_pages, result[i_chi], charsize=charsize, levels=levels, $
+       header='Best of Bests CHI!U2!N', refs_all=refs_all, _extra=user_extra
  endif
 
- obj_img=[obj_res2_best[idx_res2[0],idx_res2[1]],obj_chi2_best[idx_chi2[0],idx_chi2[1]]]
  maps_best=[]
- if ~keyword_set(spectrum_mode) then begin
- !p.multi=[0,2,3,0,1]
- plots=['Best RES solution: ','Best CHI solution: ']
- ab=[[a[idx_res2[0]],b[idx_res2[1]]],[a[idx_chi2[0]],b[idx_chi2[1]]]]
- q=[best_res2_q,best_chi2_q]
- for k=0,1 do begin
-   filnam=plots[k]
-   a=ab[0,k]
-   b=ab[1,k]
-   q0=q[k]
-   obj_metrics=obj_img[k]
-   modI=obj_metrics->get(0,/map)
-   R=modI.roi_metrics
-   obsI=obj_metrics->get(1,/map)
-   dx=tag_exist(obsI,'orig_xc')?(obsI.xc-obsI.orig_xc):0.0
-   dy=tag_exist(obsI,'orig_yc')?(obsI.yc-obsI.orig_yc):0.0
-   obsIsdev=obj_metrics->get(2,/map)
-   mod_dS=modI.dx*modI.dy
-   npix=obj_metrics->get(3,/roi_metrics)
-   RES_NORM_MAP=obj_metrics->get(5,/map)
-   res=res_norm_map.roi_metrics
-   bad=where(RES_NORM_MAP.data eq 1,nbad,ncomp=ncomp)
-   if nbad gt 0 then RES_NORM_MAP.data[bad]=0
-   RES2_MAP=obj_metrics->get(7,/map)
-   res2=RES2_MAP.roi_metrics
-   CHI_MAP=obj_metrics->get(8,/map)
-   chi=CHI_MAP.roi_metrics
-   CHI2_MAP=obj_metrics->get(9,/map)
-   chi2=CHI2_MAP.roi_metrics
-   plot_map,modI,charsize=charsize,title=filnam+'Model2Data',log_scale=want_log
-   plot_map,modI,/over,levels=levels,/perc,color=0,thick=3
-   plot_map,obsI,/over,levels=levels,/perc,color=200,thick=3
-   gx_plot_chmp_contour_legend, charsize=charsize
-   get_map_coord,modI,x,y
-   sz=size(modI.data)
-   sx=sz[1]/100.
-   sy=sz[2]/100.
-   !p.font=-1
-   xyouts,x[10*sx,90*sy],y[10*sx,90*sy],strcompress(string(dx,dy,format="('!4D!3x=',f7.2,'; !4D!3y=',f7.2)"),/rem),charsize=1.1*charsize,color=255,charthick=3
-   !p.font=2
-   xyouts,x[10*sx,90*sy],y[10*sx,80*sy],string(R,format="(' R=',g0)"),charsize=charsize,color=255
-   xyouts,x[10*sx,90*sy],y[10*sx,70*sy],string(Q0,format="(' Q0=',g0)"),charsize=charsize,color=255
-   xyouts,x[10*sx,90*sy],y[10*sx,60*sy],string(a,b,format="(' (a; b)=(',g0,'; ',g0,')')"),charsize=charsize,color=255
-   xyouts,x[10*sx,90*sy],y[10*sx,10*sy],string(total(npix),format="(' Mask_Npix=',I0)"),charsize=charsize,color=255
-   plot_map,RES_NORM_MAP,charsize=charsize,title=filnam+'RES Map',dmax=d_res, dmin=-d_res
-   xyouts,x[10*sx,90*sy],y[10*sx,90*sy],string(res,format="(' Res=',g0)"),charsize=charsize,color=25
-   xyouts,x[10*sx,90*sy],y[10*sx,80*sy],string(res2,format="(' Res!U2!N=',g0)"),charsize=charsize,color=25
-   plot_map,CHI2_MAP,charsize=charsize,title=filnam+'CHI!U2!N Map' ,dmax=d_res*20, dmin=0 ;-d_res*10
-   xyouts,x[10*sx,90*sy],y[10*sx,90*sy],string(chi,format="(' Chi=',g0)"),charsize=charsize,color=200
-   xyouts,x[10*sx,90*sy],y[10*sx,80*sy],string(chi2,format="(' Chi!U2!N=',g0)"),charsize=charsize,color=200
-   if keyword_set(return_best_maps) then maps_best=[maps_best,{modI:modI,obsI:obsI,RES_NORM_MAP:RES_NORM_MAP,CHI2_MAP:CHI2_MAP,a:a,b:b,q0:q0,npix:npix,R:R,chi:chi,chi2:chi2,res:res,res2:res2}]
- endfor
+ if keyword_set(return_best_maps) then begin
+   obj_img=[obj_res2_best[idx_res2[0],idx_res2[1]],obj_chi2_best[idx_chi2[0],idx_chi2[1]]]
+   abw=[[a[idx_res2[0]],b[idx_res2[1]]],[a[idx_chi2[0]],b[idx_chi2[1]]]]
+   qw=[best_res2_q,best_chi2_q]
+   for k=0,1 do begin
+     obj_metrics=obj_img[k]
+     if ~obj_valid(obj_metrics) then continue
+     modI=obj_metrics->get(0,/map)
+     R=modI.roi_metrics
+     obsI=obj_metrics->get(1,/map)
+     npix=obj_metrics->get(3,/roi_metrics)
+     RES_NORM_MAP=obj_metrics->get(5,/map)
+     res=res_norm_map.roi_metrics
+     bad=where(RES_NORM_MAP.data eq 1,nbad)
+     if nbad gt 0 then RES_NORM_MAP.data[bad]=0
+     res2=obj_metrics->get(7,/roi_metrics)
+     chi=obj_metrics->get(8,/roi_metrics)
+     CHI2_MAP=obj_metrics->get(9,/map)
+     chi2=CHI2_MAP.roi_metrics
+     maps_best=[maps_best,{modI:modI,obsI:obsI,RES_NORM_MAP:RES_NORM_MAP,CHI2_MAP:CHI2_MAP,$
+       a:abw[0,k],b:abw[1,k],q0:qw[k],npix:npix,R:R,chi:chi,chi2:chi2,res:res,res2:res2}]
+   endfor
  endif
 
  device,/close
