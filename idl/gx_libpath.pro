@@ -42,10 +42,35 @@ function gx_libpath_select_makefile,root_path
   return,makefiles[0]
 end
 
+function gx_libpath_installed_from_dll,root_path,binary_path
+  ; When the distribution ships a Windows DLL but no .so, the built library
+  ; in ~/gx_binaries keeps that DLL's basename.
+  if ~file_test(binary_path) then return,''
+  dlls=file_search(root_path,'*.dll',/fold)
+  good=where(dlls ne '',ndll)
+  if ndll eq 0 then return,''
+  dlls=dlls[good]
+  candidates=!null
+  for i=0L,ndll-1 do begin
+    stem=file_basename(file_basename(dlls[i]),'.dll')
+    if stem eq '' then continue
+    named=[filepath(stem+'.so',root=binary_path),$
+           filepath(stem+'_arm64.so',root=binary_path),$
+           filepath(stem+'_x86_64.so',root=binary_path)]
+    keep=where(file_test(named),nkeep)
+    if nkeep gt 0 then candidates=[candidates,named[keep]]
+  endfor
+  if n_elements(candidates) eq 0 then return,''
+  return,gx_libpath_select_so(candidates)
+end
+
 function gx_libpath,root,update=update,unix=unix
   ;Returns the precompiled WinOS name*.dll
   ;returns the path to name*.so library on Unix if found under ~/gx_binaries,
   ;or builds it when missing or /update is requested.
+  ;A .so already in ~/gx_binaries is reused unless /update is set. Its name
+  ;comes from a .so in the distribution, or from a shipped .dll when no .so
+  ;is distributed.
   if n_elements(root) eq 0 then return,!null
   root_path=(file_search(getenv('gxpath'),root))[0]
   if ~file_test(root_path) then begin
@@ -68,6 +93,10 @@ function gx_libpath,root,update=update,unix=unix
       lib_path=filepath(libname,root=binary_path)
       if file_test(lib_path) and ~keyword_set(update) then return,lib_path
       file_copy,source_lib,binary_path,/overwrite,/force
+    endif
+    if ~keyword_set(update) then begin
+      installed=gx_libpath_installed_from_dll(root_path,binary_path)
+      if file_test(installed) then return,installed
     endif
     makefile=gx_libpath_select_makefile(root_path)
     if ~file_test(makefile) then begin
