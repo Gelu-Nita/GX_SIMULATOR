@@ -1,9 +1,13 @@
 pro gx_euv_setup, instrument=instrument, idx=idx, info=info
+;+
+; Updates     : 14-Oct-2026: added the responsefile string parameter so an
+;               AIA render can store a custom temperature-response path.
+;+
 
 default, idx, { parms:  {dr:0,t0:1,n0:2,q:3,l:4,voxid:5,nhi:6,trf:7},$
                 nparms: {npix:0,nvox:1,nchan:2,usedem:3,addtr:4,applytrf:5,demavg:6,evenorm:7,chiantifix:8},$
                 rparms: {ds:0,nhi0:1,relabund:2}, $
-                sparms: {instr:0,responsedate:1,ebtel:2 }}
+                sparms: {instr:0,responsedate:1,ebtel:2, responsefile:3 }}
     
 if ~arg_present(info) then return
     
@@ -46,6 +50,7 @@ if n_elements(info) eq 0 then begin
   sparms[idx.sparms.instr] ={name:'Instrument',       value:instrument, unit:'', user:0, hint:''}
   sparms[idx.sparms.responsedate] ={name:'response_date',       value:timenow, unit:'(UTC)', user:0, hint:'yyyymmdd_hhmmss'}
   sparms[idx.sparms.ebtel] ={name:'ebtel', value:file_basename(gx_ebtel_path()), unit:'', user:0, hint:'filename base'}
+  sparms[idx.sparms.responsefile] ={name:'responsefile', value:'', unit:'', user:1, hint:'full path to custom response file'}
   
   case strupcase(instrument) of
     'TRACE':begin
