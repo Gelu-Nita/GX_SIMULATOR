@@ -6,6 +6,8 @@ pro gx_euv_lib,parms,rowdata,nparms,rparms,sparms,ebtel_path, libpath, $
 ;               so a custom response is used when the path is set.
 ;               A sparms array saved before this slot existed is treated as
 ;               an empty path, which keeps the SolarSoft response.
+;               Rebuild when that path changes, even if the response date
+;               is unchanged.
 ;+
  default,instrument,'aia'
  if arg_present(info) then begin
@@ -29,16 +31,27 @@ pro gx_euv_lib,parms,rowdata,nparms,rparms,sparms,ebtel_path, libpath, $
    Nvox=nparms[idx.nparms.nvox]
    Nchan=nparms[idx.nparms.nchan]
    rowdata[*]=0
-   update_response=(n_elements(response) eq 0)?1:(response.date ne sparms[idx.sparms.responsedate])
+   resp_path=''
+   if n_elements(sparms) gt idx.sparms.responsefile then resp_path=strtrim(sparms[idx.sparms.responsefile],2)
+   use_aia=strupcase(instrument) eq 'AIA'
+   update_response=n_elements(response) eq 0
+   if update_response eq 0 then update_response=response.date ne sparms[idx.sparms.responsedate]
+   if update_response eq 0 && use_aia then begin
+    cached_path=''
+    if tag_exist(response,'RESPONSEFILE') then cached_path=strtrim(response.responsefile,2)
+    update_response=cached_path ne resp_path
+   endif
    if (update_response eq 1) then begin
     response_date=atime(gx_utcstr2time(sparms[idx.sparms.responsedate]))
-    resp_path=''
-    if n_elements(sparms) gt idx.sparms.responsefile then resp_path=sparms[idx.sparms.responsefile]
-    response=strupcase(instrument) eq 'AIA'?gx_euv_response(response_date,instrument,$
+    response=use_aia?gx_euv_response(response_date,instrument,$
                                             evenorm=nparms[idx.nparms.evenorm],$
                                             chiantifix=nparms[idx.nparms.chiantifix], $
                                             responsefile=resp_path): $
-                                            gx_euv_response(response_date,instrument)   
+                                            gx_euv_response(response_date,instrument)
+    if use_aia then begin
+      if tag_exist(response,'RESPONSEFILE') then response=rem_tag(response,'responsefile')
+      response=add_tag(response,resp_path,'responsefile')
+    endif
    end  
    logTe_rsp=float(response.logte)
    NT_rsp=n_elements(response.logte) 
