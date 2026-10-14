@@ -4,6 +4,8 @@ pro gx_euv_lib,parms,rowdata,nparms,rparms,sparms,ebtel_path, libpath, $
 ;+
 ; Updates     : 14-Oct-2026: pass responsefile to gx_euv_response for AIA
 ;               so a custom response is used when the path is set.
+;               A sparms array saved before this slot existed is treated as
+;               an empty path, which keeps the SolarSoft response.
 ;+
  default,instrument,'aia'
  if arg_present(info) then begin
@@ -30,10 +32,12 @@ pro gx_euv_lib,parms,rowdata,nparms,rparms,sparms,ebtel_path, libpath, $
    update_response=(n_elements(response) eq 0)?1:(response.date ne sparms[idx.sparms.responsedate])
    if (update_response eq 1) then begin
     response_date=atime(gx_utcstr2time(sparms[idx.sparms.responsedate]))
+    resp_path=''
+    if n_elements(sparms) gt idx.sparms.responsefile then resp_path=sparms[idx.sparms.responsefile]
     response=strupcase(instrument) eq 'AIA'?gx_euv_response(response_date,instrument,$
                                             evenorm=nparms[idx.nparms.evenorm],$
                                             chiantifix=nparms[idx.nparms.chiantifix], $
-                                            responsefile=sparms[idx.sparms.responsefile]): $
+                                            responsefile=resp_path): $
                                             gx_euv_response(response_date,instrument)   
    end  
    logTe_rsp=float(response.logte)
