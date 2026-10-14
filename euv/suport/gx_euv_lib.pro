@@ -1,6 +1,10 @@
 pro gx_euv_lib,parms,rowdata,nparms,rparms,sparms,ebtel_path, libpath, $
           logtdem=logtdem,dem_cor_run=dem_cor_run,qrun=qrun,lrun=lrun,$
           response=response,dem_tr_run=dem_tr_run,q0=q0,l0=l0,info=info,flux_m=flux_m,instrument=instrument
+;+
+; Updates     : 14-Oct-2026: pass responsefile to gx_euv_response for AIA
+;               so a custom response is used when the path is set.
+;+
  default,instrument,'aia'
  if arg_present(info) then begin
   gx_euv_setup_lib, instrument=instrument,info=info 
@@ -28,8 +32,9 @@ pro gx_euv_lib,parms,rowdata,nparms,rparms,sparms,ebtel_path, libpath, $
     response_date=atime(gx_utcstr2time(sparms[idx.sparms.responsedate]))
     response=strupcase(instrument) eq 'AIA'?gx_euv_response(response_date,instrument,$
                                             evenorm=nparms[idx.nparms.evenorm],$
-                                            chiantifix=nparms[idx.nparms.chiantifix]): $
-                                            gx_euv_response(response_date,instrument)    
+                                            chiantifix=nparms[idx.nparms.chiantifix], $
+                                            responsefile=sparms[idx.sparms.responsefile]): $
+                                            gx_euv_response(response_date,instrument)   
    end  
    logTe_rsp=float(response.logte)
    NT_rsp=n_elements(response.logte) 
