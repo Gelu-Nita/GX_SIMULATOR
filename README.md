@@ -29,37 +29,47 @@ https://git-scm.com/
 ```bash
 git clone --recurse-submodules https://github.com/Gelu-Nita/GX_SIMULATOR gx_simulator
 cd gx_simulator
+git config submodule.recurse true
 ```
 
-Equivalent two-step form (same result: the commits recorded by this GX Simulator tree, including nested submodules):
+The clone gets the library commits this GX Simulator tree recorded, including nested submodules such as AMaFiL. The one-time `git config` line makes later `git pull` commands do the same, so ordinary updates are just `git pull`.
+
+Equivalent first clone if your Git does not support `--recurse-submodules`:
 
 ```bash
 git clone https://github.com/Gelu-Nita/GX_SIMULATOR gx_simulator
 cd gx_simulator
 git submodule update --init --recursive
+git config submodule.recurse true
 ```
 
 Do **not** add `--remote` here. `--remote` ignores the commits this release recorded and checks out the current tips of the submodule branches instead.
 
-To install a frozen published release instead of the current `master` tip, check out that tag before initializing submodules (example: `v4.4.2`; use the latest `v*` tag you want):
+To install a frozen published release instead of the current `master` tip, check out that tag after the clone (example: `v4.4.2`; use the latest `v*` tag you want):
 
 ```bash
-git clone https://github.com/Gelu-Nita/GX_SIMULATOR gx_simulator
-cd gx_simulator
 git checkout v4.4.2
-git submodule update --init --recursive
 ```
 
+With `submodule.recurse` set, that checkout also moves the libraries to the commits that tag recorded.
+
 #### Updating an existing installation (most users)
+
+After the one-time `git config submodule.recurse true` above:
 
 ```bash
 cd gx_simulator
 git checkout master
 git pull
-git submodule update --init --recursive
 ```
 
-`git pull` alone updates GX Simulator source but does not refresh submodule checkouts. The `git submodule update --init --recursive` step (still **without** `--remote`) moves each library to the commits the newly pulled GX Simulator release recorded.
+That pulls the latest vetted GX Simulator `master` **and** checks out the library commits that `master` recorded. You do not need a separate `git submodule update` and you should not add `--remote`.
+
+If this clone never set `submodule.recurse`, use one command that does both:
+
+```bash
+git pull --recurse-submodules
+```
 
 On Linux/Mac, an older compiled library in `~/gx_binaries` is reused until you rebuild it. After a library submodule change, either delete the stale `*.so` under `~/gx_binaries` or request a rebuild, for example:
 
