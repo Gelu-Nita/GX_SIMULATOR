@@ -10,6 +10,8 @@ usage() {
 Usage: bash tools/update-submodules-and-commit.sh [--dry-run] [--push] [--top-level-only]
 
 Maintainer-only helper for synchronizing GX_SIMULATOR submodule pointers.
+Ordinary users should not run this. They should install/update with
+git submodule update --init --recursive (no --remote).
 
 Options:
   --dry-run   Update submodules, then report commits/pushes without creating them.
@@ -211,7 +213,8 @@ EOF
 
 echo "WARNING: this helper is intended only for GX_SIMULATOR maintainers/developers"
 echo "with write access to GX_SIMULATOR and the relevant submodule repositories."
-echo "Normal users should use git submodule update --init --recursive instead."
+echo "Ordinary users should install/update with git submodule update --init --recursive"
+echo "(no --remote) so they keep the commits recorded by the GX Simulator release."
 echo
 
 if [ "$TOP_LEVEL_ONLY" -eq 1 ]; then

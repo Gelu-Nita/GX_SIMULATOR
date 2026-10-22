@@ -16,6 +16,8 @@ The GUI **Help** button opens the GitHub-rendered README for the installed relea
 
 # Here are the steps needed to download the package, including the linked external submodule dependencies
 
+GX Simulator records a specific commit for each external library (and those libraries record their own nested commits, such as AMaFiL inside `external/nlfff`). That recorded set is what a GX Simulator **release** was tested with. Ordinary users should install and update that vetted set. Only maintainers or advanced users should overwrite it with newer upstream submodule tips.
+
 #### If not already installed on your system, download and install git for command line
 
 https://git-scm.com/
@@ -25,24 +27,60 @@ https://git-scm.com/
 #### CD to your SSW/packages/ installation folder and issue the following sequence of commands
 
 ```bash
-git clone https://github.com/Gelu-Nita/GX_SIMULATOR gx_simulator
+git clone --recurse-submodules https://github.com/Gelu-Nita/GX_SIMULATOR gx_simulator
 cd gx_simulator
-git submodule update --init --recursive --remote
 ```
 
-This downloads GX_SIMULATOR and updates all configured submodules recursively from their remote branches. This is the recommended normal installation path because it gives users the latest available external libraries, including the nested AMaFiL library used by `external/nlfff`, even when the upstream `nlfff` repository has not yet updated its recorded AMaFiL pointer.
-
-After this command, `git status` may show modified submodules. That is expected and harmless for normal users. It means one or more local submodules were advanced beyond the exact commit pointers recorded by their parent repositories. Normal users do not need to commit or push those pointer changes.
-
-For a fully reproducible checkout that uses only the exact submodule commits recorded by GX_SIMULATOR and its parent submodules, developers can instead run:
+Equivalent two-step form (same result: the commits recorded by this GX Simulator tree, including nested submodules):
 
 ```bash
+git clone https://github.com/Gelu-Nita/GX_SIMULATOR gx_simulator
+cd gx_simulator
 git submodule update --init --recursive
 ```
 
+Do **not** add `--remote` here. `--remote` ignores the commits this release recorded and checks out the current tips of the submodule branches instead.
+
+To install a frozen published release instead of the current `master` tip, check out that tag before initializing submodules (example: `v4.4.2`; use the latest `v*` tag you want):
+
+```bash
+git clone https://github.com/Gelu-Nita/GX_SIMULATOR gx_simulator
+cd gx_simulator
+git checkout v4.4.2
+git submodule update --init --recursive
+```
+
+#### Updating an existing installation (most users)
+
+```bash
+cd gx_simulator
+git checkout master
+git pull
+git submodule update --init --recursive
+```
+
+`git pull` alone updates GX Simulator source but does not refresh submodule checkouts. The `git submodule update --init --recursive` step (still **without** `--remote`) moves each library to the commits the newly pulled GX Simulator release recorded.
+
+On Linux/Mac, an older compiled library in `~/gx_binaries` is reused until you rebuild it. After a library submodule change, either delete the stale `*.so` under `~/gx_binaries` or request a rebuild, for example:
+
+```idl
+print, gx_libpath('nlfff', /update)
+print, gx_libpath('grid', /update)
+```
+
+#### Advanced: track live upstream submodule tips (unvetted)
+
+This overwrites the GX Simulator release pins with whatever the submodule owners have published on the branches listed in `.gitmodules`. Those commits have not necessarily been tested with this GX Simulator version. Do not commit the resulting dirty submodule pointers unless you are maintaining GX_SIMULATOR.
+
+```bash
+git submodule update --init --recursive --remote
+```
+
+After this command, `git status` may show modified submodules. That is expected in this advanced mode.
+
 ##### Developer/maintainer submodule synchronization
 
-Committing updated submodule pointers is a repository maintenance operation. Only developers with write access to GX_SIMULATOR and the relevant submodule repositories should run the synchronization helper.
+Committing updated submodule pointers is how a GX Simulator release absorbs a newly vetted upstream library (for example a new `nlfff` / AMaFiL tip). After you pin and tag, ordinary users who follow the install/update steps above receive that set without `--remote`. Only developers with write access to GX_SIMULATOR and the relevant submodule repositories should run the synchronization helper.
 
 To update all submodules recursively and commit any changed nested and top-level submodule pointers locally:
 
